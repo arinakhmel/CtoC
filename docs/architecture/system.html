@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CtoC System Sketch</title>
+<style>
+:root {
+  --bg: #f6f6f3; --surface: #ffffff; --surface-2: #f0f0ec; --text: #1c1d21; --muted: #5d6169;
+  --border: #d4d4cd; --accent: #4b47c9; --accent-ink: #ffffff; --accent-soft: #ecebfb;
+  --edge: #6d717a; --store: #0f766e; --store-soft: #e6f4f2; --ext: #a15c07; --ext-soft: #fbf3e6;
+  --ok: #2f7d32; --ok-soft: #e8f3e8; --end: #80848c; --end-soft: #eeeeec; --code-bg: #efeff9;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111215; --surface: #1a1c21; --surface-2: #22252b; --text: #e7e8ea; --muted: #a2a6ae;
+    --border: #353841; --accent: #8e8af5; --accent-ink: #111215; --accent-soft: #26264a;
+    --edge: #8f949d; --store: #4fc1b4; --store-soft: #15302d; --ext: #e2a24e; --ext-soft: #33281a;
+    --ok: #7cc47f; --ok-soft: #1b2e1c; --end: #8d9199; --end-soft: #26282d; --code-bg: #24253a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111215; --surface: #1a1c21; --surface-2: #22252b; --text: #e7e8ea; --muted: #a2a6ae;
+  --border: #353841; --accent: #8e8af5; --accent-ink: #111215; --accent-soft: #26264a;
+  --edge: #8f949d; --store: #4fc1b4; --store-soft: #15302d; --ext: #e2a24e; --ext-soft: #33281a;
+  --ok: #7cc47f; --ok-soft: #1b2e1c; --end: #8d9199; --end-soft: #26282d; --code-bg: #24253a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px 64px; }
+header.top {
+  position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(6px); border-bottom: 1px solid var(--border);
+}
+header.top .wrap { display: flex; align-items: center; gap: 16px; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; }
+.brand { font-weight: 700; letter-spacing: .2px; }
+nav { display: flex; gap: 4px 14px; flex-wrap: wrap; flex: 1; font-size: 13.5px; }
+nav a { color: var(--muted); text-decoration: none; }
+nav a:hover { color: var(--accent); }
+button.theme {
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer;
+}
+h1 { font-size: 30px; line-height: 1.2; margin: 36px 0 8px; }
+h2 { font-size: 21px; margin: 52px 0 6px; padding-top: 8px; }
+h3 { font-size: 16px; margin: 26px 0 8px; }
+p.lead { color: var(--muted); max-width: 820px; margin: 0 0 12px; }
+.src { font-size: 12.5px; color: var(--muted); margin: 0 0 14px; }
+.src code, td code, .step code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: .92em; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.callout {
+  border: 1px solid var(--border); border-left: 4px solid var(--accent); background: var(--surface);
+  border-radius: 8px; padding: 12px 14px; font-size: 14px; max-width: 900px;
+}
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+.diagram { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.diagram svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+.legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; border: 1.5px solid var(--edge); }
+.legend .l-person::before { background: var(--accent-soft); border-color: var(--accent); }
+.legend .l-system::before { background: var(--accent); border-color: var(--accent); }
+.legend .l-ext::before { background: var(--ext-soft); border-color: var(--ext); border-style: dashed; }
+.legend .l-store::before { background: var(--store-soft); border-color: var(--store); }
+.legend .l-end::before { background: var(--end-soft); border-color: var(--end); }
+.legend .l-ok::before { background: var(--ok-soft); border-color: var(--ok); }
+
+/* SVG */
+svg text { fill: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+.n rect, .n circle { stroke-width: 1.5; }
+.n-default rect { fill: var(--surface); stroke: var(--border); }
+.n-person rect { fill: var(--accent-soft); stroke: var(--accent); }
+.n-system rect { fill: var(--accent); stroke: var(--accent); }
+.n-system text { fill: var(--accent-ink); }
+.n-ext rect { fill: var(--ext-soft); stroke: var(--ext); stroke-dasharray: 5 4; }
+.n-store rect { fill: var(--store-soft); stroke: var(--store); }
+.n-layer rect { fill: var(--surface); stroke: var(--accent); }
+.n-port rect { fill: var(--surface-2); stroke: var(--accent); stroke-dasharray: 4 3; }
+.n-note rect { fill: var(--surface-2); stroke: var(--border); }
+.n-state rect { fill: var(--surface); stroke: var(--accent); }
+.n-ok rect { fill: var(--ok-soft); stroke: var(--ok); }
+.n-end rect { fill: var(--end-soft); stroke: var(--end); }
+.n-start circle { fill: var(--text); stroke: none; }
+.t-title { font-weight: 650; font-size: 13px; }
+.t-sub { font-size: 11.5px; fill: var(--muted) !important; }
+.n-system .t-sub { fill: var(--accent-ink) !important; opacity: .85; }
+.g rect { fill: none; stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 2 0; }
+.g text { font-size: 12.5px; font-weight: 650; fill: var(--muted); }
+.e path { fill: none; stroke: var(--edge); stroke-width: 1.4; }
+.e.dashed path { stroke-dasharray: 6 5; }
+.e-label { font-size: 11.5px; fill: var(--text); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+.card .e-label { stroke: var(--surface); }
+.arrowhead { fill: var(--edge); }
+
+/* Steps */
+ol.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; counter-reset: s; }
+.step { display: grid; grid-template-columns: 44px 1fr; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.step .num { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 700; }
+.step .who { font-weight: 650; }
+.step .meta { display: grid; grid-template-columns: 92px 1fr; gap: 3px 10px; font-size: 13.5px; margin-top: 4px; }
+.step .meta dt { color: var(--muted); }
+.step .meta dd { margin: 0; overflow-wrap: anywhere; }
+.chip { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--text); margin: 1px 4px 1px 0; }
+.chip.state { background: var(--store-soft); }
+
+/* Tables */
+.tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { background: var(--surface-2); font-weight: 650; position: sticky; top: 0; }
+tr:last-child td { border-bottom: 0; }
+td.group { background: var(--surface-2); font-weight: 650; color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .4px; }
+
+/* Decisions */
+.grid3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.adr .no { font-size: 12px; color: var(--accent); font-weight: 700; letter-spacing: .5px; }
+.adr h4 { margin: 4px 0 6px; font-size: 15px; }
+.adr p { margin: 0; font-size: 13.5px; color: var(--muted); }
+.adr .file { font-size: 12px; margin-top: 8px; }
+ul.oq { margin: 0; padding-left: 18px; font-size: 14px; }
+ul.oq li { margin: 3px 0; }
+footer { margin-top: 56px; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 14px; }
+@media (max-width: 640px) {
+  header.top { position: static; }
+  nav { order: 3; flex-basis: 100%; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; padding-bottom: 2px; }
+  .brand { flex: 1; }
+  h1 { font-size: 24px; }
+  .step { grid-template-columns: 1fr; }
+  .step .meta { grid-template-columns: 1fr; }
+  .step .meta dt { margin-top: 4px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <span class="brand">CtoC · system sketch</span>
+    <nav aria-label="Sections">
+      <a href="#context">Context</a><a href="#containers">Containers</a><a href="#scenario">Scenario</a>
+      <a href="#states">State machines</a><a href="#pages">Pages</a><a href="#decisions">Decisions</a><a href="#questions">Open questions</a>
+    </nav>
+    <button class="theme" type="button" id="themeBtn" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>CtoC: technical solution sketch</h1>
+  <p class="lead">A micro-task marketplace for beginner students only. Customers post tasks at a fixed price, moderators check them, verified students apply, the customer reserves funds and accepts the result, and the student is paid and gets a platform-confirmed experience record.</p>
+  <div class="callout">
+    This page is a <strong>picture</strong> of the markdown documents in <code>docs/architecture/</code> and <code>docs/adr/</code>, not a second source of truth. Each section names the file it is drawn from. If they disagree, the markdown wins.
+  </div>
+
+  <!-- 1. Context -->
+  <h2 id="context">1. System context (C4 level 1)</h2>
+  <p class="src">From <code>overview.md</code> §2.</p>
+  <div class="card diagram"><svg id="dg-context" role="img" aria-label="System context diagram: five actors use the CtoC platform, which talks to an SMTP provider, a simulated payment port, a hosting platform and a static university domain list."></svg>
+    <div class="legend"><span class="l-person">person</span><span class="l-system">our system</span><span class="l-ext">external (dashed = not a live API)</span></div>
+  </div>
+
+  <!-- 2. Containers -->
+  <h2 id="containers">2. Containers and API layers (C4 level 2)</h2>
+  <p class="src">From <code>overview.md</code> §3, ADR-0002 (layers), ADR-0004 (storage), ADR-0005 (HTTP).</p>
+  <div class="card diagram"><svg id="dg-containers" role="img" aria-label="Container diagram: React SPA in the browser calls one Node.js API process. Inside the API each module is layered: middleware, routes, policy, service, domain, repo, plus three ports. Data goes to a SQLite file and a local uploads folder; email goes to an SMTP provider."></svg>
+    <div class="legend"><span class="l-system">module layer</span><span class="l-store">data store</span><span class="l-ext">external</span></div>
+  </div>
+
+  <!-- 3. Scenario -->
+  <h2 id="scenario">3. End-to-end scenario, step by step</h2>
+  <p class="src">From <code>overview.md</code> §5. Endpoints are in <code>api.md</code>, states in <code>domain-model.md</code> §3.</p>
+  <ol class="steps" id="steps"></ol>
+
+  <!-- 4. State machines -->
+  <h2 id="states">4. State machines</h2>
+  <p class="src">From <code>domain-model.md</code> §3. Brackets are guard conditions, and every arrow cites its source.</p>
+  <h3>4.1 Task (the brief's "Project")</h3>
+  <div class="card diagram"><svg id="dg-task" role="img" aria-label="Task state machine with states pending_moderation, published, rejected, in_progress, in_review, revision, done and cancelled."></svg>
+    <div class="legend"><span class="l-system">active state</span><span class="l-ok">successful end</span><span class="l-end">terminal (no exit)</span></div>
+  </div>
+  <h3>4.2 Student role (the brief's "Role")</h3>
+  <div class="card diagram"><svg id="dg-role" role="img" aria-label="Student role state machine: unconfirmed, confirmed, pending_review, verified."></svg></div>
+  <h3>4.3 Application</h3>
+  <div class="card diagram"><svg id="dg-app" role="img" aria-label="Application state machine: sent, accepted, rejected."></svg></div>
+
+  <!-- 5. Pages -->
+  <h2 id="pages">5. Frontend pages mapped to stories</h2>
+  <p class="src">From <code>overview.md</code> §4. Access: P public · A any logged-in user · S- student with confirmed email · S+ verified student · C customer · M moderator.</p>
+  <div class="tablewrap"><table id="pagesTable"><thead><tr><th>Route</th><th>Page</th><th>Access</th><th>Stories</th></tr></thead><tbody></tbody></table></div>
+
+  <!-- 6. Decisions -->
+  <h2 id="decisions">6. The nine decisions</h2>
+  <p class="src">From <code>docs/adr/README.md</code>. All are <em>Proposed</em> until the team accepts them.</p>
+  <div class="grid3" id="adrs"></div>
+
+  <!-- 7. Open questions -->
+  <h2 id="questions">7. Open questions</h2>
+  <p class="src">From <code>overview.md</code> §7. Condensed. The full wording and the interim behaviour are in the markdown.</p>
+  <div class="card"><ul class="oq" id="oq"></ul></div>
+
+  <footer>Sources: requirements-digest.md · overview.md · domain-model.md · api.md · data-model.md · docs/adr/0001–0009. This file has no external dependencies and opens from the file system.</footer>
+</main>
+
+<script>
+(function () {
+  /* ---------- theme ---------- */
+  var root = document.documentElement, btn = document.getElementById('themeBtn');
+  function stored() { try { return localStorage.getItem('ctoc-theme'); } catch (e) { return null; } }
+  function save(v) { try { localStorage.setItem('ctoc-theme', v); } catch (e) {} }
+  function effective() {
+    var t = root.getAttribute('data-theme');
+    if (t) return t;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  function label() { btn.textContent = effective() === 'dark' ? 'Light theme' : 'Dark theme'; }
+  var s = stored(); if (s === 'light' || s === 'dark') root.setAttribute('data-theme', s);
+  label();
+  btn.addEventListener('click', function () {
+    var next = effective() === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next); save(next); label();
+  });
+
+  /* ---------- tiny SVG diagram renderer ---------- */
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function textBlock(parent, x, y, lines, cls, lh) {
+    var t = el('text', { x: x, y: y, 'text-anchor': 'middle', class: cls || '' }, parent);
+    lines.forEach(function (ln, i) {
+      var ts = el('tspan', { x: x, dy: i === 0 ? 0 : lh }, t);
+      ts.textContent = ln;
+    });
+    return t;
+  }
+  function center(n) { return { x: n.x + n.w / 2, y: n.y + n.h / 2 }; }
+  function clip(n, toward) {
+    var c = center(n), dx = toward.x - c.x, dy = toward.y - c.y;
+    if (n.kind === 'start') { var L = Math.hypot(dx, dy) || 1; return { x: c.x + dx / L * n.w / 2, y: c.y + dy / L * n.h / 2 }; }
+    var tx = dx === 0 ? Infinity : (n.w / 2) / Math.abs(dx), ty = dy === 0 ? Infinity : (n.h / 2) / Math.abs(dy);
+    var t = Math.min(tx, ty);
+    return { x: c.x + dx * t, y: c.y + dy * t };
+  }
+  function render(svgId, spec) {
+    var svg = document.getElementById(svgId);
+    svg.setAttribute('viewBox', '0 0 ' + spec.w + ' ' + spec.h);
+    var defs = el('defs', {}, svg);
+    var mk = el('marker', { id: svgId + '-a', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 8, markerHeight: 8, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M0,0 L10,5 L0,10 z', class: 'arrowhead' }, mk);
+    var byId = {};
+    (spec.groups || []).forEach(function (g) {
+      var gg = el('g', { class: 'g' }, svg);
+      el('rect', { x: g.x, y: g.y, width: g.w, height: g.h, rx: 14 }, gg);
+      var tt = el('text', { x: g.x + 14, y: g.y + 20 }, gg); tt.textContent = g.label;
+    });
+    spec.nodes.forEach(function (n) { byId[n.id] = n; });
+    var labelLayer = [];
+    (spec.edges || []).forEach(function (e) {
+      var a = byId[e.from], b = byId[e.to], ca = center(a), cb = center(b);
+      var bend = e.bend || 0, mid = { x: (ca.x + cb.x) / 2, y: (ca.y + cb.y) / 2 };
+      var len = Math.hypot(cb.x - ca.x, cb.y - ca.y) || 1;
+      var ctrl = { x: mid.x - (cb.y - ca.y) / len * bend, y: mid.y + (cb.x - ca.x) / len * bend };
+      var p0 = clip(a, bend ? ctrl : cb), p2 = clip(b, bend ? ctrl : ca);
+      var g = el('g', { class: 'e' + (e.dashed ? ' dashed' : '') }, svg);
+      var d = bend ? 'M' + p0.x + ',' + p0.y + ' Q' + ctrl.x + ',' + ctrl.y + ' ' + p2.x + ',' + p2.y
+                   : 'M' + p0.x + ',' + p0.y + ' L' + p2.x + ',' + p2.y;
+      el('path', { d: d, 'marker-end': 'url(#' + svgId + '-a)' }, g);
+      if (e.label) {
+        var t = e.lt == null ? 0.5 : e.lt, q = 1 - t, lx, ly;
+        if (bend) { lx = q * q * p0.x + 2 * q * t * ctrl.x + t * t * p2.x; ly = q * q * p0.y + 2 * q * t * ctrl.y + t * t * p2.y; }
+        else { lx = p0.x + (p2.x - p0.x) * t; ly = p0.y + (p2.y - p0.y) * t; }
+        labelLayer.push({ x: lx + (e.dx || 0), y: ly + (e.dy || 0), lines: e.label.split('\n') });
+      }
+    });
+    spec.nodes.forEach(function (n) {
+      var g = el('g', { class: 'n n-' + (n.kind || 'default') }, svg);
+      if (n.kind === 'anchor') return;
+      if (n.kind === 'start') { el('circle', { cx: n.x + n.w / 2, cy: n.y + n.h / 2, r: n.w / 2 }, g); return; }
+      el('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: n.kind === 'person' ? 22 : (n.kind === 'store' ? 14 : 8) }, g);
+      var lines = n.label.split('\n'), lh = 15, total = (lines.length - 1) * lh, cy = n.y + n.h / 2 - total / 2 + 4.5;
+      var t = el('text', { x: n.x + n.w / 2, y: cy, 'text-anchor': 'middle' }, g);
+      lines.forEach(function (ln, i) {
+        var ts = el('tspan', { x: n.x + n.w / 2, dy: i === 0 ? 0 : lh, class: i === 0 ? 't-title' : 't-sub' }, t);
+        ts.textContent = ln;
+      });
+    });
+    labelLayer.forEach(function (L) {
+      var off = (L.lines.length - 1) * 14 / 2;
+      textBlock(svg, L.x, L.y - off + 4, L.lines, 'e-label', 14);
+    });
+  }
+
+  /* ---------- 1. context (overview.md §2) ---------- */
+  render('dg-context', {
+    w: 1040, h: 520,
+    nodes: [
+      { id: 'visitor', x: 20, y: 20, w: 180, h: 56, kind: 'person', label: 'Visitor\nanonymous' },
+      { id: 'student', x: 20, y: 120, w: 180, h: 56, kind: 'person', label: 'Student\nverified beginner' },
+      { id: 'customer', x: 20, y: 220, w: 180, h: 56, kind: 'person', label: 'Customer\nsmall business' },
+      { id: 'moderator', x: 20, y: 320, w: 180, h: 56, kind: 'person', label: 'Moderator\nplatform team' },
+      { id: 'employer', x: 20, y: 420, w: 180, h: 56, kind: 'person', label: 'Employer\noutside the platform' },
+      { id: 'ctoc', x: 430, y: 196, w: 200, h: 104, kind: 'system', label: 'CtoC platform\nweb app + API\nADR-0001, ADR-0002' },
+      { id: 'smtp', x: 820, y: 26, w: 200, h: 60, kind: 'ext', label: 'SMTP provider\nreal integration, hosted only' },
+      { id: 'pay', x: 820, y: 150, w: 200, h: 60, kind: 'ext', label: 'Payment provider\nNOT integrated: simulated port' },
+      { id: 'host', x: 820, y: 290, w: 200, h: 60, kind: 'ext', label: 'Hosting platform\nplatform only, no API' },
+      { id: 'domains', x: 820, y: 420, w: 200, h: 60, kind: 'ext', label: 'University domain list\nstatic data we maintain' }
+    ],
+    edges: [
+      { from: 'visitor', to: 'ctoc', label: 'reads public pages\n(US-01…05)' },
+      { from: 'student', to: 'ctoc', label: 'verifies, applies,\ndelivers, withdraws' },
+      { from: 'customer', to: 'ctoc', label: 'posts tasks, reserves\nfunds, accepts' },
+      { from: 'moderator', to: 'ctoc', label: 'moderates documents\nand tasks, settles' },
+      { from: 'employer', to: 'ctoc', dashed: true, label: 'opens a public profile\nlink (US-38)' },
+      { from: 'ctoc', to: 'smtp', label: 'confirmation emails\n(SMTP)' },
+      { from: 'ctoc', to: 'pay', dashed: true, label: 'PaymentProvider port\n(future)' },
+      { from: 'ctoc', to: 'host', label: 'runs on\n(optional, ADR-0009)' },
+      { from: 'domains', to: 'ctoc', label: 'seeded into allow-list\n(BR-01)' }
+    ]
+  });
+
+  /* ---------- 2. containers (overview.md §3, ADR-0002/4/5) ---------- */
+  var LX = 380, LW = 360;
+  render('dg-containers', {
+    w: 1040, h: 720,
+    groups: [
+      { x: 20, y: 20, w: 250, h: 570, label: 'Browser: Web app (React SPA, Vite)' },
+      { x: 360, y: 20, w: 400, h: 570, label: 'One Node.js process: API server (Express 5, REST /api)' }
+    ],
+    nodes: [
+      { id: 'app', x: 40, y: 70, w: 210, h: 52, label: 'app/\nrouter, layout, guards' },
+      { id: 'feat', x: 40, y: 160, w: 210, h: 52, label: 'features/*\npages + TanStack Query' },
+      { id: 'lib', x: 40, y: 250, w: 210, h: 52, label: 'lib/api\nerror code → uk text' },
+      { id: 'ui', x: 40, y: 340, w: 210, h: 52, label: 'ui/\nshared primitives' },
+      { id: 'static', x: LX, y: 50, w: LW, h: 40, kind: 'note', label: 'Static file serving: built web app (npm start)' },
+      { id: 'mods', x: LX, y: 102, w: LW, h: 50, kind: 'note', label: 'modules: identity · verification · tasks · applications\npayments · delivery · chat · notifications · experience · admin' },
+      { id: 'mw', x: LX, y: 166, w: LW, h: 46, kind: 'layer', label: 'platform/http\nsession · origin · rate limit · validate · upload · errors' },
+      { id: 'routes', x: LX, y: 224, w: LW, h: 40, kind: 'layer', label: 'routes.ts: HTTP only' },
+      { id: 'policy', x: LX, y: 280, w: LW, h: 40, kind: 'layer', label: 'policy.ts: who may do what (403)' },
+      { id: 'service', x: LX, y: 336, w: LW, h: 40, kind: 'layer', label: 'service.ts: use case, owns the transaction' },
+      { id: 'domain', x: LX, y: 392, w: LW, h: 40, kind: 'layer', label: 'domain.ts: pure state machines' },
+      { id: 'repo', x: LX, y: 448, w: LW, h: 40, kind: 'layer', label: 'repo.ts: Drizzle queries' },
+      { id: 'mailer', x: LX, y: 518, w: 100, h: 44, kind: 'port', label: 'Mailer\nconsole / SMTP' },
+      { id: 'payport', x: 640, y: 518, w: 110, h: 44, kind: 'port', label: 'PaymentProvider\nsimulated' },
+      { id: 'fsport', x: 510, y: 518, w: 110, h: 44, kind: 'port', label: 'FileStorage\nlocal disk' },
+      { id: 'db', x: 830, y: 420, w: 190, h: 70, kind: 'store', label: 'Database\nSQLite data/ctoc.db\nADR-0004' },
+      { id: 'files', x: 830, y: 630, w: 190, h: 66, kind: 'store', label: 'File storage\nlocal disk data/uploads\nADR-0004' },
+      { id: 'smtp', x: 380, y: 636, w: 200, h: 56, kind: 'ext', label: 'SMTP provider\nexternal, optional' },
+      { id: 'shared', x: 60, y: 630, w: 250, h: 62, kind: 'note', label: 'packages/shared\nZod schemas · money · messages.uk.ts' },
+      { id: 'apiEdge', x: 360, y: 560, w: 0, h: 0, kind: 'anchor' }
+    ],
+    edges: [
+      { from: 'static', to: 'app', label: 'serves HTML/JS', dy: -8 },
+      { from: 'lib', to: 'mw', label: 'JSON over HTTPS,\ncookie session', lt: 0.45 },
+      { from: 'mw', to: 'routes' }, { from: 'routes', to: 'policy' }, { from: 'policy', to: 'service' },
+      { from: 'service', to: 'domain' }, { from: 'domain', to: 'repo' },
+      { from: 'repo', to: 'db', label: 'SQL, synchronous\ntransactions', dy: -24, lt: 0.5 },
+      { from: 'payport', to: 'db', label: 'internal ledger', lt: 0.5, dx: 12, dy: 12 },
+      { from: 'fsport', to: 'files', label: 'FileStorage port', dy: 16, lt: 0.62 },
+      { from: 'mailer', to: 'smtp', label: 'SMTP or console', dx: 70 },
+      { from: 'shared', to: 'ui', dashed: true, label: 'compiled into', lt: 0.5, dx: 44 },
+      { from: 'shared', to: 'apiEdge', dashed: true, label: 'compiled into', lt: 0.55, dx: 46 }
+    ]
+  });
+
+  /* ---------- 4.1 task (domain-model.md §3.1) ---------- */
+  var C1 = 140, MID = 320, C2 = 500, C3 = 810, C4 = 1010, R0 = 30, R1 = 170, R2 = 320, R3 = 470, W = 180, H = 52;
+  render('dg-task', {
+    w: 1200, h: 560,
+    nodes: [
+      { id: 'start', x: 30, y: R1 + 18, w: 16, h: 16, kind: 'start' },
+      { id: 'pending', x: C1, y: R1, w: W, h: H, kind: 'state', label: 'pending_moderation\n«На модерації»' },
+      { id: 'published', x: C2, y: R1, w: W, h: H, kind: 'state', label: 'published\n«Опубліковано»' },
+      { id: 'inprog', x: C3, y: R1, w: W, h: H, kind: 'state', label: 'in_progress\n«В роботі»' },
+      { id: 'rejected', x: MID, y: R0, w: W, h: H, kind: 'end', label: 'rejected\n«Відхилено»' },
+      { id: 'cancelled', x: MID, y: R2 + 20, w: W, h: H, kind: 'end', label: 'cancelled\n«Скасовано»' },
+      { id: 'revision', x: C4, y: R2, w: W - 10, h: H, kind: 'state', label: 'revision\n«На доопрацюванні»' },
+      { id: 'inreview', x: C3, y: R3, w: W, h: H, kind: 'state', label: 'in_review\n«На перевірці»' },
+      { id: 'done', x: C2, y: R3, w: W, h: H, kind: 'ok', label: 'done\n«Виконано»' }
+    ],
+    edges: [
+      { from: 'start', to: 'pending', label: 'customer creates\n(US-16, US-17)', lt: 0, dy: -34, dx: 30 },
+      { from: 'pending', to: 'published', label: 'moderator publishes\n(US-40/S1)' },
+      { from: 'pending', to: 'rejected', label: 'moderator rejects\n[reason] (US-40/S2)', dx: -56, lt: 0.55 },
+      { from: 'published', to: 'rejected', label: 'moderator unpublishes\n[no executor] (G-17)', dx: 62, lt: 0.55 },
+      { from: 'pending', to: 'cancelled', label: 'owner deletes\n(A-08)', dx: -44, lt: 0.5 },
+      { from: 'published', to: 'cancelled', label: 'owner deletes\n[no executor] (A-08)', dx: 58, lt: 0.45 },
+      { from: 'published', to: 'inprog', label: 'owner selects executor\n[escrow held]\n(US-25, US-26)' },
+      { from: 'inprog', to: 'inreview', label: 'executor submits\n[≥1 file] (US-28)', dx: 60, lt: 0.3 },
+      { from: 'inreview', to: 'done', label: 'owner accepts /\nmoderator releases\n(US-31, A-09)' },
+      { from: 'inreview', to: 'revision', bend: 34, label: 'owner returns\n[comment] (US-32, US-33)', dx: 40, dy: 18 },
+      { from: 'revision', to: 'inreview', bend: 34, label: 'executor resubmits\n(US-32/S1)', dx: 30, dy: -14 },
+      { from: 'inprog', to: 'cancelled', label: 'moderator refunds (A-09)', lt: 0.3, dy: -10 },
+      { from: 'inreview', to: 'cancelled', label: 'moderator refunds (A-09)', lt: 0.55, dy: 14 },
+      { from: 'revision', to: 'cancelled', bend: -40, label: 'moderator refunds (A-09)', lt: 0.2, dy: -12 }
+    ]
+  });
+
+  /* ---------- 4.2 student role (domain-model.md §3.2) ---------- */
+  render('dg-role', {
+    w: 1160, h: 340,
+    nodes: [
+      { id: 'start', x: 20, y: 62, w: 16, h: 16, kind: 'start' },
+      { id: 'unconf', x: 130, y: 44, w: 200, h: 52, kind: 'state', label: 'unconfirmed\nemail not confirmed' },
+      { id: 'conf', x: 470, y: 44, w: 200, h: 52, kind: 'state', label: 'confirmed\nno student role, cannot apply' },
+      { id: 'pend', x: 850, y: 44, w: 200, h: 52, kind: 'state', label: 'pending_review\ndocument pending' },
+      { id: 'ver', x: 850, y: 250, w: 200, h: 56, kind: 'ok', label: 'verified\nbadge «верифікований студент»' }
+    ],
+    edges: [
+      { from: 'start', to: 'unconf', label: 'registers (US-06)', lt: 0, dy: -26, dx: 44 },
+      { from: 'unconf', to: 'conf', label: 'opens link [token valid,\n≤24h] (US-07)' },
+      { from: 'conf', to: 'pend', label: 'uploads document\n[JPG/PNG/PDF, ≤10MB] (US-08)', dy: -6 },
+      { from: 'pend', to: 'conf', bend: -70, dy: 16, label: 'moderator rejects [reason],\nmay resubmit (US-39/S2, A-18)' },
+      { from: 'pend', to: 'ver', label: 'moderator approves\n(US-39/S1, US-09)', dx: 70 },
+      { from: 'ver', to: 'conf', label: 'moderator revokes (A-18)', lt: 0.45, dy: 14, dx: -30 }
+    ]
+  });
+
+  /* ---------- 4.3 application (domain-model.md §3.3) ---------- */
+  render('dg-app', {
+    w: 1160, h: 300,
+    nodes: [
+      { id: 'start', x: 30, y: 132, w: 16, h: 16, kind: 'start' },
+      { id: 'sent', x: 330, y: 114, w: 180, h: 52, kind: 'state', label: 'sent\n«Надіслано»' },
+      { id: 'acc', x: 840, y: 30, w: 180, h: 52, kind: 'ok', label: 'accepted\n«Прийнято»' },
+      { id: 'rej', x: 840, y: 200, w: 180, h: 52, kind: 'end', label: 'rejected\n«Відхилено»' }
+    ],
+    edges: [
+      { from: 'start', to: 'sent', label: 'verified student applies\n[task published, first\napplication, note ≤500]\n(US-18, US-19)', dy: -40 },
+      { from: 'sent', to: 'acc', label: 'owner selects this applicant\n[escrow held] (US-25/S1, US-20/S2)', dy: -22 },
+      { from: 'sent', to: 'rej', label: 'owner selects another applicant (US-25/S1)\nowner rejects it (US-20/S3)\ntask cancelled or unpublished (A-14)', dy: 34 }
+    ]
+  });
+
+  /* ---------- 3. scenario (overview.md §5) ---------- */
+  var steps = [
+    ['Visitor', '/, /payment-safety, /resume-info', 'GET /api/public/settings', 'Sees the beginners-only message, the steps and the commission', [], 'US-01…US-05'],
+    ['Student', '/register, /confirm-email', 'POST /api/auth/register · POST /api/auth/confirm-email', 'Account', ['unconfirmed → confirmed'], 'US-06, US-07'],
+    ['Student, Moderator', '/me/verification, /mod/verifications', 'POST /api/me/verification · POST /api/mod/verifications/:id/approve', 'Badge shown', ['pending_review → verified'], 'US-08, US-39, US-09'],
+    ['Student', '/me/profile', 'PUT /api/me/skills · PUT /api/me/profile', 'Skills and bio on the public profile', [], 'US-10, US-11'],
+    ['Customer, Moderator', '/c/tasks/new, /mod/tasks', 'POST /api/tasks · POST /api/mod/tasks/:id/publish', 'Commission snapshot', ['task: pending_moderation → published'], 'US-16, US-17, US-40'],
+    ['Student', '/feed, /tasks/:id', 'GET /api/tasks · POST /api/tasks/:id/applications', 'Application created', ['application: sent'], 'US-12…US-15, US-18, US-19'],
+    ['Customer', '/c/tasks/:id', 'GET /api/tasks/:id/applications · POST /api/tasks/:id/assign', 'Others rejected, notification sent', ['task: in_progress', 'escrow: held', 'application: accepted'], 'US-24, US-25, US-26, US-21'],
+    ['Student, Customer', '/work/:taskId', 'POST /api/tasks/:id/messages · POST /api/tasks/:id/result/files · POST /api/tasks/:id/result/submit', 'Result submitted', ['task: in_review'], 'US-22, US-23, US-27, US-28, US-29'],
+    ['Customer', '/c/tasks/:id', 'POST /api/tasks/:id/accept (or /return → revision)', 'Payout and commission, experience record, notification', ['task: done', 'escrow: released'], 'US-31, US-30, US-34, US-37, US-38 (US-32, US-33)'],
+    ['Student, Moderator', '/me/finance, /mod/withdrawals', 'POST /api/me/withdrawals · POST /api/mod/withdrawals/:id/mark-paid', 'Withdrawal processed', ['withdrawal: requested → paid'], 'US-35, US-36 (A-10)']
+  ];
+  var ol = document.getElementById('steps');
+  steps.forEach(function (s, i) {
+    var li = document.createElement('li'); li.className = 'step';
+    var chips = s[4].map(function (c) { return '<span class="chip state">' + c + '</span>'; }).join('');
+    li.innerHTML = '<div class="num">' + (i + 1) + '</div><div><div class="who">' + s[0] + '</div><dl class="meta">' +
+      '<dt>Page</dt><dd><code>' + s[1] + '</code></dd>' +
+      '<dt>Endpoints</dt><dd><code>' + s[2] + '</code></dd>' +
+      '<dt>Result</dt><dd>' + chips + s[3] + '</dd>' +
+      '<dt>Stories</dt><dd>' + s[5] + '</dd></dl></div>';
+    ol.appendChild(li);
+  });
+
+  /* ---------- 5. pages (overview.md §4) ---------- */
+  var pages = [
+    ['Public'],
+    ['/', 'Landing: beginners-only message, "Як це працює", commission', 'P', 'US-01, US-02, US-03'],
+    ['/payment-safety', '"Оплата та безпека"', 'P', 'US-04'],
+    ['/resume-info', 'How experience records are confirmed, with an example', 'P', 'US-05'],
+    ['/terms', 'Terms and current commission', 'P', 'US-03'],
+    ['/register', 'Sign-up, choosing student or customer', 'P', 'US-06 (customer path: OQ-04)'],
+    ['/login', 'Login', 'P', 'US-09/S3 (OQ-11)'],
+    ['/confirm-email', 'Result of the confirmation link, resend', 'P', 'US-07'],
+    ['/u/:userId', 'Public student profile: badge, skills, bio, experience', 'P', 'US-09, US-10, US-11, US-24, US-37, US-38'],
+    ['Student'],
+    ['/me/profile', 'Edit skills and bio', 'S- / S+', 'US-10, US-11, US-38/S3'],
+    ['/me/verification', 'Upload a student document and see its status', 'S-', 'US-08, US-39/S2'],
+    ['/feed', 'Task feed', 'S+', 'US-12, US-13, US-14, US-15'],
+    ['/tasks/:id', 'Task details and apply dialog with note', 'S+', 'US-13, US-15, US-18, US-19, US-42'],
+    ['/me/applications', '"Мої відгуки" with statuses', 'S- / S+', 'US-20'],
+    ['/me/work', '"Мої активні завдання"', 'S+', 'US-22, US-29'],
+    ['/work/:taskId', 'Workspace: terms, chat, result upload and submit, revision comment', 'S+ (executor)', 'US-22, US-23, US-27, US-28, US-29, US-32, US-33'],
+    ['/me/finance', 'Balance, per-task breakdown, withdrawal', 'S+', 'US-34, US-35, US-36'],
+    ['/notifications', 'Notification centre', 'A', 'US-21, US-30, US-39/S2'],
+    ['Customer'],
+    ['/c/tasks/new', 'Task form', 'C', 'US-16, US-17'],
+    ['/c/tasks', 'My tasks with statuses', 'C', 'none (OQ-07)'],
+    ['/c/tasks/:id', 'Task management: candidates, select and reserve, review result, chat', 'C (owner)', 'US-23, US-24, US-25, US-26, US-31, US-32, US-33'],
+    ['/c/balance', 'Sandbox balance top-up', 'C', 'US-26 (OQ-09)'],
+    ['Moderator'],
+    ['/mod/verifications', 'Student document queue', 'M', 'US-39, US-41'],
+    ['/mod/tasks', 'Task moderation queue, deal resolution', 'M', 'US-40, US-14, US-15/S2 (resolution: OQ-08)'],
+    ['/mod/withdrawals', 'Withdrawal requests', 'M', 'none (OQ-10)'],
+    ['/mod/settings', 'Commission, price limits, university domains', 'M', 'US-03/S3']
+  ];
+  var tb = document.querySelector('#pagesTable tbody');
+  pages.forEach(function (p) {
+    var tr = document.createElement('tr');
+    if (p.length === 1) { tr.innerHTML = '<td class="group" colspan="4">' + p[0] + '</td>'; }
+    else { tr.innerHTML = '<td><code>' + p[0] + '</code></td><td>' + p[1] + '</td><td>' + p[2] + '</td><td>' + p[3] + '</td>'; }
+    tb.appendChild(tr);
+  });
+
+  /* ---------- 6. decisions (docs/adr/README.md) ---------- */
+  var adrs = [
+    ['0001', 'Platform: responsive web (React)', '0001-platform-web.md'],
+    ['0002', 'Architecture style: modular monolith (backend), feature folders (frontend)', '0002-architecture-style.md'],
+    ['0003', 'Repository: npm-workspaces monorepo', '0003-repository-structure.md'],
+    ['0004', 'Data store: SQLite + Drizzle, files on local disk', '0004-data-store-and-files.md'],
+    ['0005', 'Backend: Express 5, Zod, REST, error format, polling', '0005-backend-api.md'],
+    ['0006', 'Authentication: cookie sessions, one role per account', '0006-authentication.md'],
+    ['0007', 'Concurrency and money: DB-enforced invariants, simulated payments', '0007-concurrency-and-money.md'],
+    ['0008', 'Frontend: Vite, React Router, TanStack Query, Tailwind', '0008-frontend-stack.md'],
+    ['0009', 'Deployment: local first, optional single hosted service', '0009-deployment.md']
+  ];
+  var grid = document.getElementById('adrs');
+  adrs.forEach(function (a) {
+    var parts = a[1].split(': ');
+    var d = document.createElement('div'); d.className = 'card adr';
+    d.innerHTML = '<div class="no">ADR-' + a[0] + ' · Proposed</div><h4>' + parts[0] + '</h4><p>' + parts.slice(1).join(': ') +
+      '</p><div class="file"><code>docs/adr/' + a[2] + '</code></div>';
+    grid.appendChild(d);
+  });
+
+  /* ---------- 7. open questions (overview.md §7, condensed) ---------- */
+  var oq = [
+    ['OQ-01', 'DevMatch "Project, Role" mapped to CtoC Task and Student role. Is this correct?'],
+    ['OQ-02', 'US-24/S2 contradicts US-18/S3 (can a non-verified user apply?)'],
+    ['OQ-03', '«На перевірці» labels two task states. Which display labels?'],
+    ['OQ-04', 'No story for customer registration'],
+    ['OQ-05', '«Студент» role in US-08 versus account role plus verified flag'],
+    ['OQ-06', 'No display name in registration'],
+    ['OQ-07', 'No "my tasks" page or customer notifications'],
+    ['OQ-08', 'Cancellation and disputes are undefined (US-37/S2)'],
+    ['OQ-09', 'How a customer funds the escrow balance'],
+    ['OQ-10', 'Who processes withdrawals'],
+    ['OQ-11', 'No login, logout or password-reset stories'],
+    ['OQ-12', 'US-34/S2 and S3 assume a real payment gateway'],
+    ['OQ-13', 'Detecting foreign-bank cards needs BIN data'],
+    ['OQ-14', '"обсяг" versus "опис", and confidentiality of public experience records'],
+    ['OQ-15', 'US-41/S3 cannot be enforced technically'],
+    ['OQ-16', 'US-02/S2 and S3 assume dynamic content'],
+    ['OQ-17', 'Limits with no source value (proposed values marked [prop])'],
+    ['OQ-18', 'Allow .zip for result files?']
+  ];
+  var ul = document.getElementById('oq');
+  oq.forEach(function (q) { var li = document.createElement('li'); li.innerHTML = '<strong>' + q[0] + '</strong> ' + q[1]; ul.appendChild(li); });
+})();
+</script>
+</body>
+</html>
