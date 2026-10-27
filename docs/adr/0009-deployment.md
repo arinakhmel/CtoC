@@ -19,7 +19,7 @@ The budget is 0 UAH and the team has no DevOps experience. Local launch after `g
 
 ## Decision
 
-1. **Primary target:** `git clone` → `npm install` → `npm run dev`. The database is created, migrated and seeded on first start (ADR-0003). `npm start` serves the built frontend from the API for a production-like run.
+1. **Primary target:** `git clone` → `pnpm install` → `cp .env.example .env` → `pnpm dev`. Pending migrations are applied on start (ADR-0003). A production-like run serves the built frontend from the API.
 2. **Optional hosted demo:** one Node web service on a free tier that serves the API and `apps/web/dist` from the same origin, with a `/healthz` endpoint. It runs one instance. The provider is chosen in week 4 after checking current free-tier terms. Candidates include Render, Railway and Fly, but none is promised.
 3. **Data on the host is disposable.** The seed recreates demo accounts, tasks and a moderator on an empty database. Before a demo, run through the scripted flow once to warm up the service.
 4. **CI:** one GitHub Actions workflow on pull requests: install, typecheck, test, build.

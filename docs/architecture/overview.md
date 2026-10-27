@@ -87,7 +87,7 @@ flowchart LR
 
     subgraph server["One Node.js process (ADR-0002, ADR-0009)"]
         api["API server<br/>Express 5, REST /api<br/>modules + layers"]
-        static["Static file serving<br/>built web app (npm start)"]
+        static["Static file serving<br/>built web app (pnpm start)"]
     end
 
     db[("Database<br/>SQLite file data/ctoc.db<br/>ADR-0004")]
@@ -96,7 +96,7 @@ flowchart LR
 
     web -- "JSON over HTTPS, cookie session" --> api
     static -- "serves HTML/JS" --> web
-    api -- "SQL, synchronous transactions" --> db
+    api -- "Prisma, short transactions" --> db
     api -- "FileStorage port" --> files
     api -- "Mailer port (SMTP or console)" --> smtp
 ```
@@ -123,7 +123,7 @@ There are five containers: the browser SPA, the API, static serving inside the s
 
 ### Components of the API server (`apps/api`)
 
-Every module has the same layers (ADR-0002): `routes.ts` → `policy.ts` → `service.ts` (owns the transaction) → `domain.ts` (pure state machine) → `repo.ts` (Drizzle).
+Every module has the same layers (ADR-0002): `routes.ts` → `policy.ts` → `service.ts` (owns the transaction) → `domain.ts` (pure state machine) → `repo.ts` (Prisma).
 
 | Module | Responsibility |
 |---|---|

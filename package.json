@@ -1,0 +1,25 @@
+{
+  "name": "ctoc",
+  "private": true,
+  "version": "0.0.0",
+  "description": "CtoC: micro-task marketplace for beginner students",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter \"./apps/*\" --parallel dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck && tsc -p e2e/tsconfig.json --noEmit",
+    "test": "pnpm -r test",
+    "test:e2e": "playwright test",
+    "db:generate": "pnpm --filter @ctoc/api db:generate",
+    "db:migrate": "pnpm --filter @ctoc/api db:migrate",
+    "db:reset": "pnpm --filter @ctoc/api db:reset"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.9.0"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm db:generate:*)",
+      "Bash(pnpm db:migrate:*)",
+      "Bash(pnpm exec prisma generate:*)",
+      "Bash(pnpm exec prisma migrate dev:*)",
+      "Bash(pnpm exec prisma migrate deploy:*)",
+      "Bash(pnpm exec prisma migrate status:*)",
+      "Bash(pnpm exec prisma migrate diff:*)",
+      "Bash(pnpm --filter @ctoc/api dev:*)",
+      "Bash(pnpm --filter @ctoc/api typecheck:*)",
+      "Bash(pnpm --filter @ctoc/api test:*)",
+      "Bash(pnpm --filter @ctoc/api exec vitest:*)",
+      "Bash(pnpm --filter @ctoc/web dev:*)",
+      "Bash(pnpm --filter @ctoc/web typecheck:*)",
+      "Bash(pnpm --filter @ctoc/web test:*)",
+      "Bash(pnpm --filter @ctoc/web exec vitest:*)",
+      "Bash(pnpm --filter @ctoc/shared typecheck:*)",
+      "Bash(pnpm --filter @ctoc/shared test:*)",
+      "Bash(pnpm --filter @ctoc/shared exec vitest:*)",
+      "Bash(pnpm exec playwright test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git blame:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git branch --show-current)",
+      "Bash(git branch --list:*)",
+      "Bash(git remote -v)",
+      "Bash(git worktree list)"
+    ],
+    "ask": [
+      "Bash(pnpm db:reset:*)",
+      "Bash(pnpm exec prisma migrate reset:*)",
+      "Bash(pnpm exec playwright install:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-input-docs.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

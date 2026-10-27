@@ -39,8 +39,8 @@ Everything the system or the team depends on outside our own code. For each: wha
 ## Database (SQLite)
 
 - **What we take:** persistent relational storage with transactions and constraints.
-- **Integration type:** an embedded file (`data/ctoc.db`) through a native Node module. There is no service to run or reach (ADR-0004).
-- **If unavailable or lost:** `npm run db:reset` recreates and reseeds. On a hosted instance the disk may be wiped on redeploy, which is accepted (T-02). If the native module does not install on a machine, the fallback is Node's built-in SQLite module (T-01).
+- **Integration type:** an embedded file (`data/ctoc.db`) through Prisma Client. There is no service to run or reach (ADR-0004).
+- **If unavailable or lost:** `pnpm db:reset` recreates the database. On a hosted instance the disk may be wiped on redeploy, which is accepted (T-02). If Prisma's engines cannot be downloaded on a machine, they are fetched once and cached (T-01).
 
 ## File storage
 
@@ -58,7 +58,7 @@ Everything the system or the team depends on outside our own code. For each: wha
 
 - **What we take:** source hosting, pull requests, and a single Actions workflow (install, typecheck, test, build).
 - **Integration type:** none in the product. It is not an API integration of the app.
-- **If unavailable:** work continues locally. The same commands (`npm run typecheck`, `npm test`, `npm run build`) run on every machine.
+- **If unavailable:** work continues locally. The same commands (`pnpm typecheck`, `pnpm test`, `pnpm build`) run on every machine.
 
 ## npm registry
 

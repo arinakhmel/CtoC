@@ -96,3 +96,24 @@
 
 Детальну технічну специфікацію, карту історій, декомпозовані User Stories та критерії приймання можна знайти за посиланням:
 - [Специфікація вимог до MVP (docs/requirements.md)](docs/requirements.md)
+
+## Запуск (3 команди)
+
+Потрібні Node 22 (`.nvmrc`) і pnpm (`corepack enable`).
+
+```bash
+git clone https://github.com/arinakhmel/CtoC.git && cd CtoC
+pnpm install
+pnpm dev
+```
+
+`pnpm dev` застосовує міграції, створює базу `apps/api/data/ctoc.db` і запускає разом API (http://localhost:3001/api/health) та веб-застосунок (http://localhost:5173). Файл `.env` не обов'язковий: значення за замовчуванням лежать у `.env.example`; щоб змінити порт чи базу, скопіюйте його в `.env`.
+
+| Команда | Що робить |
+|---|---|
+| `pnpm typecheck` | перевірка типів у всіх пакетах і в e2e |
+| `pnpm test` | unit-, API- і компонентні тести (vitest) |
+| `pnpm test:e2e` | e2e у Playwright (перший раз: `pnpm exec playwright install chromium`) |
+| `pnpm db:reset` | перестворити локальну базу |
+
+Структура: `apps/api` (Express 5 + Prisma + SQLite), `apps/web` (Vite + React), `packages/shared` (zod-схеми, статуси, коди помилок). Документація та рішення: `docs/`. Правила роботи з Claude Code: `CLAUDE.md`.

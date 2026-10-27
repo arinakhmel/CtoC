@@ -167,7 +167,7 @@ This follows the risk register: M-01 (scope) and M-05 (late integration).
 | **4. Work, accept, pay** | Week 3 | US-22, US-27, US-28, US-48, US-31, US-34, US-37, US-38, US-30 (+ `GET /api/me/work`) | Completes journey step 7 | The journey from registration to the verified experience record runs in the browser. **Demo checkpoint.** |
 | **5. Remaining S1 scenarios** | Week 3–4 | US-10, US-11, US-19, US-20, US-23 (chat), US-29, US-32, US-33, US-35, US-36 (+ `/mod/withdrawals`) | Fills the journey without changing its shape | Every story has its S1 working |
 | **6. Public pages (parallel filler)** | From week 1, by the frontend developer | US-01, US-02, US-03 (page), US-04, US-05 | Static, no backend dependency. A good task while the backend slices are in progress. | Pages exist and pass the content checks |
-| **7. Pass B: edge scenarios and hardening** | Week 4 | All S2 and S3 in §1. First the authorization matrix (every endpoint × role), the concurrency tests and `npm run check:invariants`. Then upload checks, then US-41 and US-42. | Cheap once the slices exist, and the money and permission rules need most attention | Tests named after INV-xx and every scenario in §1 are green |
+| **7. Pass B: edge scenarios and hardening** | Week 4 | All S2 and S3 in §1. First the authorization matrix (every endpoint × role), the concurrency tests and `pnpm check:invariants`. Then upload checks, then US-41 and US-42. | Cheap once the slices exist, and the money and permission rules need most attention | Tests named after INV-xx and every scenario in §1 are green |
 | **8. Demo preparation** | Week 5 | Seed, scripted walkthrough, hosting time-box, cut list | | A local demo from a clean clone, with a rehearsed script |
 
 **Cut list if behind** (agreed earlier, risk M-01), cut in this order:
@@ -261,3 +261,12 @@ If the assumption is wrong, these stories change.
 1. Get a decision on W-01, W-03 and A-06, since they change endpoints or access rules.
 2. Have the product owner reword the scenarios listed under W-04, W-05, W-07, W-14 and W-20 (and US-18/S3, whose wording still assumes a non-verified user who cannot see the feed).
 3. Confirm the placeholders for W-24 (customer funding and withdrawal processing). The student-side notifications for a returned result and for verification approval still have no story either.
+
+---
+
+## 5. Implementation status
+
+Updated by `/implement-story` when a story is implemented. One row per story. A story is `done` only when it meets the definition of done in `CLAUDE.md`.
+
+| Story | Status | Code | Tests |
+|---|---|---|---|
