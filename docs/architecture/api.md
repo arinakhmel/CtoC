@@ -35,11 +35,11 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| POST | `/api/auth/register` | US-06 | P | 201 | 400 `VALIDATION_FAILED`, `EMAIL_DOMAIN_NOT_ALLOWED` · 409 `EMAIL_TAKEN` · 429 |
+| POST | `/api/auth/register` | US-06, US-43, US-44 | P | 201 | 400 `VALIDATION_FAILED`, `EMAIL_DOMAIN_NOT_ALLOWED` · 409 `EMAIL_TAKEN` · 429 |
 | POST | `/api/auth/confirm-email` | US-07/S1, S2 | P | 200 | 400 `TOKEN_INVALID`, `TOKEN_EXPIRED` |
 | POST | `/api/auth/resend-confirmation` | US-07/S3 | A (unconfirmed) | 202 | 409 `EMAIL_ALREADY_CONFIRMED` · 429 |
-| POST | `/api/auth/login` | US-09/S3 (OQ-11) | P | 200 | 401 `INVALID_CREDENTIALS` · 429 |
-| POST | `/api/auth/logout` | none | A | 204 | |
+| POST | `/api/auth/login` | US-45 | P | 200 | 401 `INVALID_CREDENTIALS` · 429 |
+| POST | `/api/auth/logout` | US-46 | A | 204 | |
 | GET | `/api/me` | none | A | 200 | 401 |
 | PUT | `/api/me/profile` | US-11 | S- | 200 | 400 `BIO_TOO_LONG` · 403 `ROLE_FORBIDDEN` |
 | PUT | `/api/me/skills` | US-10 | S- | 200 | 400 `SKILL_EMPTY`, `SKILLS_LIMIT` |
@@ -61,8 +61,8 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S- (any student with a confirmed email) | 200 | 401 · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
 | GET | `/api/tasks/:id` | US-13, US-15, US-22 | S- (published) · Own · Ex · M | 200 | 404 `NOT_FOUND` |
 | POST | `/api/tasks` | US-16, US-17, US-40/S3 | C (confirmed) | 201, always `pending_moderation` | 400 `VALIDATION_FAILED`, `TITLE_TOO_SHORT`, `PRICE_BELOW_MIN`, `PRICE_ABOVE_MAX`, `DEADLINE_IN_PAST` · 403 `ROLE_FORBIDDEN` |
-| GET | `/api/my/tasks` | none (OQ-07) | C | 200 | |
-| DELETE | `/api/tasks/:id` | US-22/S2, A-08 | Own | 204 | 403 `NOT_TASK_OWNER` · 409 `TASK_HAS_EXECUTOR` |
+| GET | `/api/my/tasks` | US-50 | C | 200 (each task with `applicationsCount`) | |
+| DELETE | `/api/tasks/:id` | US-22/S2, US-50, A-08 | Own | 204 | 403 `NOT_TASK_OWNER` · 409 `TASK_HAS_EXECUTOR` |
 
 ### Applications and executor selection
 
@@ -92,7 +92,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 |---|---|---|---|---|---|
 | GET | `/api/tasks/:id/messages?after=` | US-23 | Own · Ex | 200 | 403 `NOT_CHAT_PARTICIPANT` |
 | POST | `/api/tasks/:id/messages` | US-23 | Own · Ex | 201 | 400 `MESSAGE_EMPTY`, `MESSAGE_TOO_LONG` · 403 `NOT_CHAT_PARTICIPANT` · 409 `CHAT_CLOSED` |
-| GET | `/api/me/notifications?after=` | US-21, US-30 | A | 200 | |
+| GET | `/api/me/notifications?after=` | US-21, US-30, US-47, US-48, US-49 | A | 200 | |
 | POST | `/api/me/notifications/:id/read` | US-21/S3 | A (recipient) | 204 | 404 |
 
 ### Payments
@@ -178,7 +178,7 @@ Messages marked **[AC]** are quoted from a Gherkin scenario and must match exact
 | 400 | `REASON_REQUIRED` | Moderator rejection without a reason. | «Вкажіть причину відхилення» | US-39/S2, US-40/S2 |
 | 400 | `CARD_INVALID` | Not 16 digits, or the Luhn check fails. | «Невірний формат української банківської картки» | US-36/S2 |
 | 401 | `AUTH_REQUIRED` | No or expired session. The UI redirects to `/login`. | «Увійдіть, щоб продовжити» | US-12/S3 |
-| 401 | `INVALID_CREDENTIALS` | Wrong email or password. | «Невірна пошта або пароль» | OQ-11 |
+| 401 | `INVALID_CREDENTIALS` | Wrong email or password. | «Невірна пошта або пароль» | US-45/S2 |
 | 403 | `ROLE_FORBIDDEN` | Wrong role for the endpoint (for example a student opening `/api/mod/*`). | «Доступ заборонено» | US-39/S3 |
 | 403 | `ORIGIN_MISMATCH` | CSRF check failed. | «Доступ заборонено» | ADR-0006 |
 | 403 | `EMAIL_NOT_CONFIRMED` | Action needs a confirmed email. | «Спершу підтвердіть пошту» | US-08/S1 |
@@ -208,7 +208,7 @@ Messages marked **[AC]** are quoted from a Gherkin scenario and must match exact
 | 409 | `INVALID_TRANSITION` | Any other illegal state change. | «Дія недоступна в поточному статусі» | domain-model §3 |
 | 422 | `INSUFFICIENT_FUNDS` | Customer balance is below the task price when selecting. Selection is cancelled. | **[AC]** «Недостатньо коштів» | US-26/S2 |
 | 422 | `INSUFFICIENT_BALANCE` | Withdrawal above the available balance. | **[AC]** «Недостатньо коштів на балансі для виведення» | US-36/S3 |
-| 429 | `RATE_LIMITED` | Too many register, login or resend attempts. | «Забагато спроб. Спробуйте пізніше» | NFR-13 |
+| 429 | `RATE_LIMITED` | Too many register, login or resend attempts. | «Забагато спроб. Спробуйте пізніше» | US-45/S3, NFR-13 |
 | 500 | `INTERNAL_ERROR` | Unexpected failure. The whole transaction is rolled back, so no notification is sent and no status changes. No internals in the response. | «Щось пішло не так. Спробуйте пізніше» | US-21/S2, US-30/S2, US-34/S2 |
 
 The 422, 429 and 500 codes go beyond the requested 400–409 set. They follow the ADR-0005 status mapping (422 is a business rule with valid input, 429 is a rate limit, 500 is an unexpected failure).

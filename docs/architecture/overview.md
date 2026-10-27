@@ -168,8 +168,8 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 | `/payment-safety` | "Оплата та безпека" | P | US-04 |
 | `/resume-info` | How experience records are confirmed, with an example | P | US-05 |
 | `/terms` | Terms and current commission | P | US-03 |
-| `/register` | Sign-up, choosing student or customer | P | US-06 (customer path: OQ-04) |
-| `/login` | Login | P | US-09/S3 (OQ-11) |
+| `/register` | Sign-up, choosing student or customer, with display name | P | US-06, US-43, US-44 |
+| `/login` | Login. Logout is a button in the header of every page. | P | US-45, US-46 |
 | `/confirm-email` | Result of the confirmation link, resend | P | US-07 |
 | `/u/:userId` | Public student profile: badge, skills, bio, experience | P | US-09, US-10, US-11, US-24, US-37, US-38 |
 | `/me/profile` | Edit skills and bio | S- / S+ | US-10, US-11, US-38/S3 |
@@ -180,9 +180,9 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 | `/me/work` | "Мої активні завдання" | S+ | US-22, US-29 |
 | `/work/:taskId` | Workspace: terms, chat, result upload and submit, revision comment | S+ (executor) | US-22, US-23, US-27, US-28, US-29, US-32, US-33 |
 | `/me/finance` | Balance, per-task breakdown, withdrawal | S+ | US-34, US-35, US-36 |
-| `/notifications` | Notification centre | A | US-21, US-30, US-39/S2 |
+| `/notifications` | Notification centre | A | US-21, US-30, US-39/S2, US-47, US-48, US-49 |
 | `/c/tasks/new` | Task form | C | US-16, US-17 |
-| `/c/tasks` | My tasks with statuses | C | none (OQ-07) |
+| `/c/tasks` | My tasks with statuses | C | US-50 |
 | `/c/tasks/:id` | Task management: candidates, select and reserve, review result, chat | C (owner) | US-23, US-24, US-25, US-26, US-31, US-32, US-33 |
 | `/c/balance` | Sandbox balance top-up | C | US-26 (OQ-09) |
 | `/mod/verifications` | Student document queue | M | US-39, US-41 |
@@ -190,7 +190,7 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 | `/mod/withdrawals` | Withdrawal requests | M | none (OQ-10) |
 | `/mod/settings` | Commission, price limits, university domains | M | US-03/S3 |
 
-Every one of the 42 stories appears in at least one page row.
+Every one of the 50 stories (US-01 to US-42 and the added US-43 to US-50) appears in at least one page row. Logout (US-46) is a header button and is listed on the `/login` row.
 
 ---
 
@@ -234,11 +234,11 @@ These are stories that are not covered, or that contradict each other or the des
 | ID | Question | Decision | Applied in |
 |---|---|---|---|
 | OQ-01 | Project→Task and Role→student-role mapping | Naming only, no product impact. The owner asked what it meant. Treated as accepted by default. | overview naming note |
-| OQ-04 | Customers sign up with any email | **Yes.** Confirmed by the same link flow. | ADR-0006, `api.md` register |
-| OQ-06 | Ask for a display name at sign-up | **Yes.** 2–60 characters. | domain-model User |
-| OQ-07 | Customer notifications and a "My tasks" page | **Yes.** Stories still to be written. | `/c/tasks`, `GET /api/my/tasks`, notification types |
+| OQ-04 | Customers sign up with any email | **Yes.** Confirmed by the same link flow. Written as US-43. | ADR-0006, `api.md` register |
+| OQ-06 | Ask for a display name at sign-up | **Yes.** 2–60 characters. Written as US-44. | domain-model User |
+| OQ-07 | Customer notifications and a "My tasks" page | **Yes.** Written as US-47, US-48, US-49 and US-50. | `/c/tasks`, `GET /api/my/tasks`, notification types |
 | OQ-08 | Customer cancels after selecting an executor | **No.** The customer may delete only before selection. After it, only a moderator resolves (A-09). | domain-model §3.1 |
-| OQ-11 | Login and logout stories | **Yes.** Password reset stays postponed. | `api.md` auth endpoints, ADR-0006 |
+| OQ-11 | Login and logout stories | **Yes.** Password reset stays postponed. Written as US-45 and US-46. | `api.md` auth endpoints, ADR-0006 |
 | OQ-12 | US-34/S2 and S3 gateway and webhook scenarios | **Replaced** by tests for the simulated payment provider. | `traceability.md` US-34 |
 | OQ-19 | Feed visibility (was W-02): US-12 says verified students only, US-18/S3 has a non-verified student pressing «Відгукнутися» | **Variant B.** Any student with a confirmed email reads the feed and task details. Only applying needs verification. | `api.md`, overview §4, INV-02, ADR-0006, `traceability.md` |
 

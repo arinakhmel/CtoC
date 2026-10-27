@@ -1,8 +1,8 @@
 # CtoC: Traceability Matrix
 
-Maps every story **US-01…US-42** and each of its three Gherkin scenarios to the endpoint, page, entities and response code that implement it, then proposes an implementation order and lists the weak spots.
+Maps every story **US-01…US-50** and each of its three Gherkin scenarios to the endpoint, page, entities and response code that implement it, then proposes an implementation order and lists the weak spots.
 
-**Sources.** The stories and scenarios are in `docs/requirements.md` §4 (126 scenarios, 3 per story). There are no `docs/US-*.md` files. The design is in [`overview.md`](overview.md), [`api.md`](api.md), [`domain-model.md`](domain-model.md) and [`data-model.md`](data-model.md). Digest ids (`OQ-`, `A-`, `C-`, `G-`) refer to [`requirements-digest.md`](../analysis/requirements-digest.md) and to the open questions in `overview.md` §7.
+**Sources.** The stories and scenarios are in `docs/requirements.md` §4 (150 scenarios, 3 per story; US-43 to US-50 were added on 2026-10-27 for the customer-side decisions). There are no `docs/US-*.md` files. The design is in [`overview.md`](overview.md), [`api.md`](api.md), [`domain-model.md`](domain-model.md) and [`data-model.md`](data-model.md). Digest ids (`OQ-`, `A-`, `C-`, `G-`) refer to [`requirements-digest.md`](../analysis/requirements-digest.md) and to the open questions in `overview.md` §7.
 
 ## How to read the matrix
 
@@ -100,23 +100,36 @@ Maps every story **US-01…US-42** and each of its three Gherkin scenarios to th
 | US-41 | none of its own (policies on applications and `/api/mod/verifications/*`) | `/mod/verifications` | VerificationRequest | S1 [API] only verified students can apply (see US-18/S3) · S2 [API] a forged document is rejected through the US-39/S2 path · S3 ⚠ [DESIGN] "technical rules make commercial contractors impossible" cannot be tested by code (W-12) |
 | US-42 | `POST /api/tasks/:id/applications` | `/tasks/:id` | Application | S1 [UI] the apply form has no price or budget field · S2 [API] body with a lower `priceKopecks` → ignored, **201**, task price unchanged · S3 [UI] no auction or competition-by-price elements |
 
+### Epic 8: Customer accounts, login, customer notifications (added)
+
+| Story | Endpoints | Pages | Entities | Scenarios → code |
+|---|---|---|---|---|
+| US-43 | `POST /api/auth/register` (`role: customer`), `POST /api/auth/confirm-email` | `/register`, `/confirm-email` | User, EmailToken | S1 [API] customer with a non-university email → **201**, unconfirmed, email in `/api/dev/outbox` · S2 [API] a student calls `POST /api/tasks` → **403** `ROLE_FORBIDDEN`, and a customer calling `POST …/applications` → **403** `ROLE_FORBIDDEN` · S3 [API] repeated email → **409** `EMAIL_TAKEN` |
+| US-44 | `POST /api/auth/register` (`displayName`), `GET /api/tasks/:id/applications`, `GET /api/profiles/:userId` | `/register`, `/c/tasks/:id`, `/u/:userId` | User (`displayName`) | S1 [API] name 2–60 characters → **201**, shown in the applicant list → **200** · S2 [API] 1-character name → **400** `VALIDATION_FAILED` (detail on `displayName`) · S3 [API] the public profile response has the name and **no email field** |
+| US-45 | `POST /api/auth/login`, `GET /api/me` | `/login` | User, Session | S1 [API] **200**, `sid` cookie set, UI opens the start page for the role · S2 [API] wrong password and unknown email both → **401** `INVALID_CREDENTIALS` with the same message · S3 [API] repeated failures → **429** `RATE_LIMITED` |
+| US-46 | `POST /api/auth/logout` | header of every page, `/login` | Session | S1 [API] **204**, session row deleted, UI shows `/` · S2 [API] a request with the old cookie → **401** `AUTH_REQUIRED` · S3 [UI] expired session → UI redirects to `/login` with «Увійдіть, щоб продовжити» |
+| US-47 | `POST /api/tasks/:id/applications` (trigger), `GET /api/me/notifications` | `/notifications` | Notification (`application_received`), Application | S1 [API] the owner gets «Новий відгук на завдання «Назва»» in the same transaction · S2 [API] a duplicate application → **409** `ALREADY_APPLIED`, no notification · S3 [API] unread notification is still listed later |
+| US-48 | `POST /api/tasks/:id/result/submit` (trigger), `GET /api/me/notifications` | `/notifications` | Notification (`result_submitted`), ResultVersion | S1 [API] the owner gets the «Студент надіслав результат…» notification · S2 [API] submit without files → **409** `NO_RESULT_FILES`, no notification · S3 [API] resubmission after revision creates a new notification |
+| US-49 | `POST /api/mod/tasks/:id/publish`, `…/reject` (trigger), `GET /api/me/notifications` | `/notifications`, `/c/tasks` | Notification (`task_published`, `task_rejected`), Task | S1 [API] «Ваше завдання «Назва» опубліковано» · S2 [API] «…відхилено. Причина: …» carries the moderator's reason · S3 [API] reject without a reason → **400** `REASON_REQUIRED`, status unchanged, no notification |
+| US-50 | `GET /api/my/tasks`, `DELETE /api/tasks/:id`, `GET /api/tasks/:id` | `/c/tasks`, `/c/tasks/:id` | Task, Application | S1 [API] **200**, own tasks with status, price, deadline and `applicationsCount` · S2 [API] another customer's task → **404** `NOT_FOUND`, and the list contains only own tasks · S3 [API] delete before selection → **204**, status `cancelled`, applications `rejected`. After selection → **409** `TASK_HAS_EXECUTOR` |
+
 ---
 
 ## 2. Scenario coverage summary
 
-All **126 scenarios** (42 stories × 3) are mapped. Counted from the matrix above:
+All **150 scenarios** (50 stories × 3) are mapped. Counted from the matrix above:
 
 | Test level | Scenarios | Note |
 |---|---|---|
-| `[API]` | 95 | Includes the 403, 409 and 422 cases. The main automated suite. One of them, US-18/S3, is also `[UI]`. |
-| `[UI]` | 13 | Mobile layout, absent price or auction controls, local time zone |
+| `[API]` | 118 | Includes the 403, 409 and 422 cases. The main automated suite. One of them, US-18/S3, is also `[UI]`. |
+| `[UI]` | 14 | Mobile layout, absent price or auction controls, local time zone, session expiry |
 | `[CONTENT]` | 11 | Static public pages (US-01 to US-05) |
 | `[DB]` | 4 | Schema limits and encoding. One scenario (US-09/S3) is both `[UI]` and `[DB]`. |
 | `[TX]` | 3 | Fault injection inside a transaction (US-21/S2, US-30/S2, US-34/S2) |
 | `[UNIT]` | 1 | Money rounding (US-35/S2) |
 | `[DESIGN]` | 1 | Not testable by code (US-41/S3) |
 
-**10 scenarios are still marked ⚠** because they conflict with the requirements or the design, or cannot be implemented as worded: US-02/S2, US-02/S3, US-12/S2, US-13/S2, US-15/S2, US-24/S2, US-25/S3, US-36/S2, US-37/S2, US-41/S3. Each has an entry in §4.
+**10 scenarios are still marked ⚠** because they conflict with the requirements or the design, or cannot be implemented as worded: US-02/S2, US-02/S3, US-12/S2, US-13/S2, US-15/S2, US-24/S2, US-25/S3, US-36/S2, US-37/S2, US-41/S3. Each has an entry in §4. None of the 24 new scenarios (US-43 to US-50) is marked.
 
 **5 scenarios are marked ✔**: the conflict was decided by the product owner and the scenario is implemented as decided: US-18/S3, US-21/S2, US-30/S2, US-34/S2, US-34/S3.
 
@@ -124,8 +137,7 @@ Endpoints in `api.md` that **no story covers directly**. Each exists to support 
 
 | Endpoint | Why it exists | Related |
 |---|---|---|
-| `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/me` | No login story | OQ-11 |
-| `GET /api/my/tasks` | Customer "my tasks" list | OQ-07 |
+| `GET /api/me` | Current user, used by every page after login (US-45) | |
 | `POST /api/me/balance/sandbox-topup` | Customer funding for US-26 | OQ-09, A-06 |
 | `POST /api/mod/users/:id/revoke-student` | Revoking student status | A-18 |
 | `POST /api/mod/tasks/:id/resolve` | Manual deal resolution | OQ-08, A-09 |
@@ -148,11 +160,11 @@ This follows the risk register: M-01 (scope) and M-05 (late integration).
 
 | Step | When | Stories | Why here | Done when |
 |---|---|---|---|---|
-| **0. Walking skeleton** | Week 1 | US-06, US-07 plus login and logout (OQ-11) | It forces every layer to exist: shared schemas, the DB, the error format, sessions, the Vite shell, route guards, CI and the seed with a moderator | A browser registers, confirms through the outbox page, logs in, and `GET /api/me` works |
+| **0. Walking skeleton** | Week 1 | US-06, US-07, US-43, US-44, US-45, US-46 | It forces every layer to exist: shared schemas, the DB, the error format, sessions, the Vite shell, route guards, CI and the seed with a moderator | A browser registers, confirms through the outbox page, logs in, and `GET /api/me` works |
 | **1. Verified student** | Week 1–2 | US-08, US-39 (S1), US-09 | Nothing else works for students without it | A seeded moderator approves a document and the badge shows |
-| **2. Tasks and feed** | Week 2 | US-03 (settings and commission), US-16, US-17, US-40 (S1), US-14, US-12, US-13, US-15 | Commission must exist before net price (US-15). Moderation gates the feed. | A customer posts, a moderator publishes, a student sees gross and net |
-| **3. Apply, select, reserve** | Week 2–3 | US-18, US-24, US-25, US-26 (with sandbox top-up), US-21 | The riskiest transaction (ADR-0007). Builds the notification mechanism. | One click assigns an executor and holds funds, and the student gets a notification |
-| **4. Work, accept, pay** | Week 3 | US-22, US-27, US-28, US-31, US-34, US-37, US-38, US-30 (+ `GET /api/me/work`) | Completes journey step 7 | The journey from registration to the verified experience record runs in the browser. **Demo checkpoint.** |
+| **2. Tasks and feed** | Week 2 | US-03 (settings and commission), US-16, US-17, US-40 (S1), US-49, US-50, US-14, US-12, US-13, US-15 | Commission must exist before net price (US-15). Moderation gates the feed. | A customer posts, a moderator publishes, a student sees gross and net |
+| **3. Apply, select, reserve** | Week 2–3 | US-18, US-47, US-24, US-25, US-26 (with sandbox top-up), US-21 | The riskiest transaction (ADR-0007). Builds the notification mechanism. | One click assigns an executor and holds funds, and the student gets a notification |
+| **4. Work, accept, pay** | Week 3 | US-22, US-27, US-28, US-48, US-31, US-34, US-37, US-38, US-30 (+ `GET /api/me/work`) | Completes journey step 7 | The journey from registration to the verified experience record runs in the browser. **Demo checkpoint.** |
 | **5. Remaining S1 scenarios** | Week 3–4 | US-10, US-11, US-19, US-20, US-23 (chat), US-29, US-32, US-33, US-35, US-36 (+ `/mod/withdrawals`) | Fills the journey without changing its shape | Every story has its S1 working |
 | **6. Public pages (parallel filler)** | From week 1, by the frontend developer | US-01, US-02, US-03 (page), US-04, US-05 | Static, no backend dependency. A good task while the backend slices are in progress. | Pages exist and pass the content checks |
 | **7. Pass B: edge scenarios and hardening** | Week 4 | All S2 and S3 in §1. First the authorization matrix (every endpoint × role), the concurrency tests and `npm run check:invariants`. Then upload checks, then US-41 and US-42. | Cheap once the slices exist, and the money and permission rules need most attention | Tests named after INV-xx and every scenario in §1 are green |
@@ -176,8 +188,8 @@ Each row says what to do. **None of these is resolved silently.** Where the desi
 | Decision | Effect on this document |
 |---|---|
 | **W-02 → variant B.** Any student with a confirmed email reads the feed and task details. Only applying needs verification. | US-12 and US-18/S3 rows. `api.md` access changed from S+ to S-. |
-| **OQ-04, OQ-06, OQ-11: yes.** Customers sign up with any email, a display name is asked, login and logout stories are added. | W-22 is decided. The stories themselves still have to be written. |
-| **OQ-07: yes.** Customer notifications and a "My tasks" page. | W-23 is decided. The stories still have to be written. |
+| **OQ-04, OQ-06, OQ-11: yes.** Customers sign up with any email, a display name is asked, login and logout stories are added. | W-22 is decided and the stories are written: US-43, US-44, US-45, US-46. |
+| **OQ-07: yes.** Customer notifications and a "My tasks" page. | W-23 is decided and the stories are written: US-47, US-48, US-49, US-50. |
 | **OQ-08: no.** A customer cannot cancel after selecting an executor. | W-07 narrows to rewording US-37/S2. |
 | **OQ-12: yes.** Gateway and webhook scenarios are replaced by simulated-payment tests. | W-06 is decided. US-34/S2 and S3 are marked ✔. |
 | `GET /api/me/work` and `INTERNAL_ERROR` (500) added to `api.md`. | W-08 and W-09 are done. |
@@ -219,8 +231,8 @@ Rows below marked ✔ are decided. The others stay open.
 
 | ID | Gap | What to do |
 |---|---|---|
-| W-22 ✔ | No customer registration (OQ-04), no login or logout (OQ-11), no display name (OQ-06) | Write three short stories. The design assumes them (ADR-0006) and the walking skeleton cannot finish without them. |
-| W-23 ✔ | No customer-side notifications and no "my tasks" page (OQ-07) | Write one story. Without it the customer cannot know about applications (US-25) or submitted results (US-31). |
+| W-22 ✔ | No customer registration (OQ-04), no login or logout (OQ-11), no display name (OQ-06) | Written as US-43, US-44, US-45, US-46. Password reset stays postponed. |
+| W-23 ✔ | No customer-side notifications and no "my tasks" page (OQ-07) | Written as US-47, US-48, US-49, US-50. |
 | W-24 | No funding story for the customer balance (OQ-09) and no withdrawal processing story (OQ-10) | Keep the sandbox top-up and the moderator page as labelled placeholders. Write stories if real money is ever in scope. |
 
 ### 4.4 Stories that depend on digest assumptions
@@ -248,4 +260,4 @@ If the assumption is wrong, these stories change.
 **Recommended actions, in order:**
 1. Get a decision on W-01, W-03 and A-06, since they change endpoints or access rules.
 2. Have the product owner reword the scenarios listed under W-04, W-05, W-07, W-14 and W-20 (and US-18/S3, whose wording still assumes a non-verified user who cannot see the feed).
-3. Write the stories that were decided but do not exist yet: customer registration, display name, login and logout, customer notifications and "My tasks" (W-22, W-23). Confirm the placeholders for W-24.
+3. Confirm the placeholders for W-24 (customer funding and withdrawal processing). The student-side notifications for a returned result and for verification approval still have no story either.

@@ -30,7 +30,7 @@ The tables behind this model are in [`data-model.md`](data-model.md). The HTTP c
 | | For `student`: the domain must be on the university allow-list. Error «Дозволено реєстрацію лише з використанням університетської електронної пошти». | US-06/CL, US-06/S2 [AC] |
 | | For `customer`: any domain. | A-01, ADR-0006 |
 | `password` | Required. Min 8 characters. Stored only as a bcrypt hash. | US-06/S1; length [prop] |
-| `displayName` | Required, 2–60 characters. | [prop] (overview OQ-06) |
+| `displayName` | Required, 2–60 characters, Unicode. Shown to other users. The email is never shown. | US-44 [AC]; bounds from the AC |
 | `role` | `student` \| `customer` \| `moderator`. Set once. `moderator` is never self-registered. | ADR-0006, A-02, A-03 |
 | `emailConfirmedAt` | Null until confirmed. Null means status «Непідтверджений». | US-06/S1, US-07/CL |
 | `studentVerifiedAt` | Null unless an approved verification exists. Equals the requirements' «Студент» role and the «верифікований студент» badge. | US-08/CL, US-09/CL, overview OQ-05 |
@@ -116,7 +116,8 @@ A resend creates a new token and invalidates older unused ones (US-07/S3; invali
 | Attribute | Constraint | Source |
 |---|---|---|
 | `type` | Stated in requirements: `executor_selected`, `result_accepted`, `verification_rejected`. | US-21, US-30, US-39/S2 |
-| | Proposed, no story: `verification_approved`, `task_published`, `task_rejected`, `application_received`, `result_submitted`, `result_returned`, `withdrawal_processed`. | A-15, overview OQ-07 |
+| | To the customer: `application_received`, `result_submitted`, `task_published`, `task_rejected` (with the moderator's reason). | US-47, US-48, US-49 |
+| | Proposed, no story yet: `verification_approved`, `result_returned`, `withdrawal_processed`. | A-15 |
 | `readAt` | Null means unread. | US-21/S3, US-30/S3 |
 | text | Stated in requirements: «Вас обрано виконавцем завдання [Назва]» and «Ваш результат прийнято замовником! Оплату нараховано». | US-21/S1, US-30/S1 |
 
