@@ -1,0 +1,374 @@
+// Schema from docs/architecture/data-model.md (ADR-0004).
+// Conventions: ids are TEXT UUIDs, money is Int kopecks, enums are TEXT validated by CHECK constraints
+// (see the hand-written part of prisma/migrations/*_init/migration.sql), timestamps are UTC.
+// Prisma cannot express CHECK constraints, partial unique indexes or NOCASE indexes; they live in the migration.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Identity ----------
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String    @map("password_hash")
+  displayName       String    @map("display_name")
+  role              String // student | customer | moderator
+  emailConfirmedAt  DateTime? @map("email_confirmed_at")
+  studentVerifiedAt DateTime? @map("student_verified_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  sessions             Session[]
+  emailTokens          EmailToken[]
+  studentProfile       StudentProfile?
+  profileSkills        ProfileSkill[]
+  files                File[]
+  verificationRequests VerificationRequest[] @relation("VerificationSubmitter")
+  decidedVerifications VerificationRequest[] @relation("VerificationModerator")
+  customerTasks        Task[]                @relation("TaskCustomer")
+  executorTasks        Task[]                @relation("TaskExecutor")
+  applications         Application[]
+  messages             Message[]
+  notifications        Notification[]
+  escrows              Escrow[]
+  withdrawals          Withdrawal[]          @relation("WithdrawalStudent")
+  processedWithdrawals Withdrawal[]          @relation("WithdrawalModerator")
+  experienceRecords    ExperienceRecord[]
+  settingsUpdates      Setting[]
+  auditEvents          AuditEvent[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model EmailToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  purpose   String // confirm_email | reset_password
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, purpose])
+  @@map("email_tokens")
+}
+
+model UniversityDomain {
+  domain    String   @id
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("university_domains")
+}
+
+// ---------- Profile and verification ----------
+
+model StudentProfile {
+  userId    String   @id @map("user_id")
+  bio       String   @default("")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("student_profiles")
+}
+
+model Skill {
+  id        String  @id @default(uuid())
+  name      String  @unique
+  inCatalog Boolean @default(false) @map("in_catalog")
+
+  profileSkills ProfileSkill[]
+
+  @@map("skills")
+}
+
+model ProfileSkill {
+  userId  String @map("user_id")
+  skillId String @map("skill_id")
+
+  user  User  @relation(fields: [userId], references: [id])
+  skill Skill @relation(fields: [skillId], references: [id])
+
+  @@id([userId, skillId])
+  @@map("profile_skills")
+}
+
+model File {
+  id           String    @id @default(uuid())
+  ownerId      String    @map("owner_id")
+  kind         String // student_document | result
+  storageKey   String    @unique @map("storage_key")
+  originalName String    @map("original_name")
+  mime         String
+  sizeBytes    Int       @map("size_bytes")
+  sha256       String
+  createdAt    DateTime  @default(now()) @map("created_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  owner                User                  @relation(fields: [ownerId], references: [id])
+  verificationRequests VerificationRequest[]
+  resultFiles          ResultFile[]
+
+  @@index([ownerId])
+  @@map("files")
+}
+
+model VerificationRequest {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  fileId    String    @map("file_id")
+  status    String // pending | approved | rejected | revoked
+  reason    String?
+  decidedBy String?   @map("decided_by")
+  decidedAt DateTime? @map("decided_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user      User  @relation("VerificationSubmitter", fields: [userId], references: [id])
+  file      File  @relation(fields: [fileId], references: [id])
+  moderator User? @relation("VerificationModerator", fields: [decidedBy], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt])
+  @@map("verification_requests")
+}
+
+// ---------- Tasks and applications ----------
+
+model Task {
+  id                  String    @id @default(uuid())
+  customerId          String    @map("customer_id")
+  title               String
+  description         String
+  priceKopecks        Int       @map("price_kopecks")
+  deadlineAt          DateTime  @map("deadline_at")
+  status              String // see TASK_STATUSES in packages/shared
+  commissionBp        Int?      @map("commission_bp")
+  commissionKopecks   Int?      @map("commission_kopecks")
+  netKopecks          Int?      @map("net_kopecks")
+  executorId          String?   @map("executor_id")
+  moderationReason    String?   @map("moderation_reason")
+  publishedAt         DateTime? @map("published_at")
+  assignedAt          DateTime? @map("assigned_at")
+  completedAt         DateTime? @map("completed_at")
+  cancelledAt         DateTime? @map("cancelled_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  customer          User              @relation("TaskCustomer", fields: [customerId], references: [id])
+  executor          User?             @relation("TaskExecutor", fields: [executorId], references: [id], onDelete: Restrict)
+  applications      Application[]
+  resultVersions    ResultVersion[]
+  messages          Message[]
+  escrow            Escrow?
+  experienceRecord  ExperienceRecord?
+  ledgerEntries     LedgerEntry[]
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([executorId, status])
+  @@map("tasks")
+}
+
+model Application {
+  id        String    @id @default(uuid())
+  taskId    String    @map("task_id")
+  studentId String    @map("student_id")
+  note      String?
+  status    String // sent | accepted | rejected
+  createdAt DateTime  @default(now()) @map("created_at")
+  decidedAt DateTime? @map("decided_at")
+
+  task    Task @relation(fields: [taskId], references: [id])
+  student User @relation(fields: [studentId], references: [id])
+
+  @@unique([taskId, studentId])
+  @@index([studentId, createdAt(sort: Desc)])
+  @@map("applications")
+}
+
+// ---------- Delivery ----------
+
+model ResultVersion {
+  id              String    @id @default(uuid())
+  taskId          String    @map("task_id")
+  version         Int
+  status          String // draft | submitted | accepted | returned
+  revisionComment String?   @map("revision_comment")
+  submittedAt     DateTime? @map("submitted_at")
+  decidedAt       DateTime? @map("decided_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  task  Task         @relation(fields: [taskId], references: [id])
+  files ResultFile[]
+
+  @@unique([taskId, version])
+  @@map("result_versions")
+}
+
+model ResultFile {
+  resultVersionId String @map("result_version_id")
+  fileId          String @unique @map("file_id")
+
+  resultVersion ResultVersion @relation(fields: [resultVersionId], references: [id])
+  file          File          @relation(fields: [fileId], references: [id])
+
+  @@id([resultVersionId, fileId])
+  @@map("result_files")
+}
+
+// ---------- Communication ----------
+
+model Message {
+  id        String   @id @default(uuid(7))
+  taskId    String   @map("task_id")
+  senderId  String   @map("sender_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task   Task @relation(fields: [taskId], references: [id])
+  sender User @relation(fields: [senderId], references: [id])
+
+  @@index([taskId, id])
+  @@map("messages")
+}
+
+model Notification {
+  id          String    @id @default(uuid(7))
+  userId      String    @map("user_id")
+  type        String
+  payloadJson String    @map("payload_json")
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, id])
+  @@map("notifications")
+}
+
+// ---------- Money ----------
+
+model Escrow {
+  id             String    @id @default(uuid())
+  taskId         String    @unique @map("task_id")
+  customerId     String    @map("customer_id")
+  amountKopecks  Int       @map("amount_kopecks")
+  status         String // held | released | refunded
+  idempotencyKey String    @unique @map("idempotency_key")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  settledAt      DateTime? @map("settled_at")
+
+  task     Task @relation(fields: [taskId], references: [id])
+  customer User @relation(fields: [customerId], references: [id])
+
+  @@map("escrows")
+}
+
+// ownerId is a user id, or the literal "platform" for commission income, so it is not a foreign key.
+model Balance {
+  ownerId          String   @id @map("owner_id")
+  availableKopecks Int      @default(0) @map("available_kopecks")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("balances")
+}
+
+model LedgerEntry {
+  id            String   @id @default(uuid())
+  ownerId       String   @map("owner_id")
+  kind          String
+  amountKopecks Int      @map("amount_kopecks")
+  taskId        String?  @map("task_id")
+  withdrawalId  String?  @map("withdrawal_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  task       Task?       @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  withdrawal Withdrawal? @relation(fields: [withdrawalId], references: [id], onDelete: Restrict)
+
+  @@index([ownerId, createdAt])
+  @@map("ledger_entries")
+}
+
+model Withdrawal {
+  id            String    @id @default(uuid())
+  studentId     String    @map("student_id")
+  amountKopecks Int       @map("amount_kopecks")
+  cardNumber    String?   @map("card_number")
+  cardLast4     String    @map("card_last4")
+  status        String // requested | paid | rejected
+  processedBy   String?   @map("processed_by")
+  processedAt   DateTime? @map("processed_at")
+  reason        String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  student       User          @relation("WithdrawalStudent", fields: [studentId], references: [id])
+  moderator     User?         @relation("WithdrawalModerator", fields: [processedBy], references: [id], onDelete: Restrict)
+  ledgerEntries LedgerEntry[]
+
+  @@index([status, createdAt])
+  @@map("withdrawals")
+}
+
+// ---------- Experience, settings, audit ----------
+
+model ExperienceRecord {
+  id          String   @id @default(uuid())
+  studentId   String   @map("student_id")
+  taskId      String   @unique @map("task_id")
+  title       String
+  description String
+  completedAt DateTime @map("completed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  student User @relation(fields: [studentId], references: [id])
+  task    Task @relation(fields: [taskId], references: [id])
+
+  @@index([studentId, completedAt(sort: Desc)])
+  @@map("experience_records")
+}
+
+model Setting {
+  key       String   @id
+  value     Int
+  updatedBy String?  @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  updater User? @relation(fields: [updatedBy], references: [id], onDelete: Restrict)
+
+  @@map("settings")
+}
+
+model AuditEvent {
+  id        String   @id @default(uuid())
+  actorId   String?  @map("actor_id")
+  action    String
+  entity    String
+  entityId  String   @map("entity_id")
+  dataJson  String   @map("data_json")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([entity, entityId])
+  @@map("audit_events")
+}

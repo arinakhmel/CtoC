@@ -1,0 +1,27 @@
+# dependencies and build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# local environment
+.env
+.env.local
+
+# database and uploads (ADR-0004)
+apps/api/data/
+
+# test output
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Claude Code: one worktree per story, and personal notes
+.claude/worktrees/
+CLAUDE.local.md
+.claude/settings.local.json
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/

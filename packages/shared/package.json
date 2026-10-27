@@ -1,0 +1,22 @@
+{
+  "name": "@ctoc/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Zod schemas, status enums, limits and error codes shared by the API and the web app (consumed as TypeScript source)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

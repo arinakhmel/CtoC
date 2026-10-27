@@ -8,8 +8,8 @@ Short records of decisions that are expensive to change later. Written for peopl
 |---|---|---|
 | [0001](0001-platform-web.md) | Platform: responsive web (React) | Proposed |
 | [0002](0002-architecture-style.md) | Architecture style: modular monolith (backend), feature folders (frontend) | Proposed |
-| [0003](0003-repository-structure.md) | Repository: npm-workspaces monorepo | Proposed |
-| [0004](0004-data-store-and-files.md) | Data store: SQLite + Drizzle, files on local disk | Proposed |
+| [0003](0003-repository-structure.md) | Repository: pnpm-workspaces monorepo | Proposed |
+| [0004](0004-data-store-and-files.md) | Data store: SQLite + Prisma, files on local disk | Proposed |
 | [0005](0005-backend-api.md) | Backend: Express 5, Zod, REST, error format, polling | Proposed |
 | [0006](0006-authentication.md) | Authentication: cookie sessions, one role per account | Proposed |
 | [0007](0007-concurrency-and-money.md) | Concurrency and money: DB-enforced invariants, simulated payments | Proposed |

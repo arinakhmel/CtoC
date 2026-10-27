@@ -18,7 +18,20 @@ The rules that must never break: one executor per task (US-25/S2), no double esc
 
 ## Decision
 
-**1. Each business action is one transaction** in the module service (ADR-0002), and it contains no `await` (the SQLite driver is synchronous, ADR-0004), which removes check-then-act gaps. Zero changed rows means a conflict (HTTP 409).
+**1. Each business action is one interactive transaction** (`prisma.$transaction`) in the module service (ADR-0002). Every check-then-act is a conditional `updateMany` whose `count` is checked: zero changed rows means a conflict (HTTP 409). Never read a row, decide in code and then write it. Keep transactions short, with no network calls or file I/O inside. SQLite serialises writers and the connection URL sets `connection_limit=1` (ADR-0004).
+
+The pattern, used by every action:
+
+```ts
+await prisma.$transaction(async (tx) => {
+  const moved = await tx.task.updateMany({
+    where: { id: taskId, status: 'published', executorId: null },
+    data: { status: 'in_progress', executorId: studentId, assignedAt: new Date() },
+  });
+  if (moved.count === 0) throw new ApiError('TASK_ALREADY_ASSIGNED');
+  // …escrow hold, ledger entry, application statuses, notification: same tx
+});
+```
 
 **2. Invariant → mechanism**
 

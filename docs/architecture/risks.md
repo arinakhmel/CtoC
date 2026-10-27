@@ -8,7 +8,7 @@ Sources: `requirements-digest.md` (G-, A-, NFR-, BR- ids), `docs/adr/`.
 
 | ID | Risk | P | I | Accepted |
 |---|---|---|---|---|
-| T-01 | Native SQLite module fails to install on a teammate's machine | med | med | |
+| T-01 | Prisma engines fail to download or install on a teammate's machine | med | med | |
 | T-02 | Hosted demo loses data and uploads on redeploy or restart | high | low | ACCEPTED |
 | T-03 | Logic race breaks a money or state invariant | med | high | |
 | T-04 | Rounding drift between card amount, credit and breakdown | low | high | |
@@ -29,7 +29,7 @@ Sources: `requirements-digest.md` (G-, A-, NFR-, BR- ids), `docs/adr/`.
 | P-08 | Commission changes while tasks are in flight | low | med | |
 | P-09 | Homework or a forged student card passes moderation | med | med | ACCEPTED |
 | M-01 | 42 stories do not fit into 5 weeks | high | high | |
-| M-02 | Skill gap with Drizzle, TanStack Query, Zod | high | med | |
+| M-02 | Skill gap with Prisma, TanStack Query, Zod | high | med | |
 | M-03 | Deployment never works (no DevOps experience) | med | med | |
 | M-04 | Six people plus Claude Code produce merge conflicts and inconsistent code | high | med | |
 | M-05 | Frontend and backend integrate too late | med | high | |
@@ -40,10 +40,10 @@ Sources: `requirements-digest.md` (G-, A-, NFR-, BR- ids), `docs/adr/`.
 
 ## 1. Technical risks
 
-### T-01 Native SQLite module fails to install
-- **P / I:** med / med. `better-sqlite3` needs a prebuilt or compiled native binary, and the team uses different operating systems and Node versions.
-- **Trigger:** `npm install` fails for any teammate or in CI. Setup questions in the team chat in week 1.
-- **Mitigation:** pin Node in `.nvmrc` and `engines`. Run CI install on Linux and Windows. Week-1 task: every teammate runs a clean clone. Fallback: Node's built-in SQLite module.
+### T-01 Prisma engines fail to download or install
+- **P / I:** med / med. Prisma downloads query and schema engines for each operating system at install time, and pnpm 10 asks to approve dependency build scripts. The team uses different operating systems and Node versions, and a restricted network blocks the download.
+- **Trigger:** `pnpm install` or `pnpm db:generate` fails for any teammate or in CI. Setup questions in the team chat in week 1.
+- **Mitigation:** pin Node in `.nvmrc` and `engines` and pnpm in `packageManager`. List the allowed build scripts in the root `package.json` (`pnpm.onlyBuiltDependencies`). Run CI install on Linux and Windows. Week-1 task: every teammate runs a clean clone.
 - **Lives in:** ADR-0004, ADR-0003.
 
 ### T-02 Hosted data lost on redeploy or restart — ACCEPTED
@@ -54,8 +54,8 @@ Sources: `requirements-digest.md` (G-, A-, NFR-, BR- ids), `docs/adr/`.
 
 ### T-03 Logic race breaks an invariant
 - **P / I:** med / high. Two executors on one task, double escrow, double credit, withdrawal above balance (digest NFR-18).
-- **Trigger:** `npm run check:invariants` reports a mismatch between ledger and balances. A concurrency test that fires duplicate requests fails.
-- **Mitigation:** unique constraints and conditional `UPDATE`s in one synchronous transaction. Tests that call each action twice, and in parallel through HTTP.
+- **Trigger:** `pnpm check:invariants` reports a mismatch between ledger and balances. A concurrency test that fires duplicate requests fails.
+- **Mitigation:** unique constraints and conditional `updateMany` calls in one short transaction. Tests that call each action twice, and in parallel through HTTP.
 - **Lives in:** ADR-0007; `payments`, `tasks`, `applications` modules.
 
 ### T-04 Rounding drift
@@ -96,7 +96,7 @@ Sources: `requirements-digest.md` (G-, A-, NFR-, BR- ids), `docs/adr/`.
 
 ### T-10 Shared package or workspace setup breaks builds
 - **P / I:** med / med. Wrong TypeScript paths, a package that works in dev but not in the production run.
-- **Trigger:** `npm run build` or `npm start` fails after a clean clone.
+- **Trigger:** `pnpm build` or `pnpm start` fails after a clean clone.
 - **Mitigation:** the shared package is consumed as source. The API runs with `tsx`. CI runs install, typecheck, test and build.
 - **Lives in:** ADR-0003.
 
@@ -175,7 +175,7 @@ Sources: `requirements-digest.md` (G-, A-, NFR-, BR- ids), `docs/adr/`.
 - **Lives in:** planning (all ADRs).
 
 ### M-02 Skill gap with the chosen libraries
-- **P / I:** high / med. Drizzle, TanStack Query and Zod are new to some.
+- **P / I:** high / med. Prisma, TanStack Query and Zod are new to some.
 - **Trigger:** a story stalls for more than two days on tooling, not on logic.
 - **Mitigation:** the strongest developers write one complete reference slice (for example application submission) in week 1. Others copy its structure. Pair on the first slice per person.
 - **Lives in:** ADR-0002, ADR-0004, ADR-0008.

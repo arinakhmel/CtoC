@@ -4,7 +4,7 @@ For whoever writes the database schema.
 
 | Decision | Source |
 |---|---|
-| Database: SQLite through `better-sqlite3`, schema and migrations in Drizzle | ADR-0004 |
+| Database: SQLite through Prisma. Schema in `apps/api/prisma/schema.prisma`, `CHECK` constraints and partial indexes written by hand in the migration SQL | ADR-0004 |
 | Constraints in the DB, conditional updates in transactions | ADR-0007 |
 | Rules behind the columns | [`domain-model.md`](domain-model.md), cited as INV-xx |
 
@@ -12,10 +12,10 @@ For whoever writes the database schema.
 
 | Topic | Rule |
 |---|---|
-| Ids | `TEXT` UUIDs generated in code. |
-| Money | `INTEGER` kopecks. Never `REAL`. |
-| Timestamps | `INTEGER` milliseconds since epoch (UTC). Column names end in `_at`. |
-| Enums | `TEXT` with `CHECK (col IN (...))`. The values match `packages/shared` enums. |
+| Ids | `TEXT` UUIDs (`@default(uuid())`; messages and notifications use `uuid(7)` so they sort by time). |
+| Money | `Int` (SQLite `INTEGER`) kopecks. Never `Float`. Prisma `Int` is 32-bit, which is enough for the 20 000 UAH price limit; revisit if balances can exceed about 21 million UAH. |
+| Timestamps | Prisma `DateTime` (stored by SQLite, always UTC). Column names end in `_at`. |
+| Enums | `String` (Prisma on SQLite has no enum) with `CHECK (col IN (...))` in the migration SQL. The values match `packages/shared` enums. |
 | Booleans | `INTEGER` 0/1. |
 | Foreign keys | Enabled with `PRAGMA foreign_keys = ON`. `ON DELETE RESTRICT` unless stated. Nothing financial is ever deleted. |
 | Text lengths | `CHECK (length(col) BETWEEN a AND b)` mirrors the Zod schema. Zod gives the friendly error, the CHECK is the safety net. |
@@ -376,7 +376,7 @@ erDiagram
 
 ## 3. Invariants that live in transaction code
 
-The schema cannot express these. Each one is implemented in the named module's `service.ts` as one synchronous transaction (ADR-0007) and covered by a test named after the invariant.
+The schema cannot express these. Each one is implemented in the named module's `service.ts` as one short `prisma.$transaction` (ADR-0007) and covered by a test named after the invariant.
 
 | Invariant | Why the schema cannot hold it | Implementation in the transaction |
 |---|---|---|
@@ -392,7 +392,7 @@ The schema cannot express these. Each one is implemented in the named module's `
 | **INV-13**: no delete with an executor | It is a conditional action. | `UPDATE tasks SET status='cancelled' WHERE … AND executor_id IS NULL`. |
 | **INV-15**: submit needs at least one file. **INV-16**: files locked | Counting child rows and checking the parent's status is not possible in a CHECK. | `submit()` counts `result_files` for the open version. File insert and delete check `status='draft'` on the version. |
 | **INV-18**: acceptance is atomic | Spans 6 tables. | One transaction: task `done`, version `accepted`, escrow `released`, `payout` and `commission` entries and balance updates, experience record, notification. |
-| **INV-20**: balance equals the sum of the ledger | An aggregate. | Every balance change writes a ledger entry in the same transaction. `npm run check:invariants` compares the totals. |
+| **INV-20**: balance equals the sum of the ledger | An aggregate. | Every balance change writes a ledger entry in the same transaction. `pnpm check:invariants` compares the totals. |
 | **INV-23**: notification only on commit | Ordering. | Notifications are rows inserted inside the business transaction, never sent before commit. |
 | Max 20 skills per profile | A count. | `setSkills()` replaces the set in one transaction and rejects more than 20. |
 | A resend invalidates older tokens | Cross-row. | `resend()` sets `used_at` on the user's open tokens, then inserts a new one. |

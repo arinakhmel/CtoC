@@ -1,0 +1,21 @@
+/* Minimal layout only. Real styling comes with the stories (ADR-0008). */
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+header,
+main,
+footer {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+}
+header nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
