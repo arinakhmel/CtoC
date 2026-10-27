@@ -155,7 +155,7 @@ Each invariant has an id, so tests can name it. **DB** means the database schema
 | ID | Invariant | Enforced by | Source |
 |---|---|---|---|
 | INV-01 | An email belongs to at most one account. | DB | US-06/S3 |
-| INV-02 | Only a confirmed student can submit a document. Only a verified student can apply, see the feed, or withdraw. | TX (policy) | US-08/S1, US-18/S3, US-12/CL |
+| INV-02 | Only a confirmed student can submit a document. Only a verified student can apply or withdraw. Any student with a confirmed email can read the feed and task details (decision OQ-19). | TX (policy) | US-08/S1, US-18/S3, US-12/CL |
 | INV-03 | `studentVerifiedAt` is set only by a moderator approving a pending request. The badge is derived from it and nothing else. | TX | US-08/CL, US-09/CL, US-09/S2 |
 | INV-04 | A user has at most one `pending` verification request. | DB | US-08 [prop] |
 | INV-05 | A new task is always created as `pending_moderation`, whatever the client sends. | TX | US-40/S3 |

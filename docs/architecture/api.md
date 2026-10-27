@@ -58,8 +58,8 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S+ | 200 | 401 · 403 `STUDENT_NOT_VERIFIED` |
-| GET | `/api/tasks/:id` | US-13, US-15, US-22 | S+ (published) · Own · Ex · M | 200 | 404 `NOT_FOUND` |
+| GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S- (any student with a confirmed email) | 200 | 401 · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
+| GET | `/api/tasks/:id` | US-13, US-15, US-22 | S- (published) · Own · Ex · M | 200 | 404 `NOT_FOUND` |
 | POST | `/api/tasks` | US-16, US-17, US-40/S3 | C (confirmed) | 201, always `pending_moderation` | 400 `VALIDATION_FAILED`, `TITLE_TOO_SHORT`, `PRICE_BELOW_MIN`, `PRICE_ABOVE_MAX`, `DEADLINE_IN_PAST` · 403 `ROLE_FORBIDDEN` |
 | GET | `/api/my/tasks` | none (OQ-07) | C | 200 | |
 | DELETE | `/api/tasks/:id` | US-22/S2, A-08 | Own | 204 | 403 `NOT_TASK_OWNER` · 409 `TASK_HAS_EXECUTOR` |
@@ -78,6 +78,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
+| GET | `/api/me/work` | US-22, US-29 | S+ (executor) | 200: the student's tasks as executor, with status | |
 | POST | `/api/tasks/:id/result/files` | US-27 | Ex | 201 | 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_TOO_LARGE`, `TOO_MANY_FILES` · 403 `NOT_EXECUTOR` · 409 `RESULT_LOCKED` |
 | DELETE | `/api/tasks/:id/result/files/:fileId` | US-29/S3 | Ex | 204 | 403 · 409 `RESULT_LOCKED` |
 | POST | `/api/tasks/:id/result/submit` | US-28, US-29, US-32/S1 | Ex | 200 | 403 `NOT_EXECUTOR` · 409 `NO_RESULT_FILES`, `ALREADY_IN_REVIEW`, `INVALID_TRANSITION` |
@@ -208,8 +209,9 @@ Messages marked **[AC]** are quoted from a Gherkin scenario and must match exact
 | 422 | `INSUFFICIENT_FUNDS` | Customer balance is below the task price when selecting. Selection is cancelled. | **[AC]** «Недостатньо коштів» | US-26/S2 |
 | 422 | `INSUFFICIENT_BALANCE` | Withdrawal above the available balance. | **[AC]** «Недостатньо коштів на балансі для виведення» | US-36/S3 |
 | 429 | `RATE_LIMITED` | Too many register, login or resend attempts. | «Забагато спроб. Спробуйте пізніше» | NFR-13 |
+| 500 | `INTERNAL_ERROR` | Unexpected failure. The whole transaction is rolled back, so no notification is sent and no status changes. No internals in the response. | «Щось пішло не так. Спробуйте пізніше» | US-21/S2, US-30/S2, US-34/S2 |
 
-The 422 and 429 codes go beyond the requested 400–409 set. They follow the ADR-0005 status mapping (422 is a business rule with valid input, 429 is a rate limit).
+The 422, 429 and 500 codes go beyond the requested 400–409 set. They follow the ADR-0005 status mapping (422 is a business rule with valid input, 429 is a rate limit, 500 is an unexpected failure).
 
 ---
 

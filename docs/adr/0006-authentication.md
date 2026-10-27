@@ -26,7 +26,7 @@ The digest found real gaps: no story for customer sign-up (G-01), no rule on dua
 - Both confirm email with the same token flow (US-07). The token is random, stored hashed, and expires after 24 hours.
 - Student verification is data, not a role: a `verification_requests` table with the status and the moderator's decision. The «верифікований студент» badge is **derived** from an approved request.
 - Moderator accounts are created by the seed or a script, never by self-registration.
-- A confirmed `student` without approval can edit a profile and submit documents, but cannot apply (US-18/S3).
+- A confirmed `student` without approval can edit a profile, submit documents and read the feed and task details, but cannot apply (US-18/S3). The apply button is visible and answers 403 `STUDENT_NOT_VERIFIED` with a prompt to verify (decision OQ-19).
 
 **Authorization.** Each module has a `policy.ts` with functions such as `canAccept(user, task)`. Services call them and throw 403. A test matrix lists every endpoint against every role with the expected status.
 

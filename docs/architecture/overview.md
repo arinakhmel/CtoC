@@ -174,8 +174,8 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 | `/u/:userId` | Public student profile: badge, skills, bio, experience | P | US-09, US-10, US-11, US-24, US-37, US-38 |
 | `/me/profile` | Edit skills and bio | S- / S+ | US-10, US-11, US-38/S3 |
 | `/me/verification` | Upload a student document and see its status | S- | US-08, US-39/S2 |
-| `/feed` | Task feed | S+ | US-12, US-13, US-14, US-15 |
-| `/tasks/:id` | Task details and apply dialog with note | S+ | US-13, US-15, US-18, US-19, US-42 |
+| `/feed` | Task feed | S- | US-12, US-13, US-14, US-15 |
+| `/tasks/:id` | Task details and apply dialog with note. Applying needs S+. A non-verified student is prompted to verify. | S- (apply: S+) | US-13, US-15, US-18, US-19, US-42 |
 | `/me/applications` | "Мої відгуки" with statuses | S- / S+ | US-20 |
 | `/me/work` | "Мої активні завдання" | S+ | US-22, US-29 |
 | `/work/:taskId` | Workspace: terms, chat, result upload and submit, revision comment | S+ (executor) | US-22, US-23, US-27, US-28, US-29, US-32, US-33 |
@@ -229,20 +229,28 @@ The user journey `J-1…J-7` from `requirements.md` §1, as pages, endpoints and
 
 These are stories that are not covered, or that contradict each other or the design. **None of them is silently resolved.** Where the design had to proceed, it uses the assumption named in the third column, and that needs confirmation.
 
+### 7.1 Decided by the product owner (2026-10-27)
+
+| ID | Question | Decision | Applied in |
+|---|---|---|---|
+| OQ-01 | Project→Task and Role→student-role mapping | Naming only, no product impact. The owner asked what it meant. Treated as accepted by default. | overview naming note |
+| OQ-04 | Customers sign up with any email | **Yes.** Confirmed by the same link flow. | ADR-0006, `api.md` register |
+| OQ-06 | Ask for a display name at sign-up | **Yes.** 2–60 characters. | domain-model User |
+| OQ-07 | Customer notifications and a "My tasks" page | **Yes.** Stories still to be written. | `/c/tasks`, `GET /api/my/tasks`, notification types |
+| OQ-08 | Customer cancels after selecting an executor | **No.** The customer may delete only before selection. After it, only a moderator resolves (A-09). | domain-model §3.1 |
+| OQ-11 | Login and logout stories | **Yes.** Password reset stays postponed. | `api.md` auth endpoints, ADR-0006 |
+| OQ-12 | US-34/S2 and S3 gateway and webhook scenarios | **Replaced** by tests for the simulated payment provider. | `traceability.md` US-34 |
+| OQ-19 | Feed visibility (was W-02): US-12 says verified students only, US-18/S3 has a non-verified student pressing «Відгукнутися» | **Variant B.** Any student with a confirmed email reads the feed and task details. Only applying needs verification. | `api.md`, overview §4, INV-02, ADR-0006, `traceability.md` |
+
+### 7.2 Still open
+
 | ID | Question | What the design does meanwhile |
 |---|---|---|
-| OQ-01 | The brief says "DevMatch" and "Project, Role" while the requirements are CtoC. Is the mapping Project→Task, Role→Student role correct? | Uses the mapping. |
 | OQ-02 | **US-24/S2 contradicts US-18/S3.** US-24/S2 has a non-verified user who submitted an application; US-18/S3 blocks non-verified students from applying. | Follows US-18/S3. US-24/S2 can only happen if verification is revoked after applying (A-18). |
 | OQ-03 | «На перевірці» labels two different task states (US-14/US-40 versus US-28/US-29). Which display labels should each use? | Separate internal states `pending_moderation` and `in_review` (ADR-0007). The UI label for moderation is proposed as «На модерації». |
-| OQ-04 | **No story for customer registration.** US-06 requires a university email. | Customers sign up with any email and confirm it the same way (A-01, ADR-0006). A story is needed. |
 | OQ-05 | US-08 says the «Студент» role is assigned after approval. Our account `role=student` is chosen at sign-up, and "verified" is a separate flag. Is this wording difference acceptable? | `role` is the account type. The requirements' «Студент» role equals `student_verified_at IS NOT NULL`. |
-| OQ-06 | **No display name in registration** (US-06/S1 asks only for email and password), yet profiles are shown to customers (US-24/S1) and employers (US-38). | Asks for a display name at sign-up (proposed). |
-| OQ-07 | No story for the customer's "my tasks" list, or for **customer notifications** (new application, result submitted, moderation outcome). Without them the customer cannot act on US-25 or US-31. | Adds `/c/tasks` and the notification types (A-15, digest G-12). |
-| OQ-08 | US-37/S2 mentions a task "cancelled by the customer before completion", but no story defines cancellation. There is also no dispute or stalled-deal handling (digest G-07, G-08). | The owner may delete before selection. After that only a moderator can resolve (release or refund) (A-08, A-09). |
 | OQ-09 | US-26/S1 reserves "зі свого балансу/картки" ("from their balance or card"), but there is no story for funding a customer balance. | A labelled sandbox top-up on `/c/balance` (A-06). |
 | OQ-10 | US-36 ends at "a request is created". No story covers who pays it out or its statuses. | A moderator marks the request paid or rejected on `/mod/withdrawals` (A-10). |
-| OQ-11 | No story for login, logout or password reset (only "повторний вхід" in US-09/S3). | Login and logout are in the contract. Password reset is postponed (ADR-0006). |
-| OQ-12 | US-34/S2 (payment gateway failure during the credit) and US-34/S3 (duplicate webhook) assume an external gateway. With simulated payments neither can happen as written. | Tested as a forced provider error and as a repeated accept call. The scenario wording needs updating. |
 | OQ-13 | US-36/S2 rejects cards of a "закордонного банку" ("foreign bank"). That needs issuer (BIN) data, which is external data. | Validates 16 digits and the Luhn checksum only. Foreign-issuer detection is open. |
 | OQ-14 | US-37 title says "обсягом" ("volume") but the checklist says "описом" ("description") (digest C-05). The record would also publish the customer's task description on a public page (A-16). | Stores title, description and date. Customer confidentiality is not handled. |
 | OQ-15 | US-41/S3 expects "technical rules" that make commercial contractors impossible. Only manual moderation exists (US-39). | Not technically enforceable. Relies on US-39. |
