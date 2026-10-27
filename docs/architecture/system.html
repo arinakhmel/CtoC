@@ -200,6 +200,9 @@ footer { margin-top: 56px; font-size: 12.5px; color: var(--muted); border-top: 1
   <!-- 7. Open questions -->
   <h2 id="questions">7. Open questions</h2>
   <p class="src">From <code>overview.md</code> §7. Condensed. The full wording and the interim behaviour are in the markdown.</p>
+  <h3>Decided by the product owner</h3>
+  <div class="card"><ul class="oq" id="oqd"></ul></div>
+  <h3>Still open</h3>
   <div class="card"><ul class="oq" id="oq"></ul></div>
 
   <footer>Sources: requirements-digest.md · overview.md · domain-model.md · api.md · data-model.md · docs/adr/0001–0009. This file has no external dependencies and opens from the file system.</footer>
@@ -477,8 +480,8 @@ footer { margin-top: 56px; font-size: 12.5px; color: var(--muted); border-top: 1
     ['Student'],
     ['/me/profile', 'Edit skills and bio', 'S- / S+', 'US-10, US-11, US-38/S3'],
     ['/me/verification', 'Upload a student document and see its status', 'S-', 'US-08, US-39/S2'],
-    ['/feed', 'Task feed', 'S+', 'US-12, US-13, US-14, US-15'],
-    ['/tasks/:id', 'Task details and apply dialog with note', 'S+', 'US-13, US-15, US-18, US-19, US-42'],
+    ['/feed', 'Task feed', 'S-', 'US-12, US-13, US-14, US-15'],
+    ['/tasks/:id', 'Task details and apply dialog with note. Applying needs S+. A non-verified student is prompted to verify.', 'S- (apply: S+)', 'US-13, US-15, US-18, US-19, US-42'],
     ['/me/applications', '"Мої відгуки" with statuses', 'S- / S+', 'US-20'],
     ['/me/work', '"Мої активні завдання"', 'S+', 'US-22, US-29'],
     ['/work/:taskId', 'Workspace: terms, chat, result upload and submit, revision comment', 'S+ (executor)', 'US-22, US-23, US-27, US-28, US-29, US-32, US-33'],
@@ -525,19 +528,22 @@ footer { margin-top: 56px; font-size: 12.5px; color: var(--muted); border-top: 1
   });
 
   /* ---------- 7. open questions (overview.md §7, condensed) ---------- */
+  var oqd = [
+    ['OQ-01', 'Project→Task and Role→student-role mapping: naming only, accepted by default'],
+    ['OQ-04', 'Customers sign up with any email: yes'],
+    ['OQ-06', 'Display name asked at sign-up: yes'],
+    ['OQ-07', 'Customer notifications and a "My tasks" page: yes'],
+    ['OQ-08', 'Customer cancels after selecting an executor: no'],
+    ['OQ-11', 'Login and logout stories: yes (password reset postponed)'],
+    ['OQ-12', 'US-34 gateway and webhook scenarios replaced by simulated-payment tests: yes'],
+    ['OQ-19', 'Feed visibility: any student with a confirmed email reads the feed, only applying needs verification (variant B)']
+  ];
   var oq = [
-    ['OQ-01', 'DevMatch "Project, Role" mapped to CtoC Task and Student role. Is this correct?'],
     ['OQ-02', 'US-24/S2 contradicts US-18/S3 (can a non-verified user apply?)'],
     ['OQ-03', '«На перевірці» labels two task states. Which display labels?'],
-    ['OQ-04', 'No story for customer registration'],
     ['OQ-05', '«Студент» role in US-08 versus account role plus verified flag'],
-    ['OQ-06', 'No display name in registration'],
-    ['OQ-07', 'No "my tasks" page or customer notifications'],
-    ['OQ-08', 'Cancellation and disputes are undefined (US-37/S2)'],
     ['OQ-09', 'How a customer funds the escrow balance'],
     ['OQ-10', 'Who processes withdrawals'],
-    ['OQ-11', 'No login, logout or password-reset stories'],
-    ['OQ-12', 'US-34/S2 and S3 assume a real payment gateway'],
     ['OQ-13', 'Detecting foreign-bank cards needs BIN data'],
     ['OQ-14', '"обсяг" versus "опис", and confidentiality of public experience records'],
     ['OQ-15', 'US-41/S3 cannot be enforced technically'],
@@ -545,6 +551,8 @@ footer { margin-top: 56px; font-size: 12.5px; color: var(--muted); border-top: 1
     ['OQ-17', 'Limits with no source value (proposed values marked [prop])'],
     ['OQ-18', 'Allow .zip for result files?']
   ];
+  var uld = document.getElementById('oqd');
+  oqd.forEach(function (q) { var li = document.createElement('li'); li.innerHTML = '<strong>' + q[0] + '</strong> ' + q[1]; uld.appendChild(li); });
   var ul = document.getElementById('oq');
   oq.forEach(function (q) { var li = document.createElement('li'); li.innerHTML = '<strong>' + q[0] + '</strong> ' + q[1]; ul.appendChild(li); });
 })();
