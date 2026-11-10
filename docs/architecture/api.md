@@ -42,8 +42,8 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | POST | `/api/auth/logout` | US-46 | A | 204 | |
 | GET | `/api/me` | US-45 | A | 200 (body: §4.7) | 401 `AUTH_REQUIRED` |
 | PUT | `/api/me/profile` | US-11 | S- | 200 | 400 `BIO_TOO_LONG` · 403 `ROLE_FORBIDDEN` |
-| PUT | `/api/me/skills` | US-10 | S- | 200 | 400 `SKILL_EMPTY`, `SKILLS_LIMIT` |
-| GET | `/api/skills?query=` | US-10 | A | 200 | |
+| PUT | `/api/me/skills` | US-10 | S- | 200 (body: §4.10) | 400 `SKILL_EMPTY`, `SKILLS_LIMIT`, `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
+| GET | `/api/skills?query=` | US-10 | A | 200 (body: §4.10) | 401 `AUTH_REQUIRED` |
 | GET | `/api/profiles/:userId` | US-09, US-24, US-37, US-38 | P (A-16) | 200 (body: §4.9), `no-store` | 404 `NOT_FOUND` |
 | GET | `/api/public/settings` | US-03, US-15 | P | 200, `Cache-Control: no-store` | |
 
@@ -405,10 +405,28 @@ The `status` field is stripped. A valid request always creates a task in `pendin
 Public, no session needed. `Cache-Control: no-store`, so a badge granted by a moderator shows on the next request.
 
 ```json
-{ "profile": { "id": "…", "displayName": "Олена Коваль", "verified": true } }
+{ "profile": { "id": "…", "displayName": "Олена Коваль", "verified": true, "skills": ["HTML", "Java"] } }
 ```
 
 - `verified` is `studentVerifiedAt IS NOT NULL` and nothing else (INV-03). A student who has not uploaded a document, or whose request is pending or rejected, has `verified: false`.
 - Every **student** account has a profile, including one with an unconfirmed email. A missing id, a customer and a moderator all give the same 404 `NOT_FOUND`, so the URL does not reveal which accounts exist.
-- The email, the role and the hash are never returned. Skills, bio and experience records are added to this body by US-10, US-11, US-37 and US-38.
+- The email, the role and the hash are never returned. `skills` is the list from US-10 (alphabetical, `[]` when empty). Bio and experience records are added to this body by US-11, US-37 and US-38.
 - The only way to become verified is a moderator approving the request (US-39/S1). Until that endpoint exists, `studentVerifiedAt` can only be set in the database.
+
+### 4.10 `PUT /api/me/skills` and `GET /api/skills` (US-10)
+
+```json
+{ "skills": ["Java", "HTML"] }
+```
+
+200, with the saved set, alphabetical (Ukrainian collation, so Cyrillic names come before Latin ones):
+
+```json
+{ "skills": ["HTML", "Java"] }
+```
+
+- `PUT` **replaces the whole set** in one transaction, so it is repeatable, and `[]` clears it. Each name reuses the existing skill ignoring case (ASCII only, a SQLite limit) or creates one outside the catalogue (`in_catalog = 0`). A failure leaves the previous set unchanged.
+- Rules (shared schema): each skill is trimmed and 1–40 characters, at most 20 skills, no duplicates ignoring case. An empty skill gives 400 `SKILL_EMPTY`, more than 20 gives 400 `SKILLS_LIMIT`, anything else invalid gives 400 `VALIDATION_FAILED`.
+- Access: a student with a confirmed email (no session 401, other roles 403 `ROLE_FORBIDDEN`, unconfirmed 403 `EMAIL_NOT_CONFIRMED`).
+- `GET /api/skills?query=` returns `{ "skills": ["Java", "JavaScript"] }`: catalogue skills only, containing `query` ignoring case, sorted, at most 20. Any logged-in user may call it. The catalogue is seeded by a migration (20 skills) and is not extended by students' own skills.
+- There is no "get my skills" endpoint: the editor reads `GET /api/me` and then `GET /api/profiles/:id` (§4.9).

@@ -41,3 +41,26 @@ export const deleteExpiredSessions = (now: Date) => prisma.session.deleteMany({ 
 
 /** Only student accounts have a public profile (A-16). Anything else is the same as a missing account. */
 export const findStudentById = (id: string) => prisma.user.findFirst({ where: { id, role: 'student' } });
+
+/**
+ * Case-insensitive for ASCII (SQLite NOCASE, the same collation as the unique index). Cyrillic letters in
+ * different case may become two skill rows, which only adds noise to the suggestions.
+ */
+export const findSkillByName = async (tx: Tx, name: string) => {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM skills WHERE name = ${name} COLLATE NOCASE LIMIT 1`;
+  return rows[0] ?? null;
+};
+
+export const insertSkill = (tx: Tx, name: string) => tx.skill.create({ data: { name, inCatalog: false } });
+
+/** Replaces the whole set of a profile. The primary key (user_id, skill_id) prevents duplicates. */
+export const replaceProfileSkills = async (tx: Tx, userId: string, skillIds: string[]) => {
+  await tx.profileSkill.deleteMany({ where: { userId } });
+  await tx.profileSkill.createMany({ data: skillIds.map((skillId) => ({ userId, skillId })) });
+};
+
+export const listCatalogSkillNames = async () =>
+  (await prisma.skill.findMany({ where: { inCatalog: true }, select: { name: true } })).map((skill) => skill.name);
+
+export const listSkillNames = async (userId: string) =>
+  (await prisma.profileSkill.findMany({ where: { userId }, include: { skill: true } })).map((row) => row.skill.name);

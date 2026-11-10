@@ -28,7 +28,7 @@ describe('GET /api/profiles/:userId (US-09)', () => {
     const res = await api().get(`/api/profiles/${student.id}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ profile: { id: student.id, displayName: 'Олена Коваль', verified: true } });
+    expect(res.body).toEqual({ profile: { id: student.id, displayName: 'Олена Коваль', verified: true, skills: [] } });
     expect(JSON.stringify(res.body)).not.toContain('university.edu.ua');
     expect(JSON.stringify(res.body)).not.toContain(student.passwordHash);
     expect(res.headers['cache-control']).toBe('no-store');

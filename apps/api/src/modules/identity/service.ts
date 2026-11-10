@@ -1,16 +1,19 @@
 import { emailDomain, type RegisterInput } from '@ctoc/shared';
-import { Prisma } from '@prisma/client';
+import { Prisma, type User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { getMailer } from '../../platform/ports/mailer';
+import { assertStudentWithConfirmedEmail } from './policy';
 import {
   CONFIRM_TOKEN_TTL_MS,
   generateSessionId,
   generateToken as defaultGenerateToken,
   hashSessionId,
   hashToken,
+  matchSkillSuggestions,
   SESSION_TTL_MS,
+  sortSkillNames,
   tokenFailure,
 } from './domain';
 import {
@@ -18,14 +21,19 @@ import {
   deleteExpiredSessions,
   consumeToken,
   findTokenByHash,
+  findSkillByName,
   findStudentById,
   findUserByEmail,
   findUserById,
   insertConfirmToken,
   insertSession,
+  insertSkill,
   insertUser,
   invalidateUnusedConfirmTokens,
   isUniversityDomainListed,
+  listCatalogSkillNames,
+  listSkillNames,
+  replaceProfileSkills,
 } from './repo';
 
 const appUrl = () => process.env.APP_URL ?? 'http://localhost:5173';
@@ -147,5 +155,28 @@ export async function login(email: string, password: string) {
 export async function getPublicProfile(userId: string) {
   const user = await findStudentById(userId);
   if (!user) throw new ApiError('NOT_FOUND');
-  return user;
+  return { user, skills: sortSkillNames(await listSkillNames(user.id)) };
+}
+
+/**
+ * US-10. Replaces the whole skill set of the student in one transaction: each name reuses the existing skill
+ * (case-insensitive) or creates one with in_catalog = 0. A failure leaves the previous set untouched.
+ * The shared schema has already checked the 20-skill limit, the length and the duplicates.
+ */
+export async function setMySkills(user: User, skills: string[]): Promise<string[]> {
+  assertStudentWithConfirmedEmail(user);
+  await prisma.$transaction(async (tx) => {
+    const ids: string[] = [];
+    for (const name of skills) {
+      const existing = await findSkillByName(tx, name);
+      ids.push(existing ? existing.id : (await insertSkill(tx, name)).id);
+    }
+    await replaceProfileSkills(tx, user.id, [...new Set(ids)]);
+  });
+  return sortSkillNames(await listSkillNames(user.id));
+}
+
+/** US-10. Catalogue suggestions for the skill field. Any logged-in user may ask. */
+export async function suggestSkills(query: string): Promise<string[]> {
+  return matchSkillSuggestions(await listCatalogSkillNames(), query);
 }

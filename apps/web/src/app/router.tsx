@@ -3,6 +3,7 @@ import { createBrowserRouter, createMemoryRouter, type RouteObject } from 'react
 import { NotFound } from '../pages/NotFound';
 import { ConfirmEmailPage } from '../features/identity/pages/ConfirmEmailPage';
 import { LoginPage } from '../features/identity/pages/LoginPage';
+import { MyProfilePage } from '../features/identity/pages/MyProfilePage';
 import { ProfilePage } from '../features/identity/pages/ProfilePage';
 import { VerificationPage } from '../features/verification/pages/VerificationPage';
 import { RegisterPage } from '../features/identity/pages/RegisterPage';
@@ -15,6 +16,7 @@ const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
   '/register': (page) => <RegisterPage page={page} />,
   '/login': (page) => <LoginPage page={page} />,
   '/u/:userId': (page) => <ProfilePage page={page} />,
+  '/me/profile': (page) => <MyProfilePage page={page} />,
   '/me/verification': (page) => <VerificationPage page={page} />,
   '/confirm-email': (page) => <ConfirmEmailPage page={page} />,
 };

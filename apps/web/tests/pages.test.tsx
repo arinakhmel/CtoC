@@ -13,7 +13,7 @@ beforeEach(() => {
 const renderAt = (path: string) => render(<RouterProvider router={createTestRouter([path])} future={providerFuture} />);
 
 /** Pages with a real implementation have their own tests (for example tests/register.test.tsx). */
-const IMPLEMENTED_PAGES = ['/register', '/confirm-email', '/login', '/me/verification', '/u/:userId'];
+const IMPLEMENTED_PAGES = ['/register', '/confirm-email', '/login', '/me/verification', '/u/:userId', '/me/profile'];
 
 describe('overview.md §4: every page stub renders what the router promises', () => {
   it.each(PAGES.filter((page) => !IMPLEMENTED_PAGES.includes(page.path)).map((page) => [page.path, page] as const))('%s shows its title, its stories and the link to all pages', async (_path, page) => {

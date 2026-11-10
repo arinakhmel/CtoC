@@ -27,7 +27,7 @@ export const serializeMe = (user: User) => ({
   },
 });
 
-/** api.md §4.9: the public profile. Never the email, the role or the hash. Skills, bio and experience come with US-10, 11, 37, 38. */
-export const serializePublicProfile = (user: User) => ({
-  profile: { id: user.id, displayName: user.displayName, verified: isVerifiedStudent(user) },
+/** api.md §4.9: the public profile. Never the email, the role or the hash. Bio and experience come with US-11, 37, 38. */
+export const serializePublicProfile = (user: User, skills: string[]) => ({
+  profile: { id: user.id, displayName: user.displayName, verified: isVerifiedStudent(user), skills },
 });

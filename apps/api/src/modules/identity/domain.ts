@@ -20,3 +20,14 @@ export const hashSessionId = hashToken;
 
 /** INV-03: the badge is derived from studentVerifiedAt and from nothing else. */
 export const isVerifiedStudent = (user: { studentVerifiedAt: Date | null }): boolean => user.studentVerifiedAt !== null;
+
+/** Skills are shown alphabetically: there is no order column (US-10). */
+export const sortSkillNames = (names: string[]): string[] =>
+  [...names].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase(), 'uk'));
+
+/** Catalogue suggestions for GET /api/skills?query=: names containing the query, ignoring case, at most 20. */
+export const SKILL_SUGGESTIONS_MAX = 20;
+export const matchSkillSuggestions = (names: string[], query: string): string[] => {
+  const needle = query.trim().toLowerCase();
+  return sortSkillNames(names.filter((name) => name.toLowerCase().includes(needle))).slice(0, SKILL_SUGGESTIONS_MAX);
+};
