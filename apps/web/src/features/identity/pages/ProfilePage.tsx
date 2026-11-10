@@ -38,6 +38,12 @@ export function ProfilePage({ page }: { page: PageConfig }) {
           <h1 id="profile-name">{state.profile.displayName}</h1>
           {state.profile.verified && <p className="badge badge-verified">Верифікований студент</p>}
         </header>
+        {state.profile.bio !== '' && (
+          <section aria-labelledby="bio-title">
+            <h2 id="bio-title">Про мене</h2>
+            <p className="bio">{state.profile.bio}</p>
+          </section>
+        )}
         {state.profile.skills.length > 0 && (
           <section aria-labelledby="skills-title">
             <h2 id="skills-title">Навички</h2>

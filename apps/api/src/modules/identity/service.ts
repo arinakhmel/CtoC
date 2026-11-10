@@ -34,6 +34,8 @@ import {
   listCatalogSkillNames,
   listSkillNames,
   replaceProfileSkills,
+  upsertBio,
+  findBio,
 } from './repo';
 
 const appUrl = () => process.env.APP_URL ?? 'http://localhost:5173';
@@ -155,7 +157,7 @@ export async function login(email: string, password: string) {
 export async function getPublicProfile(userId: string) {
   const user = await findStudentById(userId);
   if (!user) throw new ApiError('NOT_FOUND');
-  return { user, skills: sortSkillNames(await listSkillNames(user.id)) };
+  return { user, skills: sortSkillNames(await listSkillNames(user.id)), bio: await findBio(user.id) };
 }
 
 /**
@@ -179,4 +181,13 @@ export async function setMySkills(user: User, skills: string[]): Promise<string[
 /** US-10. Catalogue suggestions for the skill field. Any logged-in user may ask. */
 export async function suggestSkills(query: string): Promise<string[]> {
   return matchSkillSuggestions(await listCatalogSkillNames(), query);
+}
+
+/**
+ * US-11. Saves the «Про мене» text exactly as typed (no trimming, so emoji and line breaks round-trip).
+ * The 500-character limit is the shared schema, with the database CHECK as the safety net.
+ */
+export async function setMyBio(user: User, bio: string): Promise<string> {
+  assertStudentWithConfirmedEmail(user);
+  return (await upsertBio(user.id, bio)).bio;
 }

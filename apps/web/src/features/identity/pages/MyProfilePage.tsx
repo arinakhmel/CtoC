@@ -3,7 +3,8 @@ import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
 import type { PageConfig } from '../../../routes.config';
-import { getMySkills, saveSkills, suggestSkills } from '../queries/skills';
+import { BioForm } from '../components/BioForm';
+import { getMyProfile, saveSkills, suggestSkills } from '../queries/skills';
 
 const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
@@ -16,6 +17,7 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [userId, setUserId] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
+  const [bio, setBio] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -25,11 +27,12 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
 
   useEffect(() => {
     let active = true;
-    getMySkills().then(
+    getMyProfile().then(
       (mine) => {
         if (!active) return;
         setUserId(mine.userId);
         setSkills(mine.skills);
+        setBio(mine.bio);
         setLoaded(true);
         suggestSkills().then(
           (result) => active && setSuggestions(result.skills),
@@ -107,6 +110,7 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
       )}
 
       {loaded && !loadError && (
+        <>
         <form onSubmit={onSave} noValidate aria-label="Навички профілю">
           <p>
             <label htmlFor="skill">Навичка</label>
@@ -156,6 +160,8 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
             </p>
           )}
         </form>
+        <BioForm initialBio={bio} />
+        </>
       )}
 
       <p>

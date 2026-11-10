@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestRouter, providerFuture } from '../src/app/router';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
-const profileBody = (verified: boolean) => json({ profile: { id: 'u1', displayName: 'Олена Коваль', verified, skills: [] } });
+const profileBody = (verified: boolean) => json({ profile: { id: 'u1', displayName: 'Олена Коваль', verified, skills: [], bio: '' } });
 
 let profileResponse: () => Response;
 let profileCalls: string[];

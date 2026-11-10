@@ -1,11 +1,18 @@
-import { confirmEmailSchema, loginSchema, putSkillsSchema, registerSchema, resendConfirmationSchema } from '@ctoc/shared';
+import {
+  confirmEmailSchema,
+  loginSchema,
+  putSkillsSchema,
+  registerSchema,
+  resendConfirmationSchema,
+  updateProfileSchema,
+} from '@ctoc/shared';
 import { Router } from 'express';
 import { requireUser, SESSION_COOKIE } from '../../http/auth';
 import { failureLimiter, rateLimit } from '../../http/rate-limit';
 import { validateBody } from '../../http/validate';
 import { ApiError } from '../../errors';
 import { serializeConfirmed, serializeMe, serializePublicProfile, serializeRegistered } from './serializer';
-import { confirmEmail, getPublicProfile, login, register, resendConfirmation, setMySkills, suggestSkills } from './service';
+import { confirmEmail, getPublicProfile, login, register, resendConfirmation, setMyBio, setMySkills, suggestSkills } from './service';
 
 export function identityRouter(): Router {
   const router = Router();
@@ -52,9 +59,14 @@ export function identityRouter(): Router {
 
   // Public (A-16). no-store: a badge granted by a moderator must show on the next request (US-09/S3).
   router.get('/profiles/:userId', async (req, res) => {
-    const { user, skills } = await getPublicProfile(req.params.userId);
+    const { user, skills, bio } = await getPublicProfile(req.params.userId);
     res.setHeader('Cache-Control', 'no-store');
-    res.json(serializePublicProfile(user, skills));
+    res.json(serializePublicProfile(user, skills, bio));
+  });
+
+  // US-11. Unknown keys are stripped by the shared schema.
+  router.put('/me/profile', requireUser, validateBody(updateProfileSchema), async (req, res) => {
+    res.json({ bio: await setMyBio(req.user!, req.body.bio) });
   });
 
   // US-10. The body is replaced as a whole; unknown keys are stripped by the shared schema.

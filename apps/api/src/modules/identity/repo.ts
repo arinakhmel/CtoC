@@ -64,3 +64,10 @@ export const listCatalogSkillNames = async () =>
 
 export const listSkillNames = async (userId: string) =>
   (await prisma.profileSkill.findMany({ where: { userId }, include: { skill: true } })).map((row) => row.skill.name);
+
+/** One atomic statement: creates the profile row on the first save, updates it afterwards (US-11). */
+export const upsertBio = (userId: string, bio: string) =>
+  prisma.studentProfile.upsert({ where: { userId }, create: { userId, bio }, update: { bio } });
+
+export const findBio = async (userId: string): Promise<string> =>
+  (await prisma.studentProfile.findUnique({ where: { userId }, select: { bio: true } }))?.bio ?? '';

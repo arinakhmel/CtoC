@@ -36,3 +36,9 @@ header nav ul {
 .badge-verified::before {
   content: '\2713\00a0';
 }
+
+/* The «Про мене» text (US-11): plain text, line breaks kept, long words wrapped. */
+.bio {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

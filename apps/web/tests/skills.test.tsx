@@ -8,12 +8,14 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const apiError = (code: string, status: number) => json({ error: { code, message: 'x' } }, status);
 
 let savedSkills: string[];
+let savedBio: string;
 let meResponse: () => Response;
 let putResponse: (skills: string[]) => Response;
 let puts: unknown[];
 
 beforeEach(() => {
   savedSkills = [];
+  savedBio = '';
   puts = [];
   meResponse = () => json({ user: { id: 'u1', role: 'student', displayName: 'Олена', emailConfirmed: true, studentVerified: false } });
   putResponse = (skills) => json({ skills: [...skills].sort() });
@@ -21,7 +23,7 @@ beforeEach(() => {
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
       if (url === '/api/me') return meResponse();
-      if (url === '/api/profiles/u1') return json({ profile: { id: 'u1', displayName: 'Олена', verified: false, skills: savedSkills } });
+      if (url === '/api/profiles/u1') return json({ profile: { id: 'u1', displayName: 'Олена', verified: false, skills: savedSkills, bio: savedBio } });
       if (url.startsWith('/api/skills')) return json({ skills: ['Java', 'HTML', 'Копірайтинг'] });
       if (url === '/api/me/skills' && init?.method === 'PUT') {
         const body = JSON.parse(String(init.body)) as { skills: string[] };

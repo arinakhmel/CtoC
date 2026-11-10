@@ -41,7 +41,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | POST | `/api/auth/login` | US-45 | P | 200, sets `sid` (body: §4.7) | 400 `VALIDATION_FAILED` · 401 `INVALID_CREDENTIALS` · 429 `RATE_LIMITED` |
 | POST | `/api/auth/logout` | US-46 | A | 204 | |
 | GET | `/api/me` | US-45 | A | 200 (body: §4.7) | 401 `AUTH_REQUIRED` |
-| PUT | `/api/me/profile` | US-11 | S- | 200 | 400 `BIO_TOO_LONG` · 403 `ROLE_FORBIDDEN` |
+| PUT | `/api/me/profile` | US-11 | S- | 200 (body: §4.11) | 400 `BIO_TOO_LONG`, `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | PUT | `/api/me/skills` | US-10 | S- | 200 (body: §4.10) | 400 `SKILL_EMPTY`, `SKILLS_LIMIT`, `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | GET | `/api/skills?query=` | US-10 | A | 200 (body: §4.10) | 401 `AUTH_REQUIRED` |
 | GET | `/api/profiles/:userId` | US-09, US-24, US-37, US-38 | P (A-16) | 200 (body: §4.9), `no-store` | 404 `NOT_FOUND` |
@@ -405,12 +405,12 @@ The `status` field is stripped. A valid request always creates a task in `pendin
 Public, no session needed. `Cache-Control: no-store`, so a badge granted by a moderator shows on the next request.
 
 ```json
-{ "profile": { "id": "…", "displayName": "Олена Коваль", "verified": true, "skills": ["HTML", "Java"] } }
+{ "profile": { "id": "…", "displayName": "Олена Коваль", "verified": true, "skills": ["HTML", "Java"], "bio": "Студент 2 курсу…" } }
 ```
 
 - `verified` is `studentVerifiedAt IS NOT NULL` and nothing else (INV-03). A student who has not uploaded a document, or whose request is pending or rejected, has `verified: false`.
 - Every **student** account has a profile, including one with an unconfirmed email. A missing id, a customer and a moderator all give the same 404 `NOT_FOUND`, so the URL does not reveal which accounts exist.
-- The email, the role and the hash are never returned. `skills` is the list from US-10 (alphabetical, `[]` when empty). Bio and experience records are added to this body by US-11, US-37 and US-38.
+- The email, the role and the hash are never returned. `skills` is the list from US-10 (alphabetical, `[]` when empty). `bio` is the «Про мене» text from US-11 (`""` when empty), shown as plain text. Experience records are added to this body by US-37 and US-38.
 - The only way to become verified is a moderator approving the request (US-39/S1). Until that endpoint exists, `studentVerifiedAt` can only be set in the database.
 
 ### 4.10 `PUT /api/me/skills` and `GET /api/skills` (US-10)
@@ -430,3 +430,20 @@ Public, no session needed. `Cache-Control: no-store`, so a badge granted by a mo
 - Access: a student with a confirmed email (no session 401, other roles 403 `ROLE_FORBIDDEN`, unconfirmed 403 `EMAIL_NOT_CONFIRMED`).
 - `GET /api/skills?query=` returns `{ "skills": ["Java", "JavaScript"] }`: catalogue skills only, containing `query` ignoring case, sorted, at most 20. Any logged-in user may call it. The catalogue is seeded by a migration (20 skills) and is not extended by students' own skills.
 - There is no "get my skills" endpoint: the editor reads `GET /api/me` and then `GET /api/profiles/:id` (§4.9).
+
+### 4.11 `PUT /api/me/profile` (US-11)
+
+```json
+{ "bio": "Люблю код 💻, дизайн 🎨 і каву ☕!" }
+```
+
+200, with the saved text:
+
+```json
+{ "bio": "Люблю код 💻, дизайн 🎨 і каву ☕!" }
+```
+
+- The text is stored **exactly as typed**: no trimming, line breaks and emoji unchanged (stored as UTF-8). `""` clears it. The first save creates the profile row, later saves update it (one atomic upsert).
+- The limit is 500 **characters, counted as Unicode code points**, the same way as the database CHECK `length(bio) <= 500`. So 500 emoji are accepted (1000 UTF-16 units) and 501 give 400 `BIO_TOO_LONG` («Текст «Про мене» перевищує 500 символів»). A missing or non-string `bio` gives 400 `VALIDATION_FAILED`.
+- Access: a student with a confirmed email (no session 401, other roles 403 `ROLE_FORBIDDEN`, unconfirmed 403 `EMAIL_NOT_CONFIRMED`). A student can only change their own bio. The body has no user id.
+- The web form shows a live counter and blocks the save over the limit. It never cuts the text off.
