@@ -8,7 +8,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 |---|---|
 | Base path | `/api`. Health check: `GET /healthz`. |
 | Authentication | `sid` cookie (httpOnly, SameSite=Lax). No session → **401** `AUTH_REQUIRED`. |
-| CSRF | Requests other than GET must send an `Origin` header that matches the app. Otherwise **403** `ORIGIN_MISMATCH`. |
+| CSRF | A request other than GET that carries the `sid` cookie must send an `Origin` header equal to the web app origin (`APP_URL`). Otherwise **403** `ORIGIN_MISMATCH`. Requests without the cookie cannot act as a user and are not checked (public endpoints). |
 | Body | JSON with `camelCase` keys. Unknown keys are **stripped**, so a forged `price` is ignored (US-42/S2). |
 | Uploads | `multipart/form-data` with the field `file`. |
 | Money | Integer kopecks in fields ending in `Kopecks`. |
@@ -38,9 +38,9 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | POST | `/api/auth/register` | US-06, US-43, US-44 | P | 201 (body: §4.5) | 400 `VALIDATION_FAILED`, `EMAIL_DOMAIN_NOT_ALLOWED` · 409 `EMAIL_TAKEN` · 429 |
 | POST | `/api/auth/confirm-email` | US-07/S1, S2 | P | 200 (body: §4.6) | 400 `TOKEN_INVALID`, `TOKEN_EXPIRED` |
 | POST | `/api/auth/resend-confirmation` | US-07/S3 | P (OQ-20) | 202, no body | 400 `VALIDATION_FAILED` · 409 `EMAIL_ALREADY_CONFIRMED` · 429 |
-| POST | `/api/auth/login` | US-45 | P | 200 | 401 `INVALID_CREDENTIALS` · 429 |
+| POST | `/api/auth/login` | US-45 | P | 200, sets `sid` (body: §4.7) | 400 `VALIDATION_FAILED` · 401 `INVALID_CREDENTIALS` · 429 `RATE_LIMITED` |
 | POST | `/api/auth/logout` | US-46 | A | 204 | |
-| GET | `/api/me` | none | A | 200 | 401 |
+| GET | `/api/me` | US-45 | A | 200 (body: §4.7) | 401 `AUTH_REQUIRED` |
 | PUT | `/api/me/profile` | US-11 | S- | 200 | 400 `BIO_TOO_LONG` · 403 `ROLE_FORBIDDEN` |
 | PUT | `/api/me/skills` | US-10 | S- | 200 | 400 `SKILL_EMPTY`, `SKILLS_LIMIT` |
 | GET | `/api/skills?query=` | US-10 | A | 200 | |
@@ -364,3 +364,22 @@ The `status` field is stripped. A valid request always creates a task in `pendin
 
 - A token works once. An unknown, used or replaced token gives 400 `TOKEN_INVALID`. A token past its 24 h lifetime that was never used gives 400 `TOKEN_EXPIRED`, and the UI offers a resend.
 - Resend takes `{ "email": "user@knu.edu.ua" }` and answers 202 with no body. It stores a new token, invalidates the older unused ones and sends a new email (the dev outbox shows it). An unknown email also gets 202 and nothing is sent. A confirmed account gets 409 `EMAIL_ALREADY_CONFIRMED`. Limit: 5 requests per hour per IP, then 429 `RATE_LIMITED` (proposal). Public access is open question OQ-20.
+
+### 4.7 `POST /api/auth/login` and `GET /api/me` (US-45)
+
+```json
+{ "email": "user@knu.edu.ua", "password": "secret-pass" }
+```
+
+200, with `Set-Cookie: sid=…; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800` (`Secure` in production). The session lasts 7 days and is not renewed. `GET /api/me` returns the same body for a valid cookie, and 401 `AUTH_REQUIRED` for no, unknown or expired cookie.
+
+```json
+{ "user": { "id": "…", "role": "student", "displayName": "Олена Коваль", "emailConfirmed": true, "studentVerified": false } }
+```
+
+- A wrong password and an unknown email give the identical 401 `INVALID_CREDENTIALS` («Невірна пошта або пароль»). An unknown email still runs a password comparison, so the timing is similar.
+- A user with an unconfirmed email can log in (`emailConfirmed: false`). The UI then offers only the resend of the confirmation email.
+- Only the SHA-256 of the cookie value is stored in `sessions.id`.
+- Limit: 5 failed logins per 15 minutes per IP, then 429 `RATE_LIMITED` even for a correct password. Successful logins are not counted and reset the count (proposal, in memory, single API instance).
+- The start page by role is decided by the web app: student → `/feed`, customer → `/c/tasks`, moderator → `/mod/verifications`.
+- Moderators are created by `pnpm db:seed` (`SEED_MODERATOR_EMAIL`, `SEED_MODERATOR_PASSWORD`), never by registration (ADR-0006).

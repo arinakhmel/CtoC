@@ -14,3 +14,14 @@ export const serializeRegistered = (user: User) => ({
 export const serializeConfirmed = (user: User) => ({
   user: { id: user.id, role: user.role, displayName: user.displayName, emailConfirmed: user.emailConfirmedAt !== null },
 });
+
+/** api.md §4.7: the user in the login and `GET /api/me` bodies. The email and the hash are never returned. */
+export const serializeMe = (user: User) => ({
+  user: {
+    id: user.id,
+    role: user.role,
+    displayName: user.displayName,
+    emailConfirmed: user.emailConfirmedAt !== null,
+    studentVerified: user.studentVerifiedAt !== null,
+  },
+});

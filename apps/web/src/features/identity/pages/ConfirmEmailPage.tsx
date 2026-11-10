@@ -53,14 +53,15 @@ export function ConfirmEmailPage({ page }: { page: PageConfig }) {
   );
 }
 
-function ResendForm() {
+/** Also used on /login for a user whose email is not confirmed yet (US-45, US-07/S3). */
+export function ResendForm({ defaultEmail = '' }: { defaultEmail?: string }) {
   const [sent, setSent] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<ResendConfirmationInput>({ resolver: zodResolver(resendConfirmationSchema), defaultValues: { email: '' } });
+  } = useForm<ResendConfirmationInput>({ resolver: zodResolver(resendConfirmationSchema), defaultValues: { email: defaultEmail } });
 
   const onSubmit = handleSubmit(async ({ email }) => {
     setFormError(null);

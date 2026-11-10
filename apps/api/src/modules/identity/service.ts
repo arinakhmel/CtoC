@@ -4,14 +4,24 @@ import bcrypt from 'bcryptjs';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { getMailer } from '../../platform/ports/mailer';
-import { CONFIRM_TOKEN_TTL_MS, generateToken as defaultGenerateToken, hashToken, tokenFailure } from './domain';
+import {
+  CONFIRM_TOKEN_TTL_MS,
+  generateSessionId,
+  generateToken as defaultGenerateToken,
+  hashSessionId,
+  hashToken,
+  SESSION_TTL_MS,
+  tokenFailure,
+} from './domain';
 import {
   confirmUser,
+  deleteExpiredSessions,
   consumeToken,
   findTokenByHash,
   findUserByEmail,
   findUserById,
   insertConfirmToken,
+  insertSession,
   insertUser,
   invalidateUnusedConfirmTokens,
   isUniversityDomainListed,
@@ -111,4 +121,23 @@ export async function resendConfirmation(email: string, deps: { generateToken?: 
     });
   });
   await sendConfirmationEmail(user.email, token);
+}
+
+/** Compared when the email is unknown, so both failures take about the same time (US-45/S2). */
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 10);
+
+/**
+ * US-45. Wrong password and unknown email are the same INVALID_CREDENTIALS. An unconfirmed user may log in
+ * (they can only resend the confirmation email). Returns the cookie value: only its hash is stored.
+ */
+export async function login(email: string, password: string) {
+  const user = await findUserByEmail(email);
+  const passwordOk = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH);
+  if (!user || !passwordOk) throw new ApiError('INVALID_CREDENTIALS');
+
+  const now = new Date();
+  const sessionId = generateSessionId();
+  await deleteExpiredSessions(now);
+  await insertSession({ id: hashSessionId(sessionId), userId: user.id, expiresAt: new Date(now.getTime() + SESSION_TTL_MS) });
+  return { user, sessionId, maxAgeMs: SESSION_TTL_MS };
 }

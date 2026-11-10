@@ -30,3 +30,11 @@ export const invalidateUnusedConfirmTokens = (tx: Tx, userId: string, now: Date)
   tx.emailToken.updateMany({ where: { userId, purpose: 'confirm_email', usedAt: null }, data: { usedAt: now } });
 
 export const findUserById = (tx: Tx, id: string) => tx.user.findUniqueOrThrow({ where: { id } });
+
+export const insertSession = (data: { id: string; userId: string; expiresAt: Date }) => prisma.session.create({ data });
+
+/** A session is valid only while `expiresAt > now`. */
+export const findValidSession = (idHash: string, now: Date) =>
+  prisma.session.findFirst({ where: { id: idHash, expiresAt: { gt: now } }, include: { user: true } });
+
+export const deleteExpiredSessions = (now: Date) => prisma.session.deleteMany({ where: { expiresAt: { lte: now } } });

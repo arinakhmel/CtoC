@@ -10,3 +10,10 @@ export const hashToken = (token: string): string => createHash('sha256').update(
 /** Why a token could not be consumed: past its lifetime and never used is "expired", anything else is "invalid". */
 export const tokenFailure = (token: { usedAt: Date | null; expiresAt: Date }, now: Date): 'TOKEN_EXPIRED' | 'TOKEN_INVALID' =>
   token.usedAt === null && token.expiresAt <= now ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID';
+
+/** Login session lifetime: 7 days, fixed (decided with the product owner for US-45). */
+export const SESSION_TTL_MS = 7 * 24 * 3600 * 1000;
+
+/** The cookie value. Only its hash is stored in `sessions.id`, so a leaked database cannot be replayed. */
+export const generateSessionId = (): string => randomBytes(32).toString('base64url');
+export const hashSessionId = hashToken;

@@ -44,7 +44,7 @@ For whoever writes the database schema.
 
 | Column | Type | Constraints |
 |---|---|---|
-| id | TEXT | PK (random, 32 bytes) |
+| id | TEXT | PK. The SHA-256 of the random 32-byte cookie value, never the cookie value itself (US-45) |
 | user_id | TEXT | FK users, ON DELETE CASCADE |
 | expires_at | INTEGER | NOT NULL |
 | created_at | INTEGER | NOT NULL |

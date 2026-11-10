@@ -1,9 +1,11 @@
-import { confirmEmailSchema, registerSchema, resendConfirmationSchema } from '@ctoc/shared';
+import { confirmEmailSchema, loginSchema, registerSchema, resendConfirmationSchema } from '@ctoc/shared';
 import { Router } from 'express';
-import { rateLimit } from '../../http/rate-limit';
+import { requireUser, SESSION_COOKIE } from '../../http/auth';
+import { failureLimiter, rateLimit } from '../../http/rate-limit';
 import { validateBody } from '../../http/validate';
-import { serializeConfirmed, serializeRegistered } from './serializer';
-import { confirmEmail, register, resendConfirmation } from './service';
+import { ApiError } from '../../errors';
+import { serializeConfirmed, serializeMe, serializeRegistered } from './serializer';
+import { confirmEmail, login, register, resendConfirmation } from './service';
 
 export function identityRouter(): Router {
   const router = Router();
@@ -22,6 +24,30 @@ export function identityRouter(): Router {
   router.post('/auth/resend-confirmation', rateLimit({ max: 5, windowMs: 3600_000 }), validateBody(resendConfirmationSchema), async (req, res) => {
     await resendConfirmation(req.body.email);
     res.status(202).end();
+  });
+
+  // 5 failed logins per 15 minutes per IP (proposal, US-45/S3). Successful logins are not counted.
+  const loginFailures = failureLimiter({ max: 5, windowMs: 15 * 60_000 });
+  router.post('/auth/login', loginFailures.check, validateBody(loginSchema), async (req, res) => {
+    try {
+      const { user, sessionId, maxAgeMs } = await login(req.body.email, req.body.password);
+      loginFailures.reset(req);
+      res.cookie(SESSION_COOKIE, sessionId, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: maxAgeMs,
+      });
+      res.status(200).json(serializeMe(user));
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'INVALID_CREDENTIALS') loginFailures.fail(req);
+      throw error;
+    }
+  });
+
+  router.get('/me', requireUser, (req, res) => {
+    res.json(serializeMe(req.user!));
   });
   return router;
 }
