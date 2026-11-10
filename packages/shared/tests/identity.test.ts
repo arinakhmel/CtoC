@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loginSchema, registerSchema, isUniversityEmail } from '../src';
+import { confirmEmailSchema, isUniversityEmail, loginSchema, registerSchema, resendConfirmationSchema } from '../src';
 import { codesOf, fieldsOf } from './helpers';
 
 describe('US-06 registration with a university email', () => {
@@ -63,5 +63,21 @@ describe('US-45 login', () => {
   it('US-45 sc.1: email and password are required, the email is normalised', () => {
     expect(loginSchema.parse({ email: ' A@B.com ', password: 'x' }).email).toBe('a@b.com');
     expect(fieldsOf(loginSchema, { email: 'a@b.com', password: '' })).toEqual(['password']);
+  });
+});
+
+describe('US-07 confirmation schemas', () => {
+  it('US-07 sc.1: a non-empty token is accepted and trimmed', () => {
+    expect(confirmEmailSchema.parse({ token: ' abc ' }).token).toBe('abc');
+  });
+
+  it('US-07 sc.1: a missing or empty token is TOKEN_INVALID', () => {
+    expect(codesOf(confirmEmailSchema, {})).toEqual(['TOKEN_INVALID']);
+    expect(codesOf(confirmEmailSchema, { token: '  ' })).toEqual(['TOKEN_INVALID']);
+  });
+
+  it('US-07 sc.3: resend takes a normalised email and rejects a malformed one', () => {
+    expect(resendConfirmationSchema.parse({ email: ' User@University.EDU.UA ' }).email).toBe('user@university.edu.ua');
+    expect(codesOf(resendConfirmationSchema, { email: 'nope' })).toEqual(['VALIDATION_FAILED']);
   });
 });

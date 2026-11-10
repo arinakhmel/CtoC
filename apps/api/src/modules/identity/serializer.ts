@@ -9,3 +9,8 @@ export const serializeRegistered = (user: User) => ({
     emailConfirmed: user.emailConfirmedAt !== null,
   },
 });
+
+/** api.md §4.6: the 200 body of POST /api/auth/confirm-email. */
+export const serializeConfirmed = (user: User) => ({
+  user: { id: user.id, role: user.role, displayName: user.displayName, emailConfirmed: user.emailConfirmedAt !== null },
+});

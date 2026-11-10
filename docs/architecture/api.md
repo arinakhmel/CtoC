@@ -36,8 +36,8 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
 | POST | `/api/auth/register` | US-06, US-43, US-44 | P | 201 (body: §4.5) | 400 `VALIDATION_FAILED`, `EMAIL_DOMAIN_NOT_ALLOWED` · 409 `EMAIL_TAKEN` · 429 |
-| POST | `/api/auth/confirm-email` | US-07/S1, S2 | P | 200 | 400 `TOKEN_INVALID`, `TOKEN_EXPIRED` |
-| POST | `/api/auth/resend-confirmation` | US-07/S3 | A (unconfirmed) | 202 | 409 `EMAIL_ALREADY_CONFIRMED` · 429 |
+| POST | `/api/auth/confirm-email` | US-07/S1, S2 | P | 200 (body: §4.6) | 400 `TOKEN_INVALID`, `TOKEN_EXPIRED` |
+| POST | `/api/auth/resend-confirmation` | US-07/S3 | P (OQ-20) | 202, no body | 400 `VALIDATION_FAILED` · 409 `EMAIL_ALREADY_CONFIRMED` · 429 |
 | POST | `/api/auth/login` | US-45 | P | 200 | 401 `INVALID_CREDENTIALS` · 429 |
 | POST | `/api/auth/logout` | US-46 | A | 204 | |
 | GET | `/api/me` | none | A | 200 | 401 |
@@ -349,3 +349,18 @@ The `status` field is stripped. A valid request always creates a task in `pendin
 - A repeated email, in any letter case, gives 409 `EMAIL_TAKEN` (INV-01, unique NOCASE index).
 - Rate limit: 10 requests per hour per IP, then 429 `RATE_LIMITED` (proposal).
 - The confirmation email goes through the `Mailer` port. A failed send does not fail the registration.
+
+### 4.6 `POST /api/auth/confirm-email` and `POST /api/auth/resend-confirmation` (US-07)
+
+```json
+{ "token": "…token from the emailed link…" }
+```
+
+200, and the account is confirmed. No session is created.
+
+```json
+{ "user": { "id": "…", "role": "student", "displayName": "Олена Коваль", "emailConfirmed": true } }
+```
+
+- A token works once. An unknown, used or replaced token gives 400 `TOKEN_INVALID`. A token past its 24 h lifetime that was never used gives 400 `TOKEN_EXPIRED`, and the UI offers a resend.
+- Resend takes `{ "email": "user@knu.edu.ua" }` and answers 202 with no body. It stores a new token, invalidates the older unused ones and sends a new email (the dev outbox shows it). An unknown email also gets 202 and nothing is sent. A confirmed account gets 409 `EMAIL_ALREADY_CONFIRMED`. Limit: 5 requests per hour per IP, then 429 `RATE_LIMITED` (proposal). Public access is open question OQ-20.

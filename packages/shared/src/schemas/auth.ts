@@ -39,3 +39,13 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'VALIDATION_FAILED'),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
+
+/** US-07/S1, S2. The token comes from the emailed link. */
+export const confirmEmailSchema = z.object({
+  token: z.string({ required_error: 'TOKEN_INVALID', invalid_type_error: 'TOKEN_INVALID' }).trim().min(1, 'TOKEN_INVALID'),
+});
+export type ConfirmEmailInput = z.infer<typeof confirmEmailSchema>;
+
+/** US-07/S3. Public: the user may not be able to log in before confirming (ADR-0006, api.md). */
+export const resendConfirmationSchema = z.object({ email: emailSchema });
+export type ResendConfirmationInput = z.infer<typeof resendConfirmationSchema>;
