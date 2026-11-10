@@ -18,6 +18,7 @@ import {
   deleteExpiredSessions,
   consumeToken,
   findTokenByHash,
+  findStudentById,
   findUserByEmail,
   findUserById,
   insertConfirmToken,
@@ -140,4 +141,11 @@ export async function login(email: string, password: string) {
   await deleteExpiredSessions(now);
   await insertSession({ id: hashSessionId(sessionId), userId: user.id, expiresAt: new Date(now.getTime() + SESSION_TTL_MS) });
   return { user, sessionId, maxAgeMs: SESSION_TTL_MS };
+}
+
+/** US-09. A missing account and a non-student account are both NOT_FOUND, so the URL reveals nothing. */
+export async function getPublicProfile(userId: string) {
+  const user = await findStudentById(userId);
+  if (!user) throw new ApiError('NOT_FOUND');
+  return user;
 }

@@ -17,3 +17,6 @@ export const SESSION_TTL_MS = 7 * 24 * 3600 * 1000;
 /** The cookie value. Only its hash is stored in `sessions.id`, so a leaked database cannot be replayed. */
 export const generateSessionId = (): string => randomBytes(32).toString('base64url');
 export const hashSessionId = hashToken;
+
+/** INV-03: the badge is derived from studentVerifiedAt and from nothing else. */
+export const isVerifiedStudent = (user: { studentVerifiedAt: Date | null }): boolean => user.studentVerifiedAt !== null;

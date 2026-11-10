@@ -1,4 +1,5 @@
 import type { User } from '@prisma/client';
+import { isVerifiedStudent } from './domain';
 
 /** api.md: the 201 body of POST /api/auth/register. The email and the hash are never returned. */
 export const serializeRegistered = (user: User) => ({
@@ -24,4 +25,9 @@ export const serializeMe = (user: User) => ({
     emailConfirmed: user.emailConfirmedAt !== null,
     studentVerified: user.studentVerifiedAt !== null,
   },
+});
+
+/** api.md §4.9: the public profile. Never the email, the role or the hash. Skills, bio and experience come with US-10, 11, 37, 38. */
+export const serializePublicProfile = (user: User) => ({
+  profile: { id: user.id, displayName: user.displayName, verified: isVerifiedStudent(user) },
 });

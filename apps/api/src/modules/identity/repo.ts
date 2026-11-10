@@ -38,3 +38,6 @@ export const findValidSession = (idHash: string, now: Date) =>
   prisma.session.findFirst({ where: { id: idHash, expiresAt: { gt: now } }, include: { user: true } });
 
 export const deleteExpiredSessions = (now: Date) => prisma.session.deleteMany({ where: { expiresAt: { lte: now } } });
+
+/** Only student accounts have a public profile (A-16). Anything else is the same as a missing account. */
+export const findStudentById = (id: string) => prisma.user.findFirst({ where: { id, role: 'student' } });

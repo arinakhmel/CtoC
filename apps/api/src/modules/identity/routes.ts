@@ -4,8 +4,8 @@ import { requireUser, SESSION_COOKIE } from '../../http/auth';
 import { failureLimiter, rateLimit } from '../../http/rate-limit';
 import { validateBody } from '../../http/validate';
 import { ApiError } from '../../errors';
-import { serializeConfirmed, serializeMe, serializeRegistered } from './serializer';
-import { confirmEmail, login, register, resendConfirmation } from './service';
+import { serializeConfirmed, serializeMe, serializePublicProfile, serializeRegistered } from './serializer';
+import { confirmEmail, getPublicProfile, login, register, resendConfirmation } from './service';
 
 export function identityRouter(): Router {
   const router = Router();
@@ -48,6 +48,13 @@ export function identityRouter(): Router {
 
   router.get('/me', requireUser, (req, res) => {
     res.json(serializeMe(req.user!));
+  });
+
+  // Public (A-16). no-store: a badge granted by a moderator must show on the next request (US-09/S3).
+  router.get('/profiles/:userId', async (req, res) => {
+    const user = await getPublicProfile(req.params.userId);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(serializePublicProfile(user));
   });
   return router;
 }

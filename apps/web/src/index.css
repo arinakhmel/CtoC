@@ -19,3 +19,20 @@ header nav ul {
   list-style: none;
   font-size: 0.85rem;
 }
+
+/* «Верифікований студент» badge (US-09): visible text on a filled background, not colour alone. */
+.badge {
+  display: inline-block;
+  margin: 0;
+  padding: 0.2rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.badge-verified {
+  color: #ffffff;
+  background: #1b7f3b;
+}
+.badge-verified::before {
+  content: '\2713\00a0';
+}

@@ -44,7 +44,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | PUT | `/api/me/profile` | US-11 | S- | 200 | 400 `BIO_TOO_LONG` · 403 `ROLE_FORBIDDEN` |
 | PUT | `/api/me/skills` | US-10 | S- | 200 | 400 `SKILL_EMPTY`, `SKILLS_LIMIT` |
 | GET | `/api/skills?query=` | US-10 | A | 200 | |
-| GET | `/api/profiles/:userId` | US-09, US-24, US-37, US-38 | P (A-16) | 200 | 404 `NOT_FOUND` |
+| GET | `/api/profiles/:userId` | US-09, US-24, US-37, US-38 | P (A-16) | 200 (body: §4.9), `no-store` | 404 `NOT_FOUND` |
 | GET | `/api/public/settings` | US-03, US-15 | P | 200, `Cache-Control: no-store` | |
 
 ### Verification
@@ -399,3 +399,16 @@ The `status` field is stripped. A valid request always creates a task in `pendin
 - At most one request per student is `pending` (INV-04, partial unique index): a second upload gives 409 `VERIFICATION_PENDING`. After a rejection or a revocation the student may upload again.
 - Access: a student with a confirmed email. No session gives 401, a customer or moderator 403 `ROLE_FORBIDDEN`, an unconfirmed email 403 `EMAIL_NOT_CONFIRMED`, an already verified student 409 `ALREADY_VERIFIED`.
 - Files are stored through the `FileStorage` port (local disk, `apps/api/data/uploads`, or `UPLOAD_DIR`) under a random key, and are never served as static files. Downloading is for the moderator (US-39).
+
+### 4.9 `GET /api/profiles/:userId` (US-09)
+
+Public, no session needed. `Cache-Control: no-store`, so a badge granted by a moderator shows on the next request.
+
+```json
+{ "profile": { "id": "…", "displayName": "Олена Коваль", "verified": true } }
+```
+
+- `verified` is `studentVerifiedAt IS NOT NULL` and nothing else (INV-03). A student who has not uploaded a document, or whose request is pending or rejected, has `verified: false`.
+- Every **student** account has a profile, including one with an unconfirmed email. A missing id, a customer and a moderator all give the same 404 `NOT_FOUND`, so the URL does not reveal which accounts exist.
+- The email, the role and the hash are never returned. Skills, bio and experience records are added to this body by US-10, US-11, US-37 and US-38.
+- The only way to become verified is a moderator approving the request (US-39/S1). Until that endpoint exists, `studentVerifiedAt` can only be set in the database.
