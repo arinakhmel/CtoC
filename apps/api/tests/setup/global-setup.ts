@@ -17,6 +17,7 @@ export default function setup() {
   execFileSync('pnpm', ['exec', 'prisma', 'migrate', 'deploy'], {
     cwd: apiRoot,
     stdio: 'pipe',
+    shell: process.platform === 'win32', // pnpm is a .cmd shim on Windows
     env: { ...process.env, DATABASE_URL: 'file:../data/test.db?connection_limit=1', NODE_ENV: 'test' },
   });
 }

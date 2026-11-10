@@ -270,3 +270,4 @@ Updated by `/implement-story` when a story is implemented. One row per story. A 
 
 | Story | Status | Code | Tests |
 |---|---|---|---|
+| US-06 | done (student path; US-43 customer path works through the same endpoint but its own scenarios are not covered yet) | `apps/api/src/modules/identity/*`, `apps/api/src/modules/dev/routes.ts`, `apps/api/src/platform/ports/mailer.ts`, `apps/api/src/http/rate-limit.ts`, `apps/api/prisma/migrations/20261110090000_seed_university_domains`, `apps/web/src/features/identity/*` | `apps/api/tests/identity/register.test.ts`, `apps/web/tests/register.test.tsx`, `packages/shared/tests/identity.test.ts` |

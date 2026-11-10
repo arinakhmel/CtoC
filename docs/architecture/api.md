@@ -35,7 +35,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| POST | `/api/auth/register` | US-06, US-43, US-44 | P | 201 | 400 `VALIDATION_FAILED`, `EMAIL_DOMAIN_NOT_ALLOWED` · 409 `EMAIL_TAKEN` · 429 |
+| POST | `/api/auth/register` | US-06, US-43, US-44 | P | 201 (body: §4.5) | 400 `VALIDATION_FAILED`, `EMAIL_DOMAIN_NOT_ALLOWED` · 409 `EMAIL_TAKEN` · 429 |
 | POST | `/api/auth/confirm-email` | US-07/S1, S2 | P | 200 | 400 `TOKEN_INVALID`, `TOKEN_EXPIRED` |
 | POST | `/api/auth/resend-confirmation` | US-07/S3 | A (unconfirmed) | 202 | 409 `EMAIL_ALREADY_CONFIRMED` · 429 |
 | POST | `/api/auth/login` | US-45 | P | 200 | 401 `INVALID_CREDENTIALS` · 429 |
@@ -332,3 +332,20 @@ Content-Type: application/json
 ```
 
 The `status` field is stripped. A valid request always creates a task in `pending_moderation` (US-40/S3, INV-05).
+
+### 4.5 `POST /api/auth/register` (US-06, US-43)
+
+```json
+{ "role": "student", "email": "user@knu.edu.ua", "displayName": "Олена Коваль", "password": "secret-pass" }
+```
+
+201. No session is created; the user logs in after confirming the email (US-07). The email is not echoed back.
+
+```json
+{ "user": { "id": "…", "role": "student", "displayName": "Олена Коваль", "emailConfirmed": false } }
+```
+
+- A student email must pass two checks: the `.edu.ua` suffix (shared schema) and a domain listed in `university_domains` (A-17). Both fail with 400 `EMAIL_DOMAIN_NOT_ALLOWED` and `details: [{ "field": "email", … }]`.
+- A repeated email, in any letter case, gives 409 `EMAIL_TAKEN` (INV-01, unique NOCASE index).
+- Rate limit: 10 requests per hour per IP, then 429 `RATE_LIMITED` (proposal).
+- The confirmation email goes through the `Mailer` port. A failed send does not fail the registration.

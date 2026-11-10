@@ -1,8 +1,15 @@
 import { Router } from 'express';
+import { devRouter } from './dev/routes';
+import { identityRouter } from './identity/routes';
 
 /**
- * Mounted at /api by app.ts. Each feature module adds its router here, for example:
- *   router.use('/tasks', tasksRouter);
+ * Mounted at /api by app.ts. Each feature module adds its router here.
+ * A function, so every app instance (and every test) gets fresh in-memory rate limiters.
  * See README.md in this folder.
  */
-export const modulesRouter = Router();
+export function createModulesRouter(): Router {
+  const router = Router();
+  router.use(identityRouter());
+  router.use(devRouter());
+  return router;
+}

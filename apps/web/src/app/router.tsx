@@ -1,5 +1,6 @@
 import { createBrowserRouter, createMemoryRouter, type RouteObject } from 'react-router-dom';
 import { NotFound } from '../pages/NotFound';
+import { RegisterPage } from '../features/identity/pages/RegisterPage';
 import { PageStub } from '../pages/PageStub';
 import { PAGES } from '../routes.config';
 import { Layout } from './Layout';
@@ -13,7 +14,7 @@ export const routes: RouteObject[] = [
       ...PAGES.map((page) =>
         page.path === '/'
           ? { index: true, element: <PageStub page={page} /> }
-          : { path: page.path.slice(1), element: <PageStub page={page} /> },
+          : { path: page.path.slice(1), element: page.path === '/register' ? <RegisterPage page={page} /> : <PageStub page={page} /> },
       ),
       { path: '*', element: <NotFound /> },
     ],
