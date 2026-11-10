@@ -51,8 +51,8 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| POST | `/api/me/verification` | US-08 | S- | 201 | 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_TOO_LARGE` · 403 `EMAIL_NOT_CONFIRMED` · 409 `VERIFICATION_PENDING`, `ALREADY_VERIFIED` |
-| GET | `/api/me/verification` | US-08, US-39/S2 | S- | 200 | |
+| POST | `/api/me/verification` | US-08 | S- | 201 (body: §4.8) | 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_TOO_LARGE`, `VALIDATION_FAILED` (no file) · 401 `AUTH_REQUIRED` · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` · 409 `VERIFICATION_PENDING`, `ALREADY_VERIFIED` |
+| GET | `/api/me/verification` | US-08, US-39/S2 | S- | 200 (body: §4.8) | 401 `AUTH_REQUIRED` · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
 
 ### Tasks and feed
 
@@ -383,3 +383,19 @@ The `status` field is stripped. A valid request always creates a task in `pendin
 - Limit: 5 failed logins per 15 minutes per IP, then 429 `RATE_LIMITED` even for a correct password. Successful logins are not counted and reset the count (proposal, in memory, single API instance).
 - The start page by role is decided by the web app: student → `/feed`, customer → `/c/tasks`, moderator → `/mod/verifications`.
 - Moderators are created by `pnpm db:seed` (`SEED_MODERATOR_EMAIL`, `SEED_MODERATOR_PASSWORD`), never by registration (ADR-0006).
+
+### 4.8 `POST /api/me/verification` and `GET /api/me/verification` (US-08)
+
+`POST` is `multipart/form-data` with one field `file`. The type is detected from the **content** (JPEG, PNG or PDF), not from the name or the browser's content type, so a renamed `.exe` is rejected. The limit is 10 MB: exactly 10 MB is accepted, one byte more gives 400 `FILE_TOO_LARGE`. Both errors carry `details: [{ "field": "file", … }]` and store nothing.
+
+201, and the same shape is returned by `GET` (`{ "verification": null }` before the first upload):
+
+```json
+{ "verification": { "id": "…", "status": "pending", "label": "Очікує перевірки", "reason": null, "createdAt": "2026-11-10T10:00:00.000Z", "decidedAt": null } }
+```
+
+- The label «Очікує перевірки» follows decision W-14. `reason` is filled only for a rejected request. The file and the moderator are never returned.
+- Uploading never grants the student role or the badge: `studentVerifiedAt` is set only by a moderator approving the request (INV-03).
+- At most one request per student is `pending` (INV-04, partial unique index): a second upload gives 409 `VERIFICATION_PENDING`. After a rejection or a revocation the student may upload again.
+- Access: a student with a confirmed email. No session gives 401, a customer or moderator 403 `ROLE_FORBIDDEN`, an unconfirmed email 403 `EMAIL_NOT_CONFIRMED`, an already verified student 409 `ALREADY_VERIFIED`.
+- Files are stored through the `FileStorage` port (local disk, `apps/api/data/uploads`, or `UPLOAD_DIR`) under a random key, and are never served as static files. Downloading is for the moderator (US-39).

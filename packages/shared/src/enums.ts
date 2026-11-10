@@ -77,3 +77,11 @@ export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 export const SETTING_KEYS = ['commission_bp', 'min_price_kopecks', 'max_price_kopecks'] as const;
 export type SettingKey = (typeof SETTING_KEYS)[number];
+
+/** Display labels of a verification request (domain-model.md, decision W-14: «Очікує перевірки»). */
+export const VERIFICATION_STATUS_LABELS_UK: Record<VerificationStatus, string> = {
+  pending: 'Очікує перевірки',
+  approved: 'Підтверджено',
+  rejected: 'Відхилено',
+  revoked: 'Скасовано',
+};

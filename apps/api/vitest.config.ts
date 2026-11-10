@@ -10,6 +10,8 @@ export default defineConfig({
       NODE_ENV: 'test',
       // Relative to prisma/, like the development database.
       DATABASE_URL: 'file:../data/test.db?connection_limit=1',
+      // Relative to the working directory (apps/api). Tests empty it before each run that uses it.
+      UPLOAD_DIR: 'data/test-uploads',
     },
     testTimeout: 15_000,
   },

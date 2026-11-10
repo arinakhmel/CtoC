@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { devRouter } from './dev/routes';
 import { identityRouter } from './identity/routes';
+import { verificationRouter } from './verification/routes';
 
 /**
  * Mounted at /api by app.ts. Each feature module adds its router here.
@@ -10,6 +11,7 @@ import { identityRouter } from './identity/routes';
 export function createModulesRouter(): Router {
   const router = Router();
   router.use(identityRouter());
+  router.use(verificationRouter());
   router.use(devRouter());
   return router;
 }

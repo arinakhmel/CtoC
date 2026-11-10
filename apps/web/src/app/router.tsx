@@ -3,6 +3,7 @@ import { createBrowserRouter, createMemoryRouter, type RouteObject } from 'react
 import { NotFound } from '../pages/NotFound';
 import { ConfirmEmailPage } from '../features/identity/pages/ConfirmEmailPage';
 import { LoginPage } from '../features/identity/pages/LoginPage';
+import { VerificationPage } from '../features/verification/pages/VerificationPage';
 import { RegisterPage } from '../features/identity/pages/RegisterPage';
 import { PageStub } from '../pages/PageStub';
 import { PAGES, type PageConfig } from '../routes.config';
@@ -12,6 +13,7 @@ import { Layout } from './Layout';
 const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
   '/register': (page) => <RegisterPage page={page} />,
   '/login': (page) => <LoginPage page={page} />,
+  '/me/verification': (page) => <VerificationPage page={page} />,
   '/confirm-email': (page) => <ConfirmEmailPage page={page} />,
 };
 const renderPage = (page: PageConfig) => IMPLEMENTED[page.path]?.(page) ?? <PageStub page={page} />;

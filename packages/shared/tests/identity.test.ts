@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { confirmEmailSchema, isUniversityEmail, loginSchema, registerSchema, resendConfirmationSchema } from '../src';
+import {
+  checkDocumentUpload,
+  confirmEmailSchema,
+  isUniversityEmail,
+  loginSchema,
+  registerSchema,
+  resendConfirmationSchema,
+  VERIFICATION_STATUS_LABELS_UK,
+} from '../src';
 import { codesOf, fieldsOf } from './helpers';
 
 describe('US-06 registration with a university email', () => {
@@ -79,5 +87,26 @@ describe('US-07 confirmation schemas', () => {
   it('US-07 sc.3: resend takes a normalised email and rejects a malformed one', () => {
     expect(resendConfirmationSchema.parse({ email: ' User@University.EDU.UA ' }).email).toBe('user@university.edu.ua');
     expect(codesOf(resendConfirmationSchema, { email: 'nope' })).toEqual(['VALIDATION_FAILED']);
+  });
+});
+
+describe('US-08 verification labels and upload rules', () => {
+  it('US-08 sc.1: the pending request is labelled «Очікує перевірки» (decision W-14)', () => {
+    expect(VERIFICATION_STATUS_LABELS_UK.pending).toBe('Очікує перевірки');
+  });
+
+  it('US-08 sc.2: only JPEG, PNG and PDF documents are allowed', () => {
+    const base = { sizeBytes: 100, fileName: 'f' };
+    for (const mime of ['image/jpeg', 'image/png', 'application/pdf']) {
+      expect(checkDocumentUpload({ ...base, mime })).toBeNull();
+    }
+    expect(checkDocumentUpload({ ...base, mime: 'application/zip' })).toBe('FILE_TYPE_NOT_ALLOWED');
+    expect(checkDocumentUpload({ ...base, mime: 'application/x-msdownload' })).toBe('FILE_TYPE_NOT_ALLOWED');
+  });
+
+  it('US-08 sc.3: 10 MB is the last accepted size', () => {
+    const base = { mime: 'application/pdf', fileName: 'f.pdf' };
+    expect(checkDocumentUpload({ ...base, sizeBytes: 10 * 1024 * 1024 })).toBeNull();
+    expect(checkDocumentUpload({ ...base, sizeBytes: 10 * 1024 * 1024 + 1 })).toBe('FILE_TOO_LARGE');
   });
 });
