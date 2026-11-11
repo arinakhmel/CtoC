@@ -14,22 +14,29 @@
     "db:generate": "prisma generate",
     "db:migrate": "dotenv -e ../../.env -e ../../.env.example -- prisma migrate deploy",
     "db:migrate:dev": "dotenv -e ../../.env -e ../../.env.example -- prisma migrate dev",
-    "db:reset": "dotenv -e ../../.env -e ../../.env.example -- prisma migrate reset --force --skip-seed"
+    "db:reset": "dotenv -e ../../.env -e ../../.env.example -- prisma migrate reset --force --skip-seed",
+    "db:clean-users": "tsx --env-file=../../.env.example --env-file-if-exists=../../.env src/clean-test-users.ts",
+    "db:seed":"tsx --env-file=../../.env.example --env-file-if-exists=../../.env src/seed.ts"
   },
   "dependencies": {
     "@ctoc/shared": "workspace:*",
     "@prisma/client": "^6.19.0",
+    "bcryptjs": "^3.0.3",
+    "dotenv-cli": "^8.0.0",
     "express": "^5.1.0",
+    "multer": "^2.5.0",
+    "nodemailer": "^10.5.0",
+    "prisma": "^6.19.0",
+    "tsx": "^4.20.0",
     "zod": "^3.25.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
+    "@types/multer": "^2.3.0",
     "@types/node": "^22.10.0",
+    "@types/nodemailer": "^8.0.2",
     "@types/supertest": "^6.0.0",
-    "dotenv-cli": "^8.0.0",
-    "prisma": "^6.19.0",
     "supertest": "^7.1.0",
-    "tsx": "^4.20.0",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"
   }

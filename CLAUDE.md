@@ -17,6 +17,7 @@ pnpm workspaces monorepo, Node 22, TypeScript only. `apps/api` (Express 5, Zod, 
 | `pnpm --filter @ctoc/api exec vitest run -t "US-18"` | Tests of one story. Replace `@ctoc/api` with `@ctoc/web` or `@ctoc/shared` |
 | `pnpm db:migrate` / `pnpm --filter @ctoc/api db:migrate:dev --name <x>` | Apply / create a migration |
 | `pnpm db:reset` | Recreate the local database |
+| `pnpm db:seed` | Create the moderator account (SEED_MODERATOR_EMAIL, SEED_MODERATOR_PASSWORD in `.env`; dev default `moderator@ctoc.local`) |
 
 ## Documentation map: read this before that
 

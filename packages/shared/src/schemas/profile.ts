@@ -18,9 +18,16 @@ export const putSkillsSchema = z.object({
     }),
 });
 
-/** US-11/S2: bio up to 500 characters. */
+/**
+ * Characters are counted as Unicode code points, the same way as the database CHECK `length(bio) <= 500`
+ * (SQLite counts characters). `string.length` would count an emoji such as «💻» as 2 and disagree with the
+ * database. Used by the schema and by the live counter in the web form.
+ */
+export const countCharacters = (text: string): number => Array.from(text).length;
+
+/** US-11/S2: bio up to 500 characters (code points). */
 export const updateProfileSchema = z.object({
   bio: z
     .string({ required_error: 'VALIDATION_FAILED', invalid_type_error: 'VALIDATION_FAILED' })
-    .max(LIMITS.bioMax, 'BIO_TOO_LONG'),
+    .refine((bio) => countCharacters(bio) <= LIMITS.bioMax, { message: 'BIO_TOO_LONG' }),
 });

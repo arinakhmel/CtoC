@@ -15,7 +15,8 @@
     "test:e2e": "playwright test",
     "db:generate": "pnpm --filter @ctoc/api db:generate",
     "db:migrate": "pnpm --filter @ctoc/api db:migrate",
-    "db:reset": "pnpm --filter @ctoc/api db:reset"
+    "db:reset": "pnpm --filter @ctoc/api db:reset",
+    "db:seed": "pnpm --filter @ctoc/api db:seed"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

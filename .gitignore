@@ -3,6 +3,9 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# the project uses pnpm only
+package-lock.json
+
 # local environment
 .env
 .env.local

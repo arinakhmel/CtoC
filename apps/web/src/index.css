@@ -1,21 +1,639 @@
-/* Minimal layout only. Real styling comes with the stories (ADR-0008). */
+/*
+ * CtoC design system. Black and lime: near-black canvas, dark cards, lime accent, serif display
+ * headings, mono eyebrow labels, pill buttons (from the landing mock-ups).
+ *
+ * Accessibility (WCAG 2.2 AA). Contrast against the real backgrounds:
+ *   text #f2efe6 on #0d0d0d 17:1 · muted #a8a8a8 on #0d0d0d 8.6:1, on card #161616 7.6:1
+ *   lime #c8f23d on #0d0d0d 15.9:1 · dark text #0d0d0d on lime 15.9:1
+ *   error #ffb4ab on #2a1210 9.4:1 · input border #8a8a8a on #161616 5:1 (>= 3:1)
+ * Focus is always visible, targets are at least 44px, meaning never rests on colour alone,
+ * motion respects prefers-reduced-motion, and nothing scrolls the page sideways at 390px.
+ * Fonts are system fonts (no external requests, budget 0).
+ */
+:root {
+  color-scheme: dark;
+  --bg: #0d0d0d;
+  --surface: #161616;
+  --surface-2: #1f1f1f;
+  --olive: #131d07;
+  --border: #2a2a2a;
+  --border-strong: #8a8a8a;
+  --text: #f2efe6;
+  --muted: #a8a8a8;
+  --lime: #c8f23d;
+  --lime-hover: #dcff6b;
+  --on-lime: #0d0d0d;
+  --danger-text: #ffb4ab;
+  --danger-bg: #2a1210;
+  --danger-line: #ff6b5e;
+  --ok-text: #e3f9a3;
+  --radius: 1.5rem;
+  --radius-sm: 0.875rem;
+  --font-serif: Georgia, 'Times New Roman', 'Noto Serif', serif;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
+  display: flex;
+  flex-direction: column;
   margin: 0;
-  font-family: system-ui, sans-serif;
-  line-height: 1.5;
+  min-height: 100vh;
+  color: var(--text);
+  background: var(--bg);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
 }
-header,
-main,
-footer {
-  max-width: 60rem;
+
+#root {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+h1 {
+  margin: 0 0 1.25rem;
+  font-size: clamp(1.6rem, 1.1rem + 2vw, 2.4rem);
+}
+h2 {
+  margin: 1.75rem 0 0.75rem;
+  font-size: 1.35rem;
+}
+p {
+  margin: 0 0 0.85rem;
+}
+code {
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.35rem;
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+a {
+  color: var(--lime);
+  text-underline-offset: 0.25em;
+}
+a:hover {
+  color: var(--lime-hover);
+  text-decoration-thickness: 2px;
+}
+
+/* Visible keyboard focus everywhere (WCAG 2.4.7, 2.4.11). */
+:focus-visible {
+  outline: 3px solid var(--lime);
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+main:focus {
+  outline: none;
+}
+
+/* ---------- Skip link (WCAG 2.4.1) ---------- */
+.skip-link {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.7rem 1.1rem;
+  border-radius: 999px;
+  color: var(--on-lime);
+  background: var(--lime);
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-250%);
+}
+.skip-link:focus {
+  transform: none;
+  color: var(--on-lime);
+}
+
+/* ---------- Header ---------- */
+.container {
+  width: 100%;
+  max-width: 64rem;
   margin: 0 auto;
-  padding: 0.75rem 1rem;
+  padding: 0 1.25rem;
 }
-header nav ul {
+.site-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.header-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+.brand:hover {
+  color: var(--text);
+}
+.brand span {
+  color: var(--lime);
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Pill-shaped links that look like the buttons. */
+.link-plain,
+.link-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.link-plain {
+  color: var(--muted);
+}
+.link-plain:hover {
+  color: var(--text);
+}
+.link-pill {
+  color: var(--on-lime);
+  background: var(--lime);
+}
+.link-pill:hover {
+  color: var(--on-lime);
+  background: var(--lime-hover);
+}
+
+/* The index of all pages (a development aid): scrolls inside itself, never the page. */
+.site-nav {
+  border-top: 1px solid var(--border);
+  overflow-x: auto;
+}
+.site-nav ul {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.35rem 1.25rem;
+  list-style: none;
+  white-space: nowrap;
+}
+.site-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+.site-nav a:hover {
+  color: var(--text);
+}
+.site-nav a[aria-current='page'] {
+  color: var(--on-lime);
+  background: var(--lime);
+  font-weight: 700;
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 3.5rem;
+}
+
+.site-footer {
+  border-top: 1px solid var(--border);
+}
+.site-footer .container {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.site-footer p {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Page card ---------- */
+main > article {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+@media (max-width: 30rem) {
+  main {
+    padding: 1.25rem 0.75rem 2.5rem;
+  }
+  main > article {
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+  }
+}
+
+/* The «All pages» way back, at the foot of every card. */
+main > article > p:last-child {
+  margin: 1.75rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+main > article > p:last-child a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--muted);
+}
+main > article > p:last-child a:hover {
+  color: var(--lime);
+}
+
+/* ---------- Forms ---------- */
+form {
+  margin: 0 0 1rem;
+}
+form p:has(> label) {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 1.1rem;
+}
+label {
+  margin-bottom: 0.4rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+input:not([type='radio']):not([type='checkbox']):not([type='file']),
+textarea,
+select {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.6rem 1rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: var(--bg);
+  font: inherit;
+}
+textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #8f8f8f;
+}
+input:not([type='radio']):not([type='checkbox']):not([type='file']):focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+  border-color: var(--lime);
+}
+input:not([type='radio']):not([type='checkbox']):not([type='file'])[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: var(--danger-line);
+  border-width: 2px;
+}
+
+input[type='file'] {
+  width: 100%;
+  padding: 0.9rem;
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: var(--bg);
+  font: inherit;
+}
+input[type='file']::file-selector-button {
+  min-height: 2.5rem;
+  margin-right: 0.85rem;
+  padding: 0 1.1rem;
+  border: 1.5px solid var(--lime);
+  border-radius: 999px;
+  color: var(--lime);
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+fieldset {
+  min-width: 0;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  border: 0;
+}
+/* Small mono caption, like the eyebrow labels of the mock-ups. */
+legend {
+  margin-bottom: 0.6rem;
+  padding: 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Role choice (student / customer): two option cards. The checked one is outlined AND bold. */
+fieldset label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: calc(50% - 0.4rem);
+  min-height: 3.25rem;
+  margin: 0 0.4rem 0 0;
+  padding: 0.6rem 1rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-weight: 500;
+  cursor: pointer;
+}
+fieldset label:has(input:checked) {
+  border: 2px solid var(--lime);
+  background: var(--olive);
+  color: var(--lime);
+  font-weight: 700;
+}
+fieldset label:has(input:focus-visible) {
+  outline: 3px solid var(--lime);
+  outline-offset: 3px;
+}
+@media (max-width: 30rem) {
+  fieldset label {
+    width: 100%;
+    margin: 0 0 0.5rem;
+  }
+}
+input[type='radio'],
+input[type='checkbox'] {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--lime);
+}
+
+#bio-counter {
+  margin: 0.25rem 0 0.5rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+/* Field row: input + button on one line (skills). */
+form p.field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.4rem 0.6rem;
+  align-items: stretch;
+}
+form p.field-row label {
+  grid-column: 1 / -1;
+}
+
+/* ---------- Buttons ---------- */
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0 1.5rem;
+  border: 2px solid var(--lime);
+  border-radius: 999px;
+  color: var(--on-lime);
+  background: var(--lime);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  border-color: var(--lime-hover);
+  background: var(--lime-hover);
+}
+/* Secondary: outlined pill. */
+button[type='button'] {
+  border-color: var(--border-strong);
+  color: var(--text);
+  background: transparent;
+}
+button[type='button']:hover:not(:disabled) {
+  border-color: var(--lime);
+  color: var(--lime);
+  background: transparent;
+}
+button:disabled {
+  border-color: #3a3a3a;
+  color: #9a9a9a;
+  background: #252525;
+  cursor: not-allowed;
+}
+form > button[type='submit'] {
+  min-width: 13rem;
+}
+@media (max-width: 30rem) {
+  form > button[type='submit'] {
+    width: 100%;
+  }
+}
+
+/* ---------- Messages: an icon and a left rule carry the meaning, not colour alone ---------- */
+[role='alert']:not(:empty) {
+  margin-top: 0.4rem;
+  padding: 0.6rem 0.9rem;
+  border-left: 4px solid var(--danger-line);
+  border-radius: 0.5rem;
+  color: var(--danger-text);
+  background: var(--danger-bg);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+[role='alert']:not(:empty)::before {
+  content: '⚠\00a0' / '';
+}
+[role='alert']:empty {
+  margin: 0;
+  padding: 0;
+}
+[role='alert'] a {
+  color: inherit;
+}
+
+main [role='status'] {
+  margin: 0.85rem 0;
+  padding: 0.65rem 0.9rem;
+  border-left: 4px solid var(--lime);
+  border-radius: 0.5rem;
+  color: var(--ok-text);
+  background: var(--olive);
+  font-weight: 600;
+}
+main [role='status']::before {
+  content: '✓\00a0' / '';
+}
+
+/* ---------- Profile ---------- */
+article > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem 1.25rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+article > header h1 {
+  margin: 0 0 0.4rem;
+}
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 4.25rem;
+  height: 4.25rem;
+  border: 1.5px solid var(--lime);
+  border-radius: 50%;
+  color: var(--lime);
+  background: var(--olive);
+  font-family: var(--font-serif);
+  font-size: 1.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* «Верифікований студент» badge (US-09): visible text on a filled background, not colour alone. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.badge-verified {
+  color: var(--on-lime);
+  background: var(--lime);
+}
+.badge-verified::before {
+  content: '\2713\00a0';
+}
+
+/* The «Про мене» text (US-11): plain text, line breaks kept, long words wrapped. */
+.bio {
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Skills as tags. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 0.85rem;
   padding: 0;
   list-style: none;
+}
+.chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 2.5rem;
+  padding: 0.15rem 0.95rem;
+  border: 1px solid #4a4a4a;
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--surface-2);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.chips li button {
+  min-height: 2.75rem;
+  margin: -0.25rem -0.6rem -0.25rem 0;
+  padding: 0 0.75rem;
+  border-color: transparent;
+  color: var(--danger-text);
+  background: transparent;
   font-size: 0.85rem;
+  font-weight: 600;
+}
+.chips li button:hover:not(:disabled) {
+  border-color: var(--danger-line);
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+/* Two forms on one page (skills, bio) are separated like sections. */
+article form + form {
+  margin-top: 1.75rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- Motion and forced colours ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  button,
+  a,
+  input,
+  textarea {
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+}
+@media (forced-colors: active) {
+  button,
+  input,
+  textarea,
+  .badge,
+  .chips li {
+    border: 2px solid ButtonText;
+  }
 }

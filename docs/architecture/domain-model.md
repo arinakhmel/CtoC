@@ -60,7 +60,7 @@ A resend creates a new token and invalidates older unused ones (US-07/S3; invali
 | Attribute | Constraint | Source |
 |---|---|---|
 | `skills` | 0–20 items. Each is 1–40 characters, trimmed and non-empty, case-insensitively unique per profile. Chosen from the catalogue or entered freely. | US-10/CL, US-10/S2, S3 [AC/ex]; length [prop] |
-| `bio` («Про мене») | 0–500 characters, Unicode including emoji. | US-11/S1, S2, S3 [ex] |
+| `bio` («Про мене») | 0–500 characters, Unicode including emoji. Counted as Unicode code points, like the database CHECK. | US-11/S1, S2, S3 [ex] |
 
 ### Task (= Project)
 

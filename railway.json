@@ -1,0 +1,14 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "corepack enable && DATABASE_URL=${DATABASE_URL:-file:/tmp/prisma-build.db} pnpm install --frozen-lockfile --prod=false && pnpm build"
+  },
+  "deploy": {
+    "startCommand": "pnpm --filter @ctoc/api start",
+    "healthcheckPath": "/healthz",
+    "healthcheckTimeout": 120,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}
