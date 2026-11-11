@@ -40,12 +40,48 @@ export function createSmtpMailer(transport: Transporter, from: string): Mailer {
   };
 }
 
+/** Delivers through the Brevo HTTPS API (hosts such as Railway block outbound SMTP). Uses the global fetch. */
+export function createBrevoMailer(options: { apiKey: string; fromEmail: string; fromName: string }): Mailer {
+  return {
+    async send(email) {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': options.apiKey, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: options.fromName, email: options.fromEmail },
+          to: [{ email: email.to }],
+          subject: email.subject,
+          textContent: email.text,
+        }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) {
+        throw new Error(`Brevo send failed: HTTP ${response.status} ${await response.text()}`);
+      }
+    },
+  };
+}
+
 /**
- * Real delivery is on when SMTP_HOST is set (integrations.md, ADR-0006). Without it the email only goes
- * to the console and the dev outbox. The outbox and console always record the email first, so a failed
- * delivery still leaves the link visible in the log.
+ * Real delivery: Brevo when BREVO_API_KEY is set, else SMTP when SMTP_HOST is set (integrations.md,
+ * ADR-0006), else only the console and the dev outbox. The outbox and console always record the email
+ * first, so a failed delivery still leaves the link visible in the log.
  */
 export function createDefaultMailer(env: NodeJS.ProcessEnv = process.env): Mailer {
+  if (env.BREVO_API_KEY) {
+    if (!env.MAIL_FROM) throw new Error('MAIL_FROM (a sender verified in Brevo) is required when BREVO_API_KEY is set');
+    const brevo = createBrevoMailer({
+      apiKey: env.BREVO_API_KEY,
+      fromEmail: env.MAIL_FROM,
+      fromName: env.MAIL_FROM_NAME || 'CtoC',
+    });
+    return {
+      async send(email) {
+        await consoleMailer.send(email);
+        await brevo.send(email);
+      },
+    };
+  }
   const host = env.SMTP_HOST;
   if (!host) return consoleMailer;
   const port = Number(env.SMTP_PORT ?? 587);
