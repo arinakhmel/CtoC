@@ -15,6 +15,7 @@
     "db:migrate": "dotenv -e ../../.env -e ../../.env.example -- prisma migrate deploy",
     "db:migrate:dev": "dotenv -e ../../.env -e ../../.env.example -- prisma migrate dev",
     "db:reset": "dotenv -e ../../.env -e ../../.env.example -- prisma migrate reset --force --skip-seed",
+    "db:report": "tsx --env-file=../../.env.example --env-file-if-exists=../../.env src/report.ts",
     "db:clean-users": "tsx --env-file=../../.env.example --env-file-if-exists=../../.env src/clean-test-users.ts",
     "db:seed":"tsx --env-file=../../.env.example --env-file-if-exists=../../.env src/seed.ts"
   },
