@@ -168,9 +168,10 @@ describe('POST /api/auth/register (customer, US-43 smoke)', () => {
 describe('GET /api/dev/outbox', () => {
   it('is hidden in production', async () => {
     const previous = process.env.NODE_ENV;
+    const agent = api(); // created first: in production createApp requires the built web app
     process.env.NODE_ENV = 'production';
     try {
-      const res = await api().get('/api/dev/outbox');
+      const res = await agent.get('/api/dev/outbox');
       expect(res.status).toBe(404);
     } finally {
       process.env.NODE_ENV = previous;

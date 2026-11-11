@@ -117,3 +117,46 @@ pnpm dev
 | `pnpm db:reset` | перестворити локальну базу |
 
 Структура: `apps/api` (Express 5 + Prisma + SQLite), `apps/web` (Vite + React), `packages/shared` (zod-схеми, статуси, коди помилок). Документація та рішення: `docs/`. Правила роботи з Claude Code: `CLAUDE.md`.
+
+## Деплой (Railway)
+
+Один сервіс: API і зібраний SPA (`apps/web/dist`) працюють на одному origin, тож CORS не потрібен (ADR-0009). База SQLite і завантажені файли лежать на Volume. Конфіг збірки і запуску: `railway.json`.
+
+**Кроки в Railway UI**
+
+1. New Project → Deploy from GitHub repo → репозиторій CtoC, гілка `epic2`. Root Directory залишити порожнім.
+2. Створити Volume і змонтувати в `/data` **до першого деплою**.
+3. Settings → Networking → Generate Domain (до першого деплою), скопіювати https-адресу.
+4. Variables: заповнити таблицю нижче; `APP_URL` = скопійована https-адреса.
+5. Settings: Healthcheck Path `/healthz` (вже в `railway.json`), Replicas = 1 (SQLite не підтримує кілька інстансів), Serverless / App Sleeping вимкнено.
+6. Задеплоїти. Одного деплою достатньо.
+
+| Змінна | Значення |
+|---|---|
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | `file:/data/ctoc.db?connection_limit=1` |
+| `UPLOAD_DIR` | `/data/uploads` |
+| `APP_URL` | публічний https-origin, напр. `https://ctoc.up.railway.app` (інакше `ORIGIN_MISMATCH`) |
+| `VITE_API_BASE_URL` | `/api` |
+| `SEED_MODERATOR_EMAIL` | email модератора |
+| `SEED_MODERATOR_PASSWORD` | пароль модератора (обов'язковий у production) |
+| `NIXPACKS_NODE_VERSION` | `22` |
+
+`PORT` не задавати: його видає Railway.
+
+**Після першого деплою** один раз виконати `pnpm db:seed`, щоб створити модератора (Railway CLI: `railway ssh pnpm db:seed`; альтернатива: Shell або Run Command у дашборді сервісу). Не використовуйте `railway run`: він виконується локально, і `DATABASE_URL=file:/data/ctoc.db` вказуватиме на локальний шлях, а не на контейнер.
+
+**Перевірка після деплою:** `/healthz` і `/api/health` дають `{"status":"ok"}`; `/` і `/feed` (також після F5) відкривають застосунок; `/api/x` дає JSON `404 NOT_FOUND`, а не HTML.
+
+**Що зберігається.** Після редеплою лишається тільки `/data` (база й завантаження). Усе інше перестворюється зі збірки.
+
+**Якщо щось не працює**
+
+- `tsx: not found` / `prisma: not found` при старті: ці пакети мають бути в `dependencies` у `apps/api/package.json`, а збірка йде з `--prod=false`.
+- `prisma generate` падає на `postinstall` без `DATABASE_URL`: збірка підставляє `file:/tmp/prisma-build.db` (`railway.json`); не прибирайте цю підстановку.
+- Дані зникають після редеплою або база порожня: Volume не змонтований у `/data` або забули `DATABASE_URL` (тоді береться відносний шлях із `.env.example`, який не на Volume).
+- Сервіс не стартує з `Built web app not found`: не виконався `pnpm build` або задано хибний `WEB_DIST_PATH`.
+- 404 при оновленні сторінки: стара збірка без SPA-fallback; перевірте, що задеплоєна гілка `epic2`.
+- `ORIGIN_MISMATCH` на POST/PATCH: `APP_URL` не збігається з адресою в браузері (схема `https`, без слеша в кінці не обов'язково, але host має збігатися).
+
+**Вартість.** Railway платний після пробного кредиту (Hobby ≈ 5 USD на місяць із включеним використанням). Для демо достатньо одного сервісу з Volume; після демо сервіс і Volume можна видалити.
