@@ -112,7 +112,7 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
       {loaded && !loadError && (
         <>
         <form onSubmit={onSave} noValidate aria-label="Навички профілю">
-          <p>
+          <p className="field-row">
             <label htmlFor="skill">Навичка</label>
             <input
               id="skill"
@@ -136,7 +136,7 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
             {fieldError}
           </p>
 
-          <ul aria-label="Ваші навички">
+          <ul className="chips" aria-label="Ваші навички">
             {skills.map((name) => (
               <li key={name.toLowerCase()}>
                 {name}{' '}

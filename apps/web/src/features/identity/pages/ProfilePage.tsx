@@ -35,8 +35,13 @@ export function ProfilePage({ page }: { page: PageConfig }) {
     return (
       <article aria-labelledby="profile-name">
         <header>
-          <h1 id="profile-name">{state.profile.displayName}</h1>
-          {state.profile.verified && <p className="badge badge-verified">Верифікований студент</p>}
+          <span className="avatar" aria-hidden="true">
+            {[...state.profile.displayName][0]}
+          </span>
+          <div>
+            <h1 id="profile-name">{state.profile.displayName}</h1>
+            {state.profile.verified && <p className="badge badge-verified">Верифікований студент</p>}
+          </div>
         </header>
         {state.profile.bio !== '' && (
           <section aria-labelledby="bio-title">
@@ -47,7 +52,7 @@ export function ProfilePage({ page }: { page: PageConfig }) {
         {state.profile.skills.length > 0 && (
           <section aria-labelledby="skills-title">
             <h2 id="skills-title">Навички</h2>
-            <ul>
+            <ul className="chips">
               {state.profile.skills.map((name) => (
                 <li key={name}>{name}</li>
               ))}
