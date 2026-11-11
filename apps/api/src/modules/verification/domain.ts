@@ -11,3 +11,9 @@ export function detectDocumentMime(bytes: Buffer): 'image/jpeg' | 'image/png' | 
   if (bytes.length >= 5 && bytes.subarray(0, 5).toString('latin1') === '%PDF-') return 'application/pdf';
   return null;
 }
+
+/** The callback_data of the Telegram buttons: `verify:<userId>` or `reject:<userId>`. Anything else is ignored. */
+export function parseDecision(data: string | undefined): { action: 'verify' | 'reject'; userId: string } | null {
+  const match = /^(verify|reject):([0-9a-fA-F-]{36})$/.exec(data ?? '');
+  return match ? { action: match[1] as 'verify' | 'reject', userId: match[2]! } : null;
+}

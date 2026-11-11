@@ -73,7 +73,7 @@ flowchart LR
 | Public profile URL | A link a student shares with employers (US-38, A-16). | **Link** |
 | Ukrainian bank card | Validated for format only (US-36/S2). There is no bank call. | **Format** |
 | GitHub | Repository and CI only. No product integration. | **Dev tooling** |
-| Telegram and other messengers | Out of scope for the MVP (`requirements.md` §2). | **Excluded** |
+| Telegram (moderators' group) | Optional channel for moderators to approve or reject a student document (OQ-21). Other messengers stay out of scope (`requirements.md` §2). | **Optional API client**, off unless configured |
 
 ---
 
@@ -258,3 +258,4 @@ These are stories that are not covered, or that contradict each other or the des
 | OQ-17 | Limits with no source value: maximum price, title minimum and maximum, description maximum, note, revision comment, message, rejection reason. | Proposed values are marked `[prop]` in `domain-model.md` (A-11). |
 | OQ-18 | Result file types: the AC forbids only `.bat` and `.scr`, and US-08/S2 forbids `.zip` **for documents**. Should `.zip` be allowed for results (code deliverables)? | Block-list of executables for results, `.zip` allowed, archive contents not scanned. |
 | OQ-20 | `api.md` listed `POST /api/auth/resend-confirmation` as logged-in only, but login (US-45) comes after sign-up and a user with an expired link is not logged in. US-07/S3 says the button is on the "profile/login page". | Resend is public and takes `{ email }`. Unknown email: silent 202. Confirmed email: 409 `EMAIL_ALREADY_CONFIRMED`, which shows the account exists, as `EMAIL_TAKEN` already does. 5 requests per hour per IP. A button on `/login` follows with US-45. |
+| OQ-21 | `requirements.md` §2 excludes messenger integrations, but the team wants moderators to review student documents from a Telegram group. The moderator screens (US-39) are not built yet. | Optional, off unless `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` and `TELEGRAM_WEBHOOK_SECRET` are set. A plain `fetch` client, not a fourth port (ADR-0002). Student documents (email, ID photo) are then sent to a third party: tell students (privacy). A rejection from Telegram has no reason text, so the fixed reason «Відхилено модератором» is stored (US-39/S2 wants a reason). The moderator web screens (US-39) stay planned. Open: confirm the privacy decision with the product owner. | `api.md` §4.8a, `integrations.md`, INV-03 |

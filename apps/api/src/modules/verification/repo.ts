@@ -23,3 +23,22 @@ export const insertPendingRequest = (tx: Tx, data: { userId: string; fileId: str
 
 export const findLatestRequest = (userId: string) =>
   prisma.verificationRequest.findFirst({ where: { userId }, orderBy: { createdAt: 'desc' } });
+
+/**
+ * A moderator decision on the user's pending request (INV-04: at most one). Zero rows means it was already
+ * decided (a second click) or there is nothing to decide. `decidedBy` stays empty: a Telegram moderator has no account.
+ */
+export const decidePending = (tx: Tx, userId: string, status: 'approved' | 'rejected', reason: string | null, now: Date) =>
+  tx.verificationRequest.updateMany({
+    where: { userId, status: 'pending' },
+    data: { status, reason, decidedAt: now },
+  });
+
+/** INV-03: the badge. Only a student who is not yet verified qualifies. */
+export const markStudentVerified = (tx: Tx, userId: string, now: Date) =>
+  tx.user.updateMany({ where: { id: userId, role: 'student', studentVerifiedAt: null }, data: { studentVerifiedAt: now } });
+
+export const findUserEmail = (tx: Tx, userId: string) => tx.user.findUnique({ where: { id: userId }, select: { email: true } });
+
+export const insertAuditEvent = (tx: Tx, data: { action: string; entityId: string; data: Record<string, unknown> }) =>
+  tx.auditEvent.create({ data: { action: data.action, entity: 'user', entityId: data.entityId, dataJson: JSON.stringify(data.data) } });
