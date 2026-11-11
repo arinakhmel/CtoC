@@ -150,6 +150,14 @@ pnpm dev
 
 **Звіт про дані (лише читання).** `railway ssh pnpm --filter @ctoc/api db:report` друкує JSON зі зведенням (користувачі за ролями, завдання за статусами, ескроу, виведення); додайте `-- --users`, щоб побачити список користувачів. Паролі, токени й номери карток не друкуються. Локально: `pnpm --filter @ctoc/api db:report`.
 
+**Telegram-група модераторів (необов'язково).** Якщо задані `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` і `TELEGRAM_WEBHOOK_SECRET`, документ студента (фото або PDF) надходить у групу з кнопками «✅ Approve» / «❌ Reject». Один раз зареєструйте webhook (підставте свої значення, токен не комітьте):
+
+```bash
+curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook"   -d "url=<APP_URL>/api/webhooks/telegram"   -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"   -d 'allowed_updates=["callback_query"]'
+```
+
+Бот має бути в групі. Без секретного заголовка webhook відповідає 404. Документи студентів зберігає Telegram, тому студентів треба про це попередити.
+
 **Що зберігається.** Після редеплою лишається тільки `/data` (база й завантаження). Усе інше перестворюється зі збірки.
 
 **Якщо щось не працює**

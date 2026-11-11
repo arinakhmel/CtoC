@@ -2,13 +2,14 @@
 
 Everything the system or the team depends on outside our own code. For each: what we take, how (API, link, or just a format), and what we do if it is unavailable.
 
-**Not integrated:** Telegram and other messengers are out of scope for the MVP (`requirements.md` §2). GitHub has no product integration. It appears only as development tooling (see below). Nothing in the product calls a third-party API at runtime except the optional email provider.
+**Not integrated:** messengers other than the optional Telegram moderator channel (below, OQ-21) are out of scope for the MVP (`requirements.md` §2). GitHub has no product integration. It appears only as development tooling (see below). Nothing in the product calls a third-party API at runtime except the optional email provider.
 
 ## Summary
 
 | Dependency | Type | Needed at runtime? | If unavailable |
 |---|---|---|---|
 | Email (SMTP provider) | Optional API-like (SMTP) | Only when hosted | Dev outbox page, seeded confirmed accounts |
+| Telegram Bot API | Optional HTTPS API client, only when configured | No | Moderators decide in the web screens (US-39) |
 | Payment provider | None in the MVP (simulated port) | No | Not applicable |
 | Database | Local file, no service | Yes | Reseed |
 | File storage | Local disk, no service | Yes | Reseed, re-upload |
@@ -27,6 +28,14 @@ Everything the system or the team depends on outside our own code. For each: wha
 - **Constraints:** free tiers limit volume and sender reputation, and a new sender domain often lands in spam. Check current limits when choosing.
 - **If unavailable:** registration still works. Confirmation emails do not arrive. The fallback for a demo is seeded, already-confirmed accounts and the outbox page. The system must not fail registration because a send failed. It records the failure and offers «Надіслати лист повторно» (US-07/S3).
 - **Risk:** T-08.
+
+## Telegram Bot API (optional, OQ-21)
+
+- **What we take:** a group chat where moderators see a new student document (email, id, photo or PDF) and press «✅ Approve» or «❌ Reject». A webhook (`POST /api/webhooks/telegram`, `api.md` §4.8a) receives the click.
+- **Integration type:** plain `fetch` calls to `api.telegram.org` (`sendPhoto`, `sendDocument`, `editMessageCaption`, `answerCallbackQuery`), no library and no port. Variables: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`. All three or nothing is sent.
+- **Security:** the webhook accepts only requests with the secret header and only clicks from the configured chat. The bot token never appears in logs or errors.
+- **Privacy:** the student's email and document leave our server and are stored by Telegram. Students must be told.
+- **If unavailable:** the upload still succeeds and the request stays `pending`. The decision can be made in the web screens (US-39) once they exist.
 
 ## Payment provider
 

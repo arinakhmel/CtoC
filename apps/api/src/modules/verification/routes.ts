@@ -1,10 +1,12 @@
-import { LIMITS } from '@ctoc/shared';
+import { LIMITS, telegramUpdateSchema } from '@ctoc/shared';
 import { Router, type RequestHandler } from 'express';
 import multer from 'multer';
 import { ApiError } from '../../errors';
 import { requireUser } from '../../http/auth';
+import { validateBody } from '../../http/validate';
+import { assertTelegramWebhook } from './policy';
 import { serializeVerification } from './serializer';
-import { getMyVerification, submitDocument } from './service';
+import { getMyVerification, handleTelegramUpdate, submitDocument } from './service';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: LIMITS.documentMaxBytes, files: 1 } });
 
@@ -37,5 +39,19 @@ export function verificationRouter(): Router {
     const request = await getMyVerification(req.user!);
     res.json({ verification: request ? serializeVerification(request) : null });
   });
+
+  // Public, but only Telegram knows the secret header (policy). Always 200 after that, so Telegram never retries.
+  router.post(
+    '/webhooks/telegram',
+    (req, _res, next) => {
+      assertTelegramWebhook(req.get('x-telegram-bot-api-secret-token'));
+      next();
+    },
+    validateBody(telegramUpdateSchema),
+    async (req, res) => {
+      await handleTelegramUpdate(req.body);
+      res.json({ ok: true });
+    },
+  );
   return router;
 }
