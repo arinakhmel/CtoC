@@ -28,6 +28,7 @@ beforeEach(() => {
         resendCalls.push(JSON.parse(String(init?.body)));
         return new Response(null, { status: 202 });
       }
+      if (url.startsWith('/api/tasks')) return json({ tasks: [], nextCursor: null }); // the student's start page is the feed
       return json({ status: 'ok' });
     }),
   );

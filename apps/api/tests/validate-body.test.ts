@@ -1,9 +1,9 @@
 import express from 'express';
 import supertest from 'supertest';
-import { createTaskSchema, returnForRevisionSchema, registerSchema } from '@ctoc/shared';
+import { createTaskSchema, feedQuerySchema, returnForRevisionSchema, registerSchema } from '@ctoc/shared';
 import { describe, expect, it } from 'vitest';
 import { errorHandler } from '../src/http/error-handler';
-import { validateBody } from '../src/http/validate';
+import { parsedQuery, validateBody, validateQuery } from '../src/http/validate';
 import type { ZodTypeAny } from 'zod';
 
 /** A tiny app: the route echoes `req.body`, so we can see what the middleware left in it. */
@@ -40,6 +40,30 @@ describe('api.md §Conventions: validateBody replaces the body with the parsed v
     const res = await appWith(returnForRevisionSchema).post('/echo');
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('COMMENT_REQUIRED');
+  });
+});
+
+describe('api.md §Conventions: validateQuery leaves the parsed query in res.locals', () => {
+  const queryApp = () => {
+    const app = express();
+    app.get('/echo', validateQuery(feedQuerySchema), (req, res) => {
+      res.json({ received: parsedQuery(res), raw: req.query });
+    });
+    app.use(errorHandler);
+    return supertest(app);
+  };
+
+  it('US-12 coerces and defaults the query (limit comes in as a string)', async () => {
+    const res = await queryApp().get('/echo?limit=5&cursor=abc&junk=1');
+    expect(res.status).toBe(200);
+    expect(res.body.received).toEqual({ limit: 5, cursor: 'abc' });
+  });
+
+  it('US-12 an invalid query is 400 VALIDATION_FAILED with a detail for the field', async () => {
+    const res = await queryApp().get('/echo?limit=0');
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_FAILED');
+    expect(res.body.error.details).toEqual([{ field: 'limit', code: 'VALIDATION_FAILED' }]);
   });
 });
 

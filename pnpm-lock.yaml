@@ -84,6 +84,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^7.0.5
         version: 7.0.5(@standard-schema/spec@1.1.0)(react-hook-form@7.91.0(@types/react@18.3.31)(react@18.3.1))(zod@3.25.76)
+      '@tanstack/react-query':
+        specifier: 5.62.7
+        version: 5.62.7(react@18.3.1)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -858,6 +861,14 @@ packages:
 
   '@standard-schema/utils@0.3.0':
     resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
+
+  '@tanstack/query-core@5.62.7':
+    resolution: {integrity: sha512-fgpfmwatsrUal6V+8EC2cxZIQVl9xvL7qYa03gsdsCy985UTUlS4N+/3hCzwR0PclYDqisca2AqR1BVgJGpUDA==}
+
+  '@tanstack/react-query@5.62.7':
+    resolution: {integrity: sha512-+xCtP4UAFDTlRTYyEjLx0sRtWyr5GIk7TZjZwBu4YaNahi3Rt2oMyRqfpfVrtwsqY2sayP4iXVCwmC+ZqqFmuw==}
+    peerDependencies:
+      react: ^18 || ^19
 
   '@testing-library/dom@10.4.2':
     resolution: {integrity: sha512-yzr2S9HyAIdhz2/6qHgbs665Q7PKVcDF05vsOlHPxG1mo36gKVesdYVeDLnXgfjJ03CrKRk08knc6+E/9m8v2Q==}
@@ -2479,6 +2490,13 @@ snapshots:
   '@standard-schema/spec@1.1.0': {}
 
   '@standard-schema/utils@0.3.0': {}
+
+  '@tanstack/query-core@5.62.7': {}
+
+  '@tanstack/react-query@5.62.7(react@18.3.1)':
+    dependencies:
+      '@tanstack/query-core': 5.62.7
+      react: 18.3.1
 
   '@testing-library/dom@10.4.2':
     dependencies:

@@ -28,6 +28,18 @@ export const createTaskSchema = z.object({
 });
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
+/** US-12: `GET /api/tasks?cursor=<id>&limit=20` (api.md §4.12). The cursor is the id of the last task of the previous page. */
+export const feedQuerySchema = z.object({
+  cursor: z.string({ invalid_type_error: 'VALIDATION_FAILED' }).min(1, 'VALIDATION_FAILED').max(64, 'VALIDATION_FAILED').optional(),
+  limit: z.coerce
+    .number({ invalid_type_error: 'VALIDATION_FAILED' })
+    .int('VALIDATION_FAILED')
+    .min(1, 'VALIDATION_FAILED')
+    .max(LIMITS.feedPage.max, 'VALIDATION_FAILED')
+    .default(LIMITS.feedPage.default),
+});
+export type FeedQuery = z.infer<typeof feedQuerySchema>;
+
 /** US-39/S2, US-40/S2: a moderator's rejection needs a reason. */
 export const moderationRejectSchema = z.object({
   reason: z

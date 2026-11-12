@@ -19,4 +19,5 @@ export const LIMITS = {
   resultMaxBytes: 50 * 1024 * 1024,
   resultFilesMax: 10,
   cardNumberLength: 16,
+  feedPage: { default: 20, max: 50 },
 } as const;

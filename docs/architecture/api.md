@@ -58,7 +58,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S- (any student with a confirmed email) | 200 | 401 · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
+| GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S- (any student with a confirmed email) | 200 (body: §4.12) | 400 `VALIDATION_FAILED` (bad `limit` or `cursor`) · 401 `AUTH_REQUIRED` · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
 | GET | `/api/tasks/:id` | US-13, US-15, US-22 | S- (published) · Own · Ex · M | 200 | 404 `NOT_FOUND` |
 | POST | `/api/tasks` | US-16, US-17, US-40/S3 | C (confirmed) | 201, always `pending_moderation` | 400 `VALIDATION_FAILED`, `TITLE_TOO_SHORT`, `PRICE_BELOW_MIN`, `PRICE_ABOVE_MAX`, `DEADLINE_IN_PAST` · 403 `ROLE_FORBIDDEN` |
 | GET | `/api/my/tasks` | US-50 | C | 200 (each task with `applicationsCount`) | |
@@ -447,3 +447,27 @@ Public, no session needed. `Cache-Control: no-store`, so a badge granted by a mo
 - The limit is 500 **characters, counted as Unicode code points**, the same way as the database CHECK `length(bio) <= 500`. So 500 emoji are accepted (1000 UTF-16 units) and 501 give 400 `BIO_TOO_LONG` («Текст «Про мене» перевищує 500 символів»). A missing or non-string `bio` gives 400 `VALIDATION_FAILED`.
 - Access: a student with a confirmed email (no session 401, other roles 403 `ROLE_FORBIDDEN`, unconfirmed 403 `EMAIL_NOT_CONFIRMED`). A student can only change their own bio. The body has no user id.
 - The web form shows a live counter and blocks the save over the limit. It never cuts the text off.
+
+### 4.12 `GET /api/tasks` (feed, US-12)
+
+```http
+GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
+```
+
+200:
+
+```json
+{
+  "tasks": [
+    { "id": "…", "title": "Парсер сайту", "description": "Потрібен скрипт, що збирає ціни.",
+      "priceKopecks": 50000, "deadlineAt": "2026-12-01T18:00:00.000Z", "publishedAt": "2026-11-10T10:00:00.000Z" }
+  ],
+  "nextCursor": "…"
+}
+```
+
+- Access: any student with a confirmed email (decision OQ-19). No session 401 `AUTH_REQUIRED`, customer or moderator 403 `ROLE_FORBIDDEN`, unconfirmed 403 `EMAIL_NOT_CONFIRMED`. Access is checked before the query, so a forbidden user with a bad `limit` still gets 403.
+- Contents (INV-06): `status = 'published'`, no executor and `deadlineAt` in the future. A task that is pending, rejected, cancelled, taken or expired is absent. A task without a deadline cannot exist (`NOT NULL`), so the feed never skips one (US-12/S2, W-10).
+- Order: newest `publishedAt` first, ties by `id` descending. The cursor is keyset based on `(publishedAt, id)`, so a task published or taken meanwhile never repeats or skips a task, and the cursor task may leave the feed between two pages. `nextCursor` is `null` on the last page. An empty feed is `{ "tasks": [], "nextCursor": null }`.
+- `limit`: integer 1…50, default 20 (`LIMITS.feedPage`). A bad `limit` or a `cursor` that is not a published task gives 400 `VALIDATION_FAILED` with `details: [{ field, code }]`.
+- The card has no customer, status, moderation or commission fields. The net price (`commissionKopecks`, `netKopecks`) is added by US-15.
