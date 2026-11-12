@@ -11,5 +11,4 @@ export const useTask = (id: string) =>
   useQuery({
     queryKey: taskKey(id),
     queryFn: () => apiFetch<{ task: TaskDetails }>(`/tasks/${encodeURIComponent(id)}`).then((body) => body.task),
-    retry: false,
   });

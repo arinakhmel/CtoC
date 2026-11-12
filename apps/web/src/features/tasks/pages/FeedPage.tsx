@@ -14,7 +14,9 @@ export function FeedPage({ page }: { page: PageConfig }) {
   const navigate = useNavigate();
   const feed = useFeed();
 
-  const errorCode = feed.error ? (feed.error instanceof ApiClientError ? feed.error.code : 'UNKNOWN_ERROR') : null;
+  // The alert shows whenever the query is in error, also when pages are cached. Loaded cards stay visible, so a
+  // failed "Показати ще" does not wipe what the student already read.
+  const errorCode = feed.isError ? (feed.error instanceof ApiClientError ? feed.error.code : 'UNKNOWN_ERROR') : null;
   const tasks = feed.data?.pages.flatMap((result) => result.tasks) ?? [];
 
   useEffect(() => {
