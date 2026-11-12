@@ -48,6 +48,8 @@ describe('GET /api/tasks/:id: US-13 sc.1', () => {
         title: 'Парсер сайту',
         description: 'Потрібен скрипт.',
         priceKopecks: 50_000,
+        commissionKopecks: null, // no snapshot on this row (US-15)
+        netKopecks: null,
         deadlineAt: task.deadlineAt.toISOString(),
         publishedAt: task.publishedAt!.toISOString(),
       },
@@ -58,7 +60,16 @@ describe('GET /api/tasks/:id: US-13 sc.1', () => {
     const { cookie } = await loginAs();
     const task = await publish();
     const res = await getTask(task.id, cookie);
-    expect(Object.keys(res.body.task).sort()).toEqual(['deadlineAt', 'description', 'id', 'priceKopecks', 'publishedAt', 'title']);
+    expect(Object.keys(res.body.task).sort()).toEqual([
+      'commissionKopecks',
+      'deadlineAt',
+      'description',
+      'id',
+      'netKopecks',
+      'priceKopecks',
+      'publishedAt',
+      'title',
+    ]);
   });
 
   it.each([

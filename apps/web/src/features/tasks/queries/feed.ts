@@ -6,6 +6,9 @@ export interface FeedTask {
   title: string;
   description: string;
   priceKopecks: number;
+  /** The snapshot taken at publication (US-15). Both are null when the row has none: then no net line is shown. */
+  commissionKopecks: number | null;
+  netKopecks: number | null;
   deadlineAt: string;
   publishedAt: string | null;
 }

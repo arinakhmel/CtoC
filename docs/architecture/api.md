@@ -460,7 +460,8 @@ GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
 {
   "tasks": [
     { "id": "…", "title": "Парсер сайту", "description": "Потрібен скрипт, що збирає ціни.",
-      "priceKopecks": 50000, "deadlineAt": "2026-12-01T18:00:00.000Z", "publishedAt": "2026-11-10T10:00:00.000Z" }
+      "priceKopecks": 50000, "commissionKopecks": 5000, "netKopecks": 45000,
+      "deadlineAt": "2026-12-01T18:00:00.000Z", "publishedAt": "2026-11-10T10:00:00.000Z" }
   ],
   "nextCursor": "…"
 }
@@ -470,11 +471,12 @@ GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
 - Contents (INV-06): `status = 'published'`, no executor and `deadlineAt` in the future. A task that is pending, rejected, cancelled, taken or expired is absent. A task without a deadline cannot exist (`NOT NULL`), so the feed never skips one (US-12/S2, W-10).
 - Order: newest `publishedAt` first, ties by `id` descending. The cursor is keyset based on `(publishedAt, id)`, so a task published or taken meanwhile never repeats or skips a task, and the cursor task may leave the feed between two pages. `nextCursor` is `null` on the last page. An empty feed is `{ "tasks": [], "nextCursor": null }`.
 - `limit`: integer 1…50, default 20 (`LIMITS.feedPage`). A bad `limit` or a `cursor` that is not a published task gives 400 `VALIDATION_FAILED` with `details: [{ field, code }]`.
-- The card has no customer, status, moderation or commission fields. The net price (`commissionKopecks`, `netKopecks`) is added by US-15.
+- The card has no customer, status or moderation fields, and no commission **rate** (`commissionBp`).
+- Net price (US-15): `commissionKopecks` and `netKopecks` are the **snapshot taken at publication** (`priceKopecks = commissionKopecks + netKopecks`, INV-08). They are read as stored and never recomputed from the current rate, so the card shows what will be paid (NFR-20, ADR-0007). A published row that has no snapshot yet (the publish endpoint of US-40 writes it) gives `null` for **both**, and the UI shows no net line. A price of 0 or less cannot exist (INV-07, W-04), so there is no calculation for it.
 
 ### 4.13 `GET /api/tasks/:id` (details for a student, US-13)
 
-200: `{ "task": { "id", "title", "description", "priceKopecks", "deadlineAt", "publishedAt" } }`, the same fields as a feed card. The price is the fixed amount set by the customer.
+200: `{ "task": { "id", "title", "description", "priceKopecks", "commissionKopecks", "netKopecks", "deadlineAt", "publishedAt" } }`, the same fields as a feed card, with the same net price rules (§4.12, US-15). The price is the fixed amount set by the customer.
 
 - Access: the same as the feed (any student with a confirmed email), checked first: 401 `AUTH_REQUIRED`, 403 `ROLE_FORBIDDEN`, 403 `EMAIL_NOT_CONFIRMED`.
 - Visibility for a student is the feed rule (INV-06). A task that is pending, rejected, cancelled, taken or expired is 404 `NOT_FOUND`, so its existence is not leaked (US-14/S2).

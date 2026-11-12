@@ -44,7 +44,7 @@ describe('/tasks/:id page (US-13)', () => {
     render(<RouterProvider router={createTestRouter(['/tasks/t1'])} future={providerFuture} />);
 
     expect(await screen.findByRole('heading', { level: 2, name: 'Завдання 1' })).toBeInTheDocument();
-    expect(flat(document.body.textContent ?? '')).toContain('Фіксована ціна: 500 грн');
+    expect(screen.getByText('Фіксована ціна').nextElementSibling).toHaveTextContent('500 грн');
     expectNoBidControls();
   });
 

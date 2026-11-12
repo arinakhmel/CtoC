@@ -616,6 +616,43 @@ article form + form {
   border-top: 1px solid var(--border);
 }
 
+/* ---------- Task price (US-15) ----------
+ * The customer's price and the net amount are two separate rows, each with its own label. They stack on a narrow
+ * screen, so the net never runs into the gross (sc.3). The net row is set apart by a lime rule and bold text. */
+.price-block {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.5rem;
+  margin: 0 0 0.85rem;
+}
+.price-block__row {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.1rem;
+}
+.price-block dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.price-block dd {
+  margin: 0;
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+.price-block__row--net {
+  padding-left: 0.85rem;
+  border-left: 4px solid var(--lime);
+}
+.price-block__row--net dd {
+  color: var(--lime);
+}
+@media (max-width: 30rem) {
+  .price-block {
+    flex-direction: column;
+  }
+}
+
 /* ---------- Motion and forced colours ---------- */
 @media (prefers-reduced-motion: no-preference) {
   button,

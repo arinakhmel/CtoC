@@ -2,8 +2,9 @@ import { MESSAGES_UK } from '@ctoc/shared';
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
-import { formatDeadline, formatUah } from '../../../lib/money';
+import { formatDeadline } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
+import { PriceBlock } from '../components/PriceBlock';
 import { useFeed } from '../queries/feed';
 
 const messageFor = (code: string): string =>
@@ -47,9 +48,7 @@ export function FeedPage({ page }: { page: PageConfig }) {
                   <Link to={`/tasks/${task.id}`}>{task.title}</Link>
                 </h2>
                 <p>{task.description}</p>
-                <p>
-                  Ціна: <strong>{formatUah(task.priceKopecks)}</strong>
-                </p>
+                <PriceBlock priceKopecks={task.priceKopecks} netKopecks={task.netKopecks} grossLabel="Ціна замовника" />
                 <p>
                   Виконати до: <time dateTime={task.deadlineAt}>{formatDeadline(task.deadlineAt)}</time>
                 </p>
