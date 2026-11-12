@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { devRouter } from './dev/routes';
 import { identityRouter } from './identity/routes';
+import { tasksRouter } from './tasks/routes';
 import { verificationRouter } from './verification/routes';
 
 /**
@@ -12,6 +13,7 @@ export function createModulesRouter(): Router {
   const router = Router();
   router.use(identityRouter());
   router.use(verificationRouter());
+  router.use(tasksRouter());
   router.use(devRouter());
   return router;
 }

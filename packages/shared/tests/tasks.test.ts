@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createApplicationSchema, createTaskSchema, moderationRejectSchema } from '../src';
+import { createApplicationSchema, createTaskSchema, feedQuerySchema, LIMITS, moderationRejectSchema } from '../src';
 import { codesOf, fieldsOf } from './helpers';
 
 const inOneWeek = () => new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
@@ -8,6 +8,24 @@ const validTask = () => ({
   description: 'Потрібен скрипт, що збирає ціни.',
   priceKopecks: 40_000,
   deadlineAt: inOneWeek(),
+});
+
+describe('US-12 feed query', () => {
+  it('US-12 sc.1: no parameters means the first page with the default size', () => {
+    expect(feedQuerySchema.parse({})).toEqual({ limit: LIMITS.feedPage.default });
+  });
+
+  it('US-12 sc.1: limit comes in as a string from the URL and is coerced', () => {
+    expect(feedQuerySchema.parse({ limit: '5', cursor: 'abc' })).toEqual({ limit: 5, cursor: 'abc' });
+  });
+
+  it.each(['0', '-1', '1.5', 'abc', String(LIMITS.feedPage.max + 1)])('US-12: limit %s is rejected', (limit) => {
+    expect(fieldsOf(feedQuerySchema, { limit })).toEqual(['limit']);
+  });
+
+  it('US-12: an empty cursor is rejected', () => {
+    expect(fieldsOf(feedQuerySchema, { cursor: '' })).toEqual(['cursor']);
+  });
 });
 
 describe('US-16 task form', () => {

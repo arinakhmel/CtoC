@@ -1,4 +1,7 @@
+import { QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import { createQueryClient } from '../lib/queryClient';
 import { useApiHealth } from '../lib/useApiHealth';
 import { PAGES } from '../routes.config';
 
@@ -9,8 +12,10 @@ const STATUS_TEXT = { checking: 'API: checking…', ok: 'API: ok', unavailable: 
 
 export function Layout() {
   const health = useApiHealth();
+  // Inside the router, so the real app and every test router get their own client (no cache shared between tests).
+  const [queryClient] = useState(createQueryClient);
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <a className="skip-link" href="#main">
         Перейти до змісту
       </a>
@@ -48,6 +53,6 @@ export function Layout() {
           <p role="status">{STATUS_TEXT[health]}</p>
         </div>
       </footer>
-    </>
+    </QueryClientProvider>
   );
 }
