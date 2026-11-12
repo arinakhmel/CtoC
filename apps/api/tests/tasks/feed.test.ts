@@ -55,6 +55,8 @@ describe('GET /api/tasks: US-12 sc.1', () => {
         title: 'Парсер сайту',
         description: 'Потрібен скрипт.',
         priceKopecks: 50_000,
+        commissionKopecks: null, // no snapshot on this row (US-15)
+        netKopecks: null,
         deadlineAt: task.deadlineAt.toISOString(),
         publishedAt: task.publishedAt!.toISOString(),
       },
@@ -139,7 +141,16 @@ describe('GET /api/tasks: US-12 sc.1', () => {
 
     const res = await getFeed(cookie);
 
-    expect(Object.keys(res.body.tasks[0]).sort()).toEqual(['deadlineAt', 'description', 'id', 'priceKopecks', 'publishedAt', 'title']);
+    expect(Object.keys(res.body.tasks[0]).sort()).toEqual([
+      'commissionKopecks',
+      'deadlineAt',
+      'description',
+      'id',
+      'netKopecks',
+      'priceKopecks',
+      'publishedAt',
+      'title',
+    ]);
     expect(JSON.stringify(res.body)).not.toContain('owner@company.com');
   });
 

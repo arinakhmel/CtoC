@@ -12,12 +12,24 @@ const feedWhere = (now: Date): Prisma.TaskWhereInput => ({
   publishedAt: { not: null },
 });
 
+/**
+ * The columns of a feed card and of the details page. The commission snapshot (US-15) is read as stored: it was taken
+ * at publication, so the card shows what will be paid (NFR-20). It is never recomputed from today's rate.
+ */
+const cardSelect = {
+  id: true,
+  title: true,
+  description: true,
+  priceKopecks: true,
+  commissionKopecks: true,
+  netKopecks: true,
+  deadlineAt: true,
+  publishedAt: true,
+} satisfies Prisma.TaskSelect;
+
 /** US-13. One task as the student may open it: the same visibility as the feed (INV-06). Anything else is absent. */
 export const findOpenTask = (id: string, now: Date) =>
-  prisma.task.findFirst({
-    where: { id, ...feedWhere(now) },
-    select: { id: true, title: true, description: true, priceKopecks: true, deadlineAt: true, publishedAt: true },
-  });
+  prisma.task.findFirst({ where: { id, ...feedWhere(now) }, select: cardSelect });
 
 /** Any task that was published, even if it has left the feed since (assigned, expired), so paging never breaks mid-way. */
 export const findFeedCursor = (id: string) =>
@@ -37,6 +49,6 @@ export function listFeed(now: Date, limit: number, after?: { id: string; publish
     where,
     orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
     take: limit + 1, // one extra row tells whether there is a next page
-    select: { id: true, title: true, description: true, priceKopecks: true, deadlineAt: true, publishedAt: true },
+    select: cardSelect,
   });
 }
