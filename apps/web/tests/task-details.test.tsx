@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestRouter, providerFuture } from '../src/app/router';
@@ -54,6 +55,30 @@ describe('/tasks/:id page (US-13)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Не знайдено');
     expectNoBidControls();
+  });
+
+  it('US-13 sc.1 a failed refetch shows the error and no stale details from the cache', async () => {
+    const user = userEvent.setup();
+    let detailsCalls = 0;
+    respond = (url) => {
+      if (url === '/api/tasks/t1') {
+        detailsCalls += 1;
+        return detailsCalls === 1 ? json({ task: task(1) }) : apiError('NOT_FOUND', 404); // the task was taken meanwhile
+      }
+      return json({ tasks: [task(1)], nextCursor: null });
+    };
+
+    render(<RouterProvider router={createTestRouter(['/tasks/t1'])} future={providerFuture} />);
+    expect(await screen.findByRole('heading', { level: 2, name: 'Завдання 1' })).toBeInTheDocument();
+
+    // Leave and come back: the page mounts with the cached task and refetches it.
+    await user.click(screen.getByRole('link', { name: 'До стрічки завдань' }));
+    await user.click(await screen.findByRole('link', { name: 'Завдання 1' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не знайдено');
+    expect(screen.queryByRole('heading', { level: 2, name: 'Завдання 1' })).toBeNull();
+    expect(flat(document.body.textContent ?? '')).not.toContain('Фіксована ціна');
+    expect(detailsCalls).toBe(2);
   });
 });
 

@@ -15,7 +15,7 @@ export function TaskPage({ page }: { page: PageConfig }) {
   const navigate = useNavigate();
   const task = useTask(id);
 
-  const errorCode = task.error ? (task.error instanceof ApiClientError ? task.error.code : 'UNKNOWN_ERROR') : null;
+  const errorCode = task.isError ? (task.error instanceof ApiClientError ? task.error.code : 'UNKNOWN_ERROR') : null;
 
   useEffect(() => {
     if (errorCode === 'AUTH_REQUIRED') navigate('/login', { replace: true });
@@ -34,7 +34,8 @@ export function TaskPage({ page }: { page: PageConfig }) {
 
       {task.isPending && <p role="status">Завантаження…</p>}
 
-      {task.data && (
+      {/* A failed refetch (for example the task was taken, 404) must not leave stale details on screen. */}
+      {task.data && !task.isError && (
         <>
           <h2>{task.data.title}</h2>
           <p>{task.data.description}</p>
