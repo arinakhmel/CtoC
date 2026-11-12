@@ -6,6 +6,7 @@ import { LoginPage } from '../features/identity/pages/LoginPage';
 import { MyProfilePage } from '../features/identity/pages/MyProfilePage';
 import { ProfilePage } from '../features/identity/pages/ProfilePage';
 import { FeedPage } from '../features/tasks/pages/FeedPage';
+import { TaskPage } from '../features/tasks/pages/TaskPage';
 import { VerificationPage } from '../features/verification/pages/VerificationPage';
 import { RegisterPage } from '../features/identity/pages/RegisterPage';
 import { PageStub } from '../pages/PageStub';
@@ -21,6 +22,7 @@ const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
   '/me/verification': (page) => <VerificationPage page={page} />,
   '/confirm-email': (page) => <ConfirmEmailPage page={page} />,
   '/feed': (page) => <FeedPage page={page} />,
+  '/tasks/:id': (page) => <TaskPage page={page} />,
 };
 const renderPage = (page: PageConfig) => IMPLEMENTED[page.path]?.(page) ?? <PageStub page={page} />;
 
