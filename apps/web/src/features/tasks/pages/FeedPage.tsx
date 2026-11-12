@@ -41,7 +41,9 @@ export function FeedPage({ page }: { page: PageConfig }) {
           {tasks.map((task) => (
             <li key={task.id}>
               <article aria-labelledby={`task-${task.id}`}>
-                <h2 id={`task-${task.id}`}>{task.title}</h2>
+                <h2 id={`task-${task.id}`}>
+                  <Link to={`/tasks/${task.id}`}>{task.title}</Link>
+                </h2>
                 <p>{task.description}</p>
                 <p>
                   Ціна: <strong>{formatUah(task.priceKopecks)}</strong>

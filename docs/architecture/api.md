@@ -471,3 +471,11 @@ GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
 - Order: newest `publishedAt` first, ties by `id` descending. The cursor is keyset based on `(publishedAt, id)`, so a task published or taken meanwhile never repeats or skips a task, and the cursor task may leave the feed between two pages. `nextCursor` is `null` on the last page. An empty feed is `{ "tasks": [], "nextCursor": null }`.
 - `limit`: integer 1…50, default 20 (`LIMITS.feedPage`). A bad `limit` or a `cursor` that is not a published task gives 400 `VALIDATION_FAILED` with `details: [{ field, code }]`.
 - The card has no customer, status, moderation or commission fields. The net price (`commissionKopecks`, `netKopecks`) is added by US-15.
+
+### 4.13 `GET /api/tasks/:id` (details for a student, US-13)
+
+200: `{ "task": { "id", "title", "description", "priceKopecks", "deadlineAt", "publishedAt" } }`, the same fields as a feed card. The price is the fixed amount set by the customer.
+
+- Access: the same as the feed (any student with a confirmed email), checked first: 401 `AUTH_REQUIRED`, 403 `ROLE_FORBIDDEN`, 403 `EMAIL_NOT_CONFIRMED`.
+- Visibility for a student is the feed rule (INV-06). A task that is pending, rejected, cancelled, taken or expired is 404 `NOT_FOUND`, so its existence is not leaked (US-14/S2).
+- The owner, the executor and the moderator read other states through this endpoint with US-14, US-22 and US-40. This section is extended then.

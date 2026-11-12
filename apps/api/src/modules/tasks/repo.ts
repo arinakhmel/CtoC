@@ -12,6 +12,13 @@ const feedWhere = (now: Date): Prisma.TaskWhereInput => ({
   publishedAt: { not: null },
 });
 
+/** US-13. One task as the student may open it: the same visibility as the feed (INV-06). Anything else is absent. */
+export const findOpenTask = (id: string, now: Date) =>
+  prisma.task.findFirst({
+    where: { id, ...feedWhere(now) },
+    select: { id: true, title: true, description: true, priceKopecks: true, deadlineAt: true, publishedAt: true },
+  });
+
 /** Any task that was published, even if it has left the feed since (assigned, expired), so paging never breaks mid-way. */
 export const findFeedCursor = (id: string) =>
   prisma.task.findFirst({ where: { id, publishedAt: { not: null } }, select: { id: true, publishedAt: true } });
