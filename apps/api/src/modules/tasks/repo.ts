@@ -52,3 +52,6 @@ export function listFeed(now: Date, limit: number, after?: { id: string; publish
     select: cardSelect,
   });
 }
+
+/** US-16. A single insert, atomic on its own. */
+export const insertTask = (data: Prisma.TaskUncheckedCreateInput) => prisma.task.create({ data });

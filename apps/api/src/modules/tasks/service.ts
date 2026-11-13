@@ -1,8 +1,9 @@
-import type { FeedQuery } from '@ctoc/shared';
+import type { CreateTaskInput, FeedQuery } from '@ctoc/shared';
 import type { User } from '@prisma/client';
 import { ApiError } from '../../errors';
-import { assertCanReadFeed } from './policy';
-import { findFeedCursor, findOpenTask, listFeed } from './repo';
+import { newTaskData } from './domain';
+import { assertCanCreateTask, assertCanReadFeed } from './policy';
+import { findFeedCursor, findOpenTask, insertTask, listFeed } from './repo';
 
 /**
  * US-13. The details of one task, with the fixed price set by the customer. A task that is not in the feed
@@ -34,4 +35,10 @@ export async function getFeed(user: User, query: FeedQuery) {
   const page = rows.slice(0, query.limit);
   const last = page[page.length - 1];
   return { tasks: page, nextCursor: rows.length > query.limit && last ? last.id : null };
+}
+
+/** US-16. `input` is already validated by `validateBody`. The task always starts in `pending_moderation`. */
+export async function createTask(user: User, input: CreateTaskInput) {
+  assertCanCreateTask(user);
+  return insertTask(newTaskData(input, user.id));
 }

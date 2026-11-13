@@ -23,3 +23,14 @@ export const serializeFeedTask = (task: FeedTaskRow) => {
     publishedAt: task.publishedAt?.toISOString() ?? null,
   };
 };
+
+/** api.md §4.4. The customer's own view of a task they just created. */
+export const serializeOwnTask = (task: Pick<Task, 'id' | 'title' | 'description' | 'priceKopecks' | 'deadlineAt' | 'status' | 'createdAt'>) => ({
+  id: task.id,
+  title: task.title,
+  description: task.description,
+  priceKopecks: task.priceKopecks,
+  deadlineAt: task.deadlineAt.toISOString(),
+  status: task.status,
+  createdAt: task.createdAt.toISOString(),
+});
