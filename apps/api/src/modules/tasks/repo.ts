@@ -52,3 +52,6 @@ export function listFeed(now: Date, limit: number, after?: { id: string; publish
     select: cardSelect,
   });
 }
+
+/** US-16. Runs on the transaction client of the service (ADR-0007). */
+export const insertTask = (tx: Prisma.TransactionClient, data: Prisma.TaskUncheckedCreateInput) => tx.task.create({ data });

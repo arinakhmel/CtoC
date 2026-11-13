@@ -60,7 +60,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 |---|---|---|---|---|---|
 | GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S- (any student with a confirmed email) | 200 (body: §4.12) | 400 `VALIDATION_FAILED` (bad `limit` or `cursor`) · 401 `AUTH_REQUIRED` · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
 | GET | `/api/tasks/:id` | US-13, US-15, US-22 | S- (published) · Own · Ex · M | 200 | 404 `NOT_FOUND` |
-| POST | `/api/tasks` | US-16, US-17, US-40/S3 | C (confirmed) | 201, always `pending_moderation` | 400 `VALIDATION_FAILED`, `TITLE_TOO_SHORT`, `PRICE_BELOW_MIN`, `PRICE_ABOVE_MAX`, `DEADLINE_IN_PAST` · 403 `ROLE_FORBIDDEN` |
+| POST | `/api/tasks` | US-16, US-17, US-40/S3 | C (confirmed) | 201, always `pending_moderation` | 400 `VALIDATION_FAILED`, `TITLE_TOO_SHORT`, `PRICE_BELOW_MIN`, `PRICE_ABOVE_MAX`, `DEADLINE_IN_PAST` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | GET | `/api/my/tasks` | US-50 | C | 200 (each task with `applicationsCount`) | |
 | DELETE | `/api/tasks/:id` | US-22/S2, US-50, A-08 | Own | 204 | 403 `NOT_TASK_OWNER` · 409 `TASK_HAS_EXECUTOR` |
 
@@ -332,6 +332,17 @@ Content-Type: application/json
 ```
 
 The `status` field is stripped. A valid request always creates a task in `pending_moderation` (US-40/S3, INV-05).
+
+Access is checked before the body (a student with a bad body gets 403, not 400). A valid request:
+
+```json
+201 Created
+{ "task": { "id": "7d0c…", "title": "Логотип для кав’ярні", "description": "…", "priceKopecks": 40000,
+            "deadlineAt": "2026-12-01T18:00:00.000Z", "status": "pending_moderation",
+            "createdAt": "2026-11-13T10:00:00.000Z" } }
+```
+
+The response is the customer's own view: no commission fields (they are taken at publication) and no executor.
 
 ### 4.5 `POST /api/auth/register` (US-06, US-43)
 
