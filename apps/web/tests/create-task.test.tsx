@@ -76,6 +76,35 @@ describe('/c/tasks/new (US-16)', () => {
     await waitFor(() => expect(screen.getByLabelText('Опис')).toHaveAttribute('aria-invalid', 'true'));
   });
 
+  it('US-17 checklist the price is a numeric input', () => {
+    open();
+    expect(screen.getByRole('spinbutton', { name: 'Ціна, грн' })).toBeInTheDocument();
+  });
+
+  it('US-17 sc.2 a price of 20 UAH shows the minimum price message and nothing is sent', async () => {
+    open();
+    fillValid();
+    type('Ціна, грн', '20');
+    submit();
+
+    expect(await screen.findByText('Мінімальна вартість завдання — 50 грн')).toBeInTheDocument();
+    expect(screen.getByLabelText('Ціна, грн')).toHaveAttribute('aria-invalid', 'true');
+    expect(posts()).toHaveLength(0);
+  });
+
+  it('US-17 sc.3 letters in the price field give a "must be a number" error and nothing is sent', async () => {
+    open();
+    fillValid();
+    // A type=number input drops letters, so the field is empty (jsdom does the same as a browser here).
+    type('Ціна, грн', 'abc');
+    submit();
+
+    const field = screen.getByLabelText('Ціна, грн');
+    await waitFor(() => expect(field).toHaveAttribute('aria-invalid', 'true'));
+    expect(screen.getByText('Перевірте правильність заповнення полів')).toBeInTheDocument();
+    expect(posts()).toHaveLength(0);
+  });
+
   it('US-16 an unconfirmed email offers the confirmation link', async () => {
     fetchMock.mockImplementation(async () => json({ error: { code: 'EMAIL_NOT_CONFIRMED', message: 'x' } }, 403));
     open();

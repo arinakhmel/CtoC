@@ -134,6 +134,13 @@ describe('US-17 and US-15 on the same endpoint', () => {
     expect(await prisma.task.count()).toBe(0);
   });
 
+  it('US-17 checklist a price above the platform maximum → 400 PRICE_ABOVE_MAX', async () => {
+    const res = await post(customer.cookie, { ...valid(), priceKopecks: 2_000_001 });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('PRICE_ABOVE_MAX');
+    expect(await prisma.task.count()).toBe(0);
+  });
+
   it('US-17 sc.3 a non-numeric price → 400 VALIDATION_FAILED', async () => {
     const res = await post(customer.cookie, { ...valid(), priceKopecks: 'abc' });
     expect(res.status).toBe(400);
