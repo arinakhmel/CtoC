@@ -59,9 +59,9 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S- (any student with a confirmed email) | 200 | 401 · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
+| GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S- (any student with a confirmed email) | 200 (body: §4.12) | 400 `VALIDATION_FAILED` (bad `limit` or `cursor`) · 401 `AUTH_REQUIRED` · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
 | GET | `/api/tasks/:id` | US-13, US-15, US-22 | S- (published) · Own · Ex · M | 200 | 404 `NOT_FOUND` |
-| POST | `/api/tasks` | US-16, US-17, US-40/S3 | C (confirmed) | 201, always `pending_moderation` | 400 `VALIDATION_FAILED`, `TITLE_TOO_SHORT`, `PRICE_BELOW_MIN`, `PRICE_ABOVE_MAX`, `DEADLINE_IN_PAST` · 403 `ROLE_FORBIDDEN` |
+| POST | `/api/tasks` | US-16, US-17, US-40/S3 | C (confirmed) | 201, always `pending_moderation` | 400 `VALIDATION_FAILED`, `TITLE_TOO_SHORT`, `PRICE_BELOW_MIN`, `PRICE_ABOVE_MAX`, `DEADLINE_IN_PAST` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | GET | `/api/my/tasks` | US-50 | C | 200 (each task with `applicationsCount`) | |
 | DELETE | `/api/tasks/:id` | US-22/S2, US-50, A-08 | Own | 204 | 403 `NOT_TASK_OWNER` · 409 `TASK_HAS_EXECUTOR` |
 
@@ -334,6 +334,17 @@ Content-Type: application/json
 
 The `status` field is stripped. A valid request always creates a task in `pending_moderation` (US-40/S3, INV-05).
 
+Access is checked before the body (a student with a bad body gets 403, not 400). A valid request:
+
+```json
+201 Created
+{ "task": { "id": "7d0c…", "title": "Логотип для кав’ярні", "description": "…", "priceKopecks": 40000,
+            "deadlineAt": "2026-12-01T18:00:00.000Z", "status": "pending_moderation",
+            "createdAt": "2026-11-13T10:00:00.000Z" } }
+```
+
+The response is the customer's own view: no commission fields (they are taken at publication) and no executor.
+
 ### 4.5 `POST /api/auth/register` (US-06, US-43)
 
 ```json
@@ -458,3 +469,37 @@ Public, no session needed. `Cache-Control: no-store`, so a badge granted by a mo
 - The limit is 500 **characters, counted as Unicode code points**, the same way as the database CHECK `length(bio) <= 500`. So 500 emoji are accepted (1000 UTF-16 units) and 501 give 400 `BIO_TOO_LONG` («Текст «Про мене» перевищує 500 символів»). A missing or non-string `bio` gives 400 `VALIDATION_FAILED`.
 - Access: a student with a confirmed email (no session 401, other roles 403 `ROLE_FORBIDDEN`, unconfirmed 403 `EMAIL_NOT_CONFIRMED`). A student can only change their own bio. The body has no user id.
 - The web form shows a live counter and blocks the save over the limit. It never cuts the text off.
+
+### 4.12 `GET /api/tasks` (feed, US-12)
+
+```http
+GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
+```
+
+200:
+
+```json
+{
+  "tasks": [
+    { "id": "…", "title": "Парсер сайту", "description": "Потрібен скрипт, що збирає ціни.",
+      "priceKopecks": 50000, "commissionKopecks": 5000, "netKopecks": 45000,
+      "deadlineAt": "2026-12-01T18:00:00.000Z", "publishedAt": "2026-11-10T10:00:00.000Z" }
+  ],
+  "nextCursor": "…"
+}
+```
+
+- Access: any student with a confirmed email (decision OQ-19). No session 401 `AUTH_REQUIRED`, customer or moderator 403 `ROLE_FORBIDDEN`, unconfirmed 403 `EMAIL_NOT_CONFIRMED`. Access is checked before the query, so a forbidden user with a bad `limit` still gets 403.
+- Contents (INV-06): `status = 'published'`, no executor and `deadlineAt` in the future. A task that is pending, rejected, cancelled, taken or expired is absent. A task without a deadline cannot exist (`NOT NULL`), so the feed never skips one (US-12/S2, W-10).
+- Order: newest `publishedAt` first, ties by `id` descending. The cursor is keyset based on `(publishedAt, id)`, so a task published or taken meanwhile never repeats or skips a task, and the cursor task may leave the feed between two pages. `nextCursor` is `null` on the last page. An empty feed is `{ "tasks": [], "nextCursor": null }`.
+- `limit`: integer 1…50, default 20 (`LIMITS.feedPage`). A bad `limit` or a `cursor` that is not a published task gives 400 `VALIDATION_FAILED` with `details: [{ field, code }]`.
+- The card has no customer, status or moderation fields, and no commission **rate** (`commissionBp`).
+- Net price (US-15): `commissionKopecks` and `netKopecks` are the **snapshot taken at publication** (`priceKopecks = commissionKopecks + netKopecks`, INV-08). They are read as stored and never recomputed from the current rate, so the card shows what will be paid (NFR-20, ADR-0007). A published row that has no snapshot yet (the publish endpoint of US-40 writes it) gives `null` for **both**, and the UI shows no net line. A price of 0 or less cannot exist (INV-07, W-04), so there is no calculation for it.
+
+### 4.13 `GET /api/tasks/:id` (details for a student, US-13)
+
+200: `{ "task": { "id", "title", "description", "priceKopecks", "commissionKopecks", "netKopecks", "deadlineAt", "publishedAt" } }`, the same fields as a feed card, with the same net price rules (§4.12, US-15). The price is the fixed amount set by the customer.
+
+- Access: the same as the feed (any student with a confirmed email), checked first: 401 `AUTH_REQUIRED`, 403 `ROLE_FORBIDDEN`, 403 `EMAIL_NOT_CONFIRMED`.
+- Visibility for a student is the feed rule (INV-06). A task that is pending, rejected, cancelled, taken or expired is 404 `NOT_FOUND`, so its existence is not leaked (US-14/S2).
+- The owner, the executor and the moderator read other states through this endpoint with US-14, US-22 and US-40. This section is extended then.
