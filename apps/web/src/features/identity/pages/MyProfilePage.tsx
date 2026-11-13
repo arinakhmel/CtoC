@@ -16,6 +16,7 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [userId, setUserId] = useState('');
+  const [verified, setVerified] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [bio, setBio] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -31,6 +32,7 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
       (mine) => {
         if (!active) return;
         setUserId(mine.userId);
+        setVerified(mine.verified);
         setSkills(mine.skills);
         setBio(mine.bio);
         setLoaded(true);
@@ -102,6 +104,8 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
   return (
     <article aria-labelledby="page-title">
       <h1 id="page-title">{page.title}</h1>
+      {/* INV-03: the badge follows studentVerifiedAt only (the profile body's `verified`), never the role. */}
+      {verified && <p className="badge badge-verified">Верифікований студент</p>}
 
       {loadError && (
         <p role="alert">

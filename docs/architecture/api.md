@@ -53,6 +53,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 |---|---|---|---|---|---|
 | POST | `/api/me/verification` | US-08 | S- | 201 (body: §4.8) | 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_TOO_LARGE`, `VALIDATION_FAILED` (no file) · 401 `AUTH_REQUIRED` · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` · 409 `VERIFICATION_PENDING`, `ALREADY_VERIFIED` |
 | GET | `/api/me/verification` | US-08, US-39/S2 | S- | 200 (body: §4.8) | 401 `AUTH_REQUIRED` · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
+| POST | `/api/webhooks/telegram` | US-39 (moderator channel, OQ-21) | P, secret header | 200 `{ "ok": true }` | 400 `VALIDATION_FAILED` · 404 `NOT_FOUND` (not configured or wrong secret) |
 
 ### Tasks and feed
 
@@ -410,6 +411,16 @@ The response is the customer's own view: no commission fields (they are taken at
 - At most one request per student is `pending` (INV-04, partial unique index): a second upload gives 409 `VERIFICATION_PENDING`. After a rejection or a revocation the student may upload again.
 - Access: a student with a confirmed email. No session gives 401, a customer or moderator 403 `ROLE_FORBIDDEN`, an unconfirmed email 403 `EMAIL_NOT_CONFIRMED`, an already verified student 409 `ALREADY_VERIFIED`.
 - Files are stored through the `FileStorage` port (local disk, `apps/api/data/uploads`, or `UPLOAD_DIR`) under a random key, and are never served as static files. Downloading is for the moderator (US-39).
+
+### 4.8a `POST /api/webhooks/telegram` (US-39 through Telegram, OQ-21)
+
+Optional. Active only when `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` and `TELEGRAM_WEBHOOK_SECRET` are all set. Then a stored student document is posted to the moderators' group (`sendPhoto` for an image, `sendDocument` for a PDF) with the student's email and id and the buttons «✅ Approve» (`verify:<userId>`) and «❌ Reject» (`reject:<userId>`). A failed send is logged and never fails the upload.
+
+- **Authentication.** Public route, but the header `X-Telegram-Bot-Api-Secret-Token` must equal `TELEGRAM_WEBHOOK_SECRET` (set it with `setWebhook`, `secret_token`). Missing, wrong or not configured: 404 `NOT_FOUND`. Clicks from any chat other than `TELEGRAM_CHAT_ID` are ignored.
+- **Approve:** the student's `pending` request becomes `approved` and `studentVerifiedAt` is set (INV-03), in one transaction with an audit event `verification.approved` (`{ via: "telegram", moderator }`). **Reject:** the request becomes `rejected` with the reason «Відхилено модератором»; no badge. `decidedBy` stays empty because a Telegram moderator has no account.
+- **Idempotent.** The decision is a conditional update of the `pending` request. A second click or a second moderator changes nothing and sends no second email.
+- **After the commit** (a failure here never undoes the decision and the answer stays 200, so Telegram does not retry): the caption is edited to `✅ Approved by @name` or `❌ Rejected by @name` and the buttons are removed, and the student gets an email through the `Mailer`.
+- Body: the Telegram `Update` (`telegramUpdateSchema` in `@ctoc/shared`). An update that is not a button click is acknowledged with 200 and ignored.
 
 ### 4.9 `GET /api/profiles/:userId` (US-09)
 

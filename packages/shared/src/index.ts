@@ -10,4 +10,5 @@ export * from './schemas/task';
 export * from './schemas/application';
 export * from './schemas/delivery';
 export * from './schemas/payments';
+export * from './schemas/telegram';
 export * from './messages.uk';
