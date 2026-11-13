@@ -53,5 +53,5 @@ export function listFeed(now: Date, limit: number, after?: { id: string; publish
   });
 }
 
-/** US-16. A single insert, atomic on its own. */
-export const insertTask = (data: Prisma.TaskUncheckedCreateInput) => prisma.task.create({ data });
+/** US-16. Runs on the transaction client of the service (ADR-0007). */
+export const insertTask = (tx: Prisma.TransactionClient, data: Prisma.TaskUncheckedCreateInput) => tx.task.create({ data });

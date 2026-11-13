@@ -1,6 +1,7 @@
 import type { CreateTaskInput, FeedQuery } from '@ctoc/shared';
 import type { User } from '@prisma/client';
 import { ApiError } from '../../errors';
+import { prisma } from '../../platform/db';
 import { newTaskData } from './domain';
 import { assertCanCreateTask, assertCanReadFeed } from './policy';
 import { findFeedCursor, findOpenTask, insertTask, listFeed } from './repo';
@@ -40,5 +41,5 @@ export async function getFeed(user: User, query: FeedQuery) {
 /** US-16. `input` is already validated by `validateBody`. The task always starts in `pending_moderation`. */
 export async function createTask(user: User, input: CreateTaskInput) {
   assertCanCreateTask(user);
-  return insertTask(newTaskData(input, user.id));
+  return prisma.$transaction((tx) => insertTask(tx, newTaskData(input, user.id)));
 }
