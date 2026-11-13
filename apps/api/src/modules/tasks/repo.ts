@@ -31,6 +31,10 @@ const cardSelect = {
 export const findOpenTask = (id: string, now: Date) =>
   prisma.task.findFirst({ where: { id, ...feedWhere(now) }, select: cardSelect });
 
+/** US-18. Runs on the transaction client: is the task still open for applications at this moment? */
+export const countOpenTask = (tx: Prisma.TransactionClient, id: string, now: Date) =>
+  tx.task.count({ where: { id, ...feedWhere(now) } });
+
 /** Any task that was published, even if it has left the feed since (assigned, expired), so paging never breaks mid-way. */
 export const findFeedCursor = (id: string) =>
   prisma.task.findFirst({ where: { id, publishedAt: { not: null } }, select: { id: true, publishedAt: true } });
