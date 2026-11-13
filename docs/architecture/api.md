@@ -69,7 +69,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| POST | `/api/tasks/:id/applications` | US-18, US-19, US-42 | S+ | 201 | 400 `NOTE_TOO_LONG` · 403 `STUDENT_NOT_VERIFIED` · 404 `NOT_FOUND` (not published) · 409 `ALREADY_APPLIED`, `TASK_NOT_OPEN` |
+| POST | `/api/tasks/:id/applications` | US-18, US-19, US-42 | S+ | 201 | 400 `NOTE_TOO_LONG` · 403 `STUDENT_NOT_VERIFIED` · 404 `NOT_FOUND` (not in the feed: not published, assigned, expired or unknown) · 409 `ALREADY_APPLIED`, `TASK_NOT_OPEN` (race only) |
 | GET | `/api/me/applications` | US-20 | S- | 200 | |
 | GET | `/api/tasks/:id/applications` | US-24, US-25 | Own | 200 | 403 `NOT_TASK_OWNER` |
 | POST | `/api/tasks/:id/applications/:appId/reject` | US-20/S3 | Own | 200 | 403 · 409 `APPLICATION_NOT_PENDING` |
@@ -194,7 +194,7 @@ Messages marked **[AC]** are quoted from a Gherkin scenario and must match exact
 | 409 | `VERIFICATION_PENDING` | A request is already waiting. | «Ваш документ уже очікує перевірки» | INV-04 |
 | 409 | `ALREADY_VERIFIED` | Already a verified student. | «Статус студента вже підтверджено» | US-08 |
 | 409 | `ALREADY_APPLIED` | Second application to the same task. | **[AC]** «Ви вже подали відгук на це завдання» | US-18/S2 |
-| 409 | `TASK_NOT_OPEN` | Task is not `published`, or already has an executor. | «Завдання вже недоступне для відгуків» | US-18/S1 |
+| 409 | `TASK_NOT_OPEN` | Task left the feed between the visibility check and the insert (taken, unpublished or expired in that moment). A task that is already out of the feed is 404 `NOT_FOUND` (OQ-24). | «Завдання вже недоступне для відгуків» | US-18/S1 |
 | 409 | `TASK_ALREADY_ASSIGNED` | An executor is already selected. | «Виконавця вже обрано» | US-25/S2 |
 | 409 | `TASK_HAS_EXECUTOR` | Delete or unpublish after an executor was selected. | «Завдання з виконавцем не можна видалити» | US-22/S2 |
 | 409 | `APPLICATION_NOT_PENDING` | The application was already decided. | «Рішення щодо відгуку вже ухвалено» | US-20 |
