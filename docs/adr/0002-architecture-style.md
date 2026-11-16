@@ -26,6 +26,7 @@ Rules:
 1. Routes call only their own service. A service calls another module only through that module's service, inside the caller's transaction.
 2. State changes go through `domain.ts` transitions, never by setting a status in a route.
 3. Three explicit ports, because they have real alternatives: `PaymentProvider`, `Mailer`, `FileStorage`. Nothing else gets an interface.
+4. *(Added 2026-11-16, review of US-24.)* A module's `service.ts` is its only public surface. The `routes`, `repo`, `serializer` and `policy` of another module are never imported. When a service needs another module's data, that module's service returns it ready to use (identity returns the public profile card, so `applications` does not import the identity serializer). A type or a small pure rule that two modules share lives in `@ctoc/shared`. The pure predicates of another module's `domain.ts` (for example `isVerifiedStudent`) may be imported: they do no I/O and are the single source of a domain rule. An access check that two modules need, such as "is the owner of the task", is written in each module's `policy.ts`: it is one line and the tests pin it. The copies are listed in `overview.md` OQ-31 so they can be merged if they grow.
 
 **Frontend:** `features/<module>/{api,components,pages}` with the same module names, plus shared `ui/` and `lib/`.
 

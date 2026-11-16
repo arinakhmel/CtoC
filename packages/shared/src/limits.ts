@@ -21,6 +21,7 @@ export const LIMITS = {
   cardNumberLength: 16,
   feedPage: { default: 20, max: 50 },
   myWorkMax: 100,
+  candidatesMax: 100,
   chatPage: { max: 100 },
   notificationsPage: { default: 20, max: 50, unreadMax: 200 },
 } as const;

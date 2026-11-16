@@ -8,6 +8,7 @@ import {
   cancelTaskWithoutExecutor,
   findChatTask,
   findFeedCursor,
+  findTaskOwnerView,
   findOpenTask,
   findTaskForDelete,
   findTaskOfExecutor,
@@ -123,4 +124,14 @@ export async function getTaskForChat(id: string) {
 /** US-23. First statement of the send transaction: a conditional update that fails with CHAT_CLOSED if the chat closed meanwhile. */
 export async function lockTaskForChat(tx: Prisma.TransactionClient, taskId: string, userId: string): Promise<void> {
   if ((await lockChatTask(tx, taskId, userId)) === 0) throw new ApiError('CHAT_CLOSED');
+}
+
+/**
+ * US-24. A task for its owner's candidate list: its owner, title, status and price. An unknown task is 404; whether the
+ * caller owns it is the caller's policy. The applications module calls this, not the tasks table (ADR-0002).
+ */
+export async function getTaskOwnerView(id: string) {
+  const task = await findTaskOwnerView(id);
+  if (!task) throw new ApiError('NOT_FOUND');
+  return task;
 }

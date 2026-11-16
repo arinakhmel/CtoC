@@ -1,11 +1,12 @@
-import type { CreateApplicationInput } from '@ctoc/shared';
+import { LIMITS, type CreateApplicationInput } from '@ctoc/shared';
 import { Prisma, type User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
-import { assertTaskOpen, getTask } from '../tasks/service';
+import { getPublicProfiles } from '../identity/service';
+import { assertTaskOpen, getTask, getTaskOwnerView } from '../tasks/service';
 import { newApplicationData } from './domain';
-import { assertCanApply, assertCanReadMyApplications } from './policy';
-import { insertApplication, listApplicationsOfStudent } from './repo';
+import { assertCanApply, assertCanListCandidates, assertCanReadMyApplications, assertOwnsTask } from './policy';
+import { insertApplication, listApplicationsOfStudent, listApplicationsOfTask } from './repo';
 
 /**
  * US-18 (and US-19 for the note). `input` is already validated by `validateBody`.
@@ -43,4 +44,23 @@ export async function createApplication(user: User, taskId: string, input: Creat
 export async function getMyApplications(user: User) {
   assertCanReadMyApplications(user);
   return listApplicationsOfStudent(user.id);
+}
+
+/**
+ * US-24 sc.1, sc.2. The applicants of one task for its owner, oldest first, each with the public profile card of the student
+ * (name, the verified flag as it is now, skills, bio). An unknown task is 404, someone else's task is 403 NOT_TASK_OWNER
+ * (api.md §1). The cards come ready from the identity service in one batch. Read-only.
+ */
+export async function getCandidates(user: User, taskId: string) {
+  assertCanListCandidates(user);
+  const task = await getTaskOwnerView(taskId);
+  assertOwnsTask(task, user);
+
+  const rows = await listApplicationsOfTask(taskId, LIMITS.candidatesMax);
+  const cards = await getPublicProfiles(rows.map((row) => row.studentId));
+  const candidates = rows.flatMap((row) => {
+    const student = cards.get(row.studentId);
+    return student ? [{ row, student }] : [];
+  });
+  return { task, candidates };
 }

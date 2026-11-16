@@ -1,0 +1,109 @@
+import { render, screen, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { RouterProvider } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createTestRouter, providerFuture } from '../src/app/router';
+
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+const apiError = (code: string, status: number) => json({ error: { code, message: 'x' } }, status);
+
+const student = (id: string, displayName: string, verified: boolean, skills: string[] = []) => ({ id, displayName, verified, skills, bio: '' });
+const candidate = (id: string, who: ReturnType<typeof student>, note: string | null = null) => ({
+  id,
+  taskId: 't1',
+  status: 'sent',
+  note,
+  createdAt: '2026-11-12T09:15:00.000Z',
+  student: who,
+});
+
+let status: string;
+let applications: ReturnType<typeof candidate>[];
+let listResponse: (() => Response) | null;
+
+beforeEach(() => {
+  status = 'published';
+  applications = [];
+  listResponse = null;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) => {
+      if (url === '/api/tasks/t1/applications') {
+        return listResponse ? listResponse() : json({ task: { id: 't1', title: 'Логотип для кав’ярні', status, priceKopecks: 50_000 }, applications });
+      }
+      if (url === '/api/tasks/t1/messages') return json({ messages: [] });
+      return json({ status: 'ok' });
+    }),
+  );
+});
+afterEach(() => vi.unstubAllGlobals());
+
+const open = () => render(<RouterProvider router={createTestRouter(['/c/tasks/t1'])} future={providerFuture} />);
+
+describe('/c/tasks/:id candidates (US-24)', () => {
+  it('US-24 sc.1 the applicants are listed with the verified badge, skills, status and note, and the name links to the profile', async () => {
+    applications = [candidate('a1', student('u1', 'Олена Коваль', true, ['HTML', 'Java']), 'Маю досвід')];
+    open();
+
+    const item = await screen.findByRole('article', { name: 'Олена Коваль' });
+    expect(within(item).getByText('Верифікований студент')).toBeInTheDocument();
+    expect(within(item).getByRole('list', { name: 'Навички' })).toHaveTextContent('HTMLJava');
+    expect(within(item).getByText('Надіслано')).toBeInTheDocument();
+    expect(within(item).getByText(/Маю досвід/)).toBeInTheDocument();
+    expect(within(item).getByRole('link', { name: 'Олена Коваль' })).toHaveAttribute('href', '/u/u1');
+    expect(screen.getByRole('heading', { level: 1, name: 'Логотип для кав’ярні' })).toBeInTheDocument();
+  });
+
+  it('US-24 sc.2 an applicant who is not verified has no badge', async () => {
+    applications = [candidate('a1', student('u1', 'Олена Коваль', true)), candidate('a2', student('u2', 'Петро Іваненко', false))];
+    open();
+
+    const verified = await screen.findByRole('article', { name: 'Олена Коваль' });
+    const unverified = screen.getByRole('article', { name: 'Петро Іваненко' });
+    expect(within(verified).getByText('Верифікований студент')).toBeInTheDocument();
+    expect(within(unverified).queryByText('Верифікований студент')).not.toBeInTheDocument();
+  });
+
+  // The 390 px layout itself is checked by hand (traceability); here: the link is a plain page link, and the page scales.
+  it('US-24 sc.3 the profile link opens as a page, not a dialog or a new window, and the app has the mobile viewport', async () => {
+    applications = [candidate('a1', student('u1', 'Олена Коваль', true))];
+    open();
+
+    const link = await screen.findByRole('link', { name: 'Олена Коваль' });
+    expect(link).toHaveAttribute('href', '/u/u1');
+    expect(link).not.toHaveAttribute('target');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../index.html'), 'utf8');
+    expect(html).toMatch(/<meta name="viewport" content="width=device-width, initial-scale=1\.0"/);
+  });
+
+  it('US-24 with no applicants the page says so', async () => {
+    open();
+    expect(await screen.findByText('Відгуків поки немає.')).toBeInTheDocument();
+  });
+
+  it('US-24 the chat with the executor shows for a task in progress and not for a published one (US-23)', async () => {
+    status = 'in_progress';
+    applications = [candidate('a1', student('u1', 'Олена Коваль', true))];
+    open();
+    expect(await screen.findByRole('heading', { name: 'Чат із замовником' })).toBeInTheDocument();
+  });
+
+  it('US-24 a published task has no chat', async () => {
+    applications = [candidate('a1', student('u1', 'Олена Коваль', true))];
+    open();
+    await screen.findByRole('article', { name: 'Олена Коваль' });
+    expect(screen.queryByRole('heading', { name: 'Чат із замовником' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['NOT_TASK_OWNER', 403, 'Доступ заборонено'],
+    ['NOT_FOUND', 404, 'Не знайдено'],
+  ])('US-24 the API code %s is shown by its Ukrainian text', async (code, httpStatus, text) => {
+    listResponse = () => apiError(code, httpStatus);
+    open();
+    expect(await screen.findByRole('alert')).toHaveTextContent(text);
+  });
+});
