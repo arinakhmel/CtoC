@@ -50,7 +50,7 @@ describe('/me/work «Мої активні завдання» (US-22)', () => {
     openList();
 
     const item = await screen.findByRole('article', { name: 'Логотип для кав’ярні' });
-    expect(within(item).getByText('У роботі')).toBeInTheDocument();
+    expect(within(item).getByText('В роботі')).toBeInTheDocument();
     expect(within(item).getByText(/Узгоджена ціна: 500 грн/)).toBeInTheDocument();
     expect(within(item).getByRole('link', { name: 'Логотип для кав’ярні' })).toHaveAttribute('href', '/work/t1');
   });
@@ -78,7 +78,7 @@ describe('/work/:taskId card (US-22)', () => {
     expect(screen.getByText('Потрібен логотип у двох кольорах. Файли у форматі SVG.')).toBeInTheDocument();
     expect(screen.getByText('Узгоджена ціна')).toBeInTheDocument();
     expect(screen.getByText('500 грн')).toBeInTheDocument();
-    expect(screen.getByText('У роботі')).toBeInTheDocument();
+    expect(screen.getByText('В роботі')).toBeInTheDocument();
     expect(screen.getByText('Виконати до:', { exact: false }).querySelector('time')).toHaveAttribute('dateTime', DEADLINE);
   });
 
