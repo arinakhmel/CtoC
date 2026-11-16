@@ -110,7 +110,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/notifications",
-    title: "Notification centre",
+    title: "Сповіщення",
     access: "A",
     stories: ["US-21", "US-30", "US-39", "US-47", "US-48", "US-49"],
   },
