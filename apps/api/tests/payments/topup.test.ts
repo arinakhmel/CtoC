@@ -104,6 +104,8 @@ describe('Sandbox top-up of the balance: US-26', () => {
     expect(await ledgerSum(customer.user.id)).toBe(35_000);
   });
 
+  // The connection limit is 1 (ADR-0004), so the two requests are serialised by the database. This proves the first-top-up path
+  // (no balance row yet) and that the increment is done by the database, not what two parallel writers would do.
   it('US-26 two top-ups at once are both applied: the balance is the sum and there are two entries', async () => {
     const [a, b] = await Promise.all([topUp({ amountKopecks: 10_000 }, customer.cookie), topUp({ amountKopecks: 25_000 }, customer.cookie)]);
 
