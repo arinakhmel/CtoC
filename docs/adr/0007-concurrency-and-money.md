@@ -39,7 +39,7 @@ await prisma.$transaction(async (tx) => {
 |---|---|
 | One executor per task | `UPDATE tasks SET status='in_progress', executor_id=? WHERE id=? AND status='published' AND executor_id IS NULL`. If 0 rows changed, return 409. |
 | One application per student per task | `UNIQUE(task_id, student_id)` |
-| Escrow once per task | `UNIQUE(task_id)` on escrow, plus an idempotency key on the request. A repeat returns the existing record (US-26/S3). |
+| Escrow once per task | `UNIQUE(task_id)` on escrow, plus an idempotency key on the request. A repeat returns the existing record (US-26/S3). The key is optional on the request: when it is missing the server makes one, and then the guard is the `UNIQUE(task_id)` plus 409 `TASK_ALREADY_ASSIGNED` *(clarified 2026-11-16, US-25)*. |
 | Single credit per task | `UNIQUE(task_id, kind)` on `ledger_entries` (`kind='payout'`). A duplicate callback is treated as already done (US-34/S3). |
 | No over-withdrawal | `UPDATE balances SET available = available - ? WHERE user_id=? AND available >= ?`. If 0 rows changed, return 409. |
 | Accept versus return | Both transition only `WHERE status='in_review'`. The first one wins and the other gets 409. |
@@ -52,7 +52,7 @@ await prisma.$transaction(async (tx) => {
 
 **5. Ledger.** An append-only `ledger_entries` table (hold, release, commission, payout, withdrawal, refund) is written in the same transaction as every balance change. A script `npm run check:invariants` verifies that balances equal the sum of entries.
 
-**6. Payments** sit behind a `PaymentProvider` port (`hold`, `release`, `refund`, `payout`). The MVP implementation is a simulation that always follows the internal ledger and exposes a clearly labelled "sandbox" top-up. Withdrawals create a request that an admin marks paid or rejected by hand (A-10).
+**6. Payments** sit behind a `PaymentProvider` port (`hold`, `release`, `refund`, `payout`). The MVP implementation is a simulation that always follows the internal ledger and exposes a clearly labelled "sandbox" top-up. Withdrawals create a request that an admin marks paid or rejected by hand (A-10). *(Clarified 2026-11-16, US-25.)* The port lives in `platform/ports/payment-provider.ts` and has `hold` for now; `release`, `refund` and `payout` are added by the stories that need them (US-31, US-34, A-09), so no method exists before it has a caller. The sandbox implementation is `modules/payments/sandbox-provider.ts`. *Known limit:* `hold` takes the caller's Prisma transaction, which fits the sandbox because the hold must commit with the business action (INV-11). A real gateway cannot join a SQLite transaction, and a network call inside it would hold the single writer lock (§1). When a real provider is planned, its shape is decided then (for example hold after commit, with a compensation if it fails); the callers of the port do not change until then.
 
 ## Consequences
 

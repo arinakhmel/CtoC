@@ -2,9 +2,10 @@ import { LIMITS, type CreateTaskInput, type FeedQuery } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
-import { chatStateOf, deleteRefusal, newTaskData } from './domain';
+import { assignRefusal, chatStateOf, deleteRefusal, newTaskData } from './domain';
 import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed, assertTaskOwner } from './policy';
 import {
+  assignTaskTx,
   cancelTaskWithoutExecutor,
   findChatTask,
   findFeedCursor,
@@ -134,4 +135,23 @@ export async function getTaskOwnerView(id: string) {
   const task = await findTaskOwnerView(id);
   if (!task) throw new ApiError('NOT_FOUND');
   return task;
+}
+
+/**
+ * US-25. The task side of selecting an executor, on the caller's `tx` (ADR-0002 rule 1): one conditional update. 409
+ * TASK_ALREADY_ASSIGNED if an executor is already chosen, 409 TASK_NOT_OPEN if the task is not published, is past its deadline, or its
+ * price is no longer the one the escrow will take.
+ */
+export async function assignTask(
+  tx: Prisma.TransactionClient,
+  taskId: string,
+  ownerId: string,
+  executorId: string,
+  priceKopecks: number,
+): Promise<void> {
+  const moved = await assignTaskTx(tx, taskId, ownerId, executorId, priceKopecks, new Date());
+  if (moved.count === 0) {
+    const state = await findTaskState(tx, taskId);
+    throw new ApiError(assignRefusal(state ?? { executorId: null }));
+  }
 }

@@ -44,3 +44,15 @@ export const serializeOwnerTask = (task: { id: string; title: string; status: st
   status: task.status,
   priceKopecks: task.priceKopecks,
 });
+
+/** api.md §4.1. The result of selecting an executor. No ids of other applicants' students, no balances. */
+export const serializeAssignment = (result: {
+  task: { id: string; status: string; executorId: string | null; priceKopecks: number };
+  escrow: { id: string; status: string; amountKopecks: number };
+  acceptedId: string | null;
+  rejectedCount: number;
+}) => ({
+  task: result.task,
+  escrow: { id: result.escrow.id, status: result.escrow.status, amountKopecks: result.escrow.amountKopecks },
+  applications: { accepted: result.acceptedId, rejectedCount: result.rejectedCount },
+});

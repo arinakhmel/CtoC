@@ -28,3 +28,6 @@ export function assertCanListCandidates(user: User): void {
 export function assertOwnsTask(task: { customerId: string }, user: User): void {
   if (task.customerId !== user.id) throw new ApiError('NOT_TASK_OWNER');
 }
+
+/** Access "Own" of api.md (US-25): a customer with a confirmed email. That the task is theirs is checked against the row. */
+export const assertCanAssign = (user: User): void => assertCanListCandidates(user);
