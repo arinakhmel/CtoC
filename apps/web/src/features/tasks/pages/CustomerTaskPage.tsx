@@ -52,7 +52,7 @@ export function CustomerTaskPage() {
           <p>Фіксована ціна: {formatUah(data.task.priceKopecks)}</p>
           <section aria-labelledby="candidates-title">
             <h2 id="candidates-title">Відгуки студентів</h2>
-            <CandidateList candidates={data.applications} />
+            <CandidateList taskId={data.task.id} candidates={data.applications} canSelect={data.task.status === 'published'} priceKopecks={data.task.priceKopecks} />
           </section>
           {CHAT_STATUSES.includes(data.task.status) && <ChatPanel taskId={data.task.id} status={data.task.status} heading="Чат із виконавцем" />}
         </>

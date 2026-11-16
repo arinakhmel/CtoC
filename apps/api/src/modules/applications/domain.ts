@@ -12,3 +12,8 @@ export const newApplicationData = (
   note: input.note ?? null,
   status: 'sent',
 });
+
+/** domain-model.md §3.3: the statuses an application moves to when the owner selects an executor (US-25). */
+export const APPLICATION_SENT = 'sent' as const;
+export const APPLICATION_ACCEPTED = 'accepted' as const;
+export const APPLICATION_REJECTED = 'rejected' as const;

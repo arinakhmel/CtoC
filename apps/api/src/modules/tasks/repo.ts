@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../platform/db';
-import { CANCELLABLE_BY_OWNER, CANCELLED, CHAT_OPEN_STATUSES } from './domain';
+import { ASSIGNABLE_STATUS, CANCELLABLE_BY_OWNER, CANCELLED, CHAT_OPEN_STATUSES, IN_PROGRESS } from './domain';
 
 /**
  * INV-06: the feed holds only published tasks that have no executor and a future deadline.
@@ -110,3 +110,15 @@ export const lockChatTask = (tx: Prisma.TransactionClient, id: string, userId: s
 /** US-24. The owner's row of a task, to check ownership and to head the candidate list. */
 export const findTaskOwnerView = (id: string) =>
   prisma.task.findUnique({ where: { id }, select: { id: true, customerId: true, title: true, status: true, priceKopecks: true, executorId: true } });
+
+/**
+ * US-25 sc.1, sc.2 (INV-10, ADR-0007). The one conditional update that gives a task its executor: only the owner's task, still
+ * published, with no executor and a deadline in the future. It also matches the price that the escrow will take, so the amount
+ * held is tied to the row that is updated (INV-11): a price that changed since it was read gives `count` 0. `count` 0 means
+ * another select won, the task is not open, or the price changed.
+ */
+export const assignTaskTx = (tx: Prisma.TransactionClient, id: string, customerId: string, executorId: string, priceKopecks: number, now: Date) =>
+  tx.task.updateMany({
+    where: { id, customerId, status: ASSIGNABLE_STATUS, executorId: null, priceKopecks, deadlineAt: { gt: now } },
+    data: { status: IN_PROGRESS, executorId, assignedAt: now },
+  });

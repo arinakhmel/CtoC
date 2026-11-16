@@ -19,3 +19,14 @@ export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 export const assignExecutorSchema = z.object({
   applicationId: z.string({ required_error: 'VALIDATION_FAILED' }).min(1, 'VALIDATION_FAILED'),
 });
+
+/**
+ * US-26: the `Idempotency-Key` header of `POST /api/tasks/:id/assign`. A value the client makes once per attempt (a UUID),
+ * so a double click or a retry returns the same result and charges once. 8 to 100 characters.
+ */
+export const idempotencyKeySchema = z
+  .string({ invalid_type_error: 'VALIDATION_FAILED' })
+  .trim()
+  .min(8, 'VALIDATION_FAILED')
+  .max(100, 'VALIDATION_FAILED');
+export type AssignExecutorInput = z.infer<typeof assignExecutorSchema>;
