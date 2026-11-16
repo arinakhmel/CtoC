@@ -17,7 +17,7 @@ Every module has the same files. A story adds or changes files in **one** module
 
 Rules in short:
 - Validation schemas, enums, limits and money helpers come from `@ctoc/shared`. Do not redefine them.
-- A service calls another module only through that module's service, inside the caller's transaction. Never import another module's `routes`, `repo`, `serializer` or `policy`; only the pure predicates of its `domain.ts` (ADR-0002 rule 4).
+- A service calls another module only through that module's service. A call that writes runs inside the caller's transaction (it takes the caller's `tx`); a read-only call needs no transaction (ADR-0002 rule 1). Never import another module's `routes`, `repo`, `serializer` or `policy`; only the pure predicates of its `domain.ts` (ADR-0002 rule 4).
 - Register the router in `index.ts`.
 - Errors: `throw new ApiError('CODE')`. The code must exist in `api.md` §3.
 

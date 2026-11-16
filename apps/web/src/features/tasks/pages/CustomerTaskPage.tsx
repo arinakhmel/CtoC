@@ -10,8 +10,8 @@ import { formatUah } from '../../../lib/money';
 const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
 
-/** The chat shows from assignment on, and its history stays after the task is done (INV-22). */
-const CHAT_STATUSES = ['in_progress', 'in_review', 'revision', 'done'];
+/** The chat shows from assignment on, and its history stays, read-only, after the task is done or cancelled (INV-22). */
+const CHAT_STATUSES = ['in_progress', 'in_review', 'revision', 'done', 'cancelled'];
 
 /**
  * /c/tasks/:id: US-24. The customer's page of one of their tasks: the applicants with the verified badge, skills and a

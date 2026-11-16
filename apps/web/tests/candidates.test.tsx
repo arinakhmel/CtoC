@@ -91,6 +91,20 @@ describe('/c/tasks/:id candidates (US-24)', () => {
     expect(await screen.findByRole('heading', { name: 'Чат із замовником' })).toBeInTheDocument();
   });
 
+  it.each([
+    ['done', 'завдання завершене'],
+    ['cancelled', 'завдання скасоване'],
+  ])('US-24 a %s task shows the chat read-only, with no form (INV-22, US-23)', async (taskStatus, note) => {
+    status = taskStatus;
+    applications = [candidate('a1', student('u1', 'Олена Коваль', true))];
+    open();
+
+    expect(await screen.findByRole('heading', { name: 'Чат із замовником' })).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`Чат закрито: ${note}`))).toBeInTheDocument();
+    expect(screen.queryByLabelText('Повідомлення')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Надіслати' })).not.toBeInTheDocument();
+  });
+
   it('US-24 a published task has no chat', async () => {
     applications = [candidate('a1', student('u1', 'Олена Коваль', true))];
     open();
