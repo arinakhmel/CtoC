@@ -342,7 +342,7 @@ A notification is created inside the business transaction it reports (INV-23), t
 
 - The chat is open from assignment (`in_progress`, `in_review`, `revision`) and read-only after `done` or `cancelled`. Before an executor is chosen it is not open: GET is 200 with an empty list, POST is 409 `CHAT_CLOSED` (OQ-30).
 - GET returns the messages oldest first, at most 100. Without `after` it is the latest 100. With `after=<id>` only the messages newer than that id, for polling. The web app polls every 5 seconds (W-18).
-- POST takes `{ "body": "…" }`, trimmed, 1 to 2000 characters. The sender is the session and the task is the URL; other keys are ignored. The send is one transaction: a conditional update that proves the sender is a participant and the chat is still open, then the insert.
+- POST takes `{ "body": "…" }`, trimmed, 1 to 2000 characters counted as Unicode code points (an emoji is one). The sender is the session and the task is the URL; other keys are ignored. The send is one transaction: a conditional update that proves the sender is a participant and the chat is still open, then the insert.
 - A message shows `mine` (for the caller) and `from` (`customer` or `executor`). No names, ids of the other side or emails.
 
 ```json

@@ -18,6 +18,17 @@ describe('US-23 chat schemas', () => {
     expect(createMessageSchema.safeParse({ body: 'а'.repeat(LIMITS.messageMax) }).success).toBe(true);
   });
 
+  it('US-23 sc.2 the length is counted in Unicode code points: 2000 emoji pass, 2001 do not', () => {
+    const emoji = '💻'; // one code point, two UTF-16 units
+    expect(emoji.length).toBe(2);
+    expect(createMessageSchema.safeParse({ body: emoji.repeat(LIMITS.messageMax) }).success).toBe(true);
+    expect(codesOf(createMessageSchema, { body: emoji.repeat(LIMITS.messageMax + 1) })).toContain('MESSAGE_TOO_LONG');
+  });
+
+  it('US-23 an empty body is still only MESSAGE_EMPTY, not also too long', () => {
+    expect(codesOf(createMessageSchema, { body: '' })).toEqual(['MESSAGE_EMPTY']);
+  });
+
   it('US-23 the poll query accepts an optional after and rejects an empty one', () => {
     expect(chatQuerySchema.parse({})).toEqual({});
     expect(chatQuerySchema.parse({ after: 'm-1' })).toEqual({ after: 'm-1' });

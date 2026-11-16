@@ -106,6 +106,16 @@ describe('Chat: US-23', () => {
     expect(trimmed.body.message.body).toBe('привіт');
   });
 
+  it('US-23 sc.2 2000 emoji are accepted (code points, as the database counts them) and 2001 are MESSAGE_TOO_LONG', async () => {
+    const task = await activeTask();
+    const ok = await post(task.id, { body: '💻'.repeat(2000) }, student.cookie);
+    expect(ok.status).toBe(201);
+    expect(Array.from(ok.body.message.body)).toHaveLength(2000);
+    const tooLong = await post(task.id, { body: '💻'.repeat(2001) }, student.cookie);
+    expect(tooLong.status).toBe(400);
+    expect(tooLong.body.error.code).toBe('MESSAGE_TOO_LONG');
+  });
+
   it('US-23 sc.2 a forged sender in the body is ignored: the sender is the session', async () => {
     const task = await activeTask();
     const res = await post(task.id, { body: 'Привіт', senderId: customer.user.id, taskId: 'other' }, student.cookie);
