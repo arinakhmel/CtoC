@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
 import { formatDeadline } from '../../../lib/money';
+import { ChatPanel } from '../../chat/components/ChatPanel';
 import { PriceBlock } from '../components/PriceBlock';
 import { useTask } from '../queries/task';
 
@@ -56,6 +57,7 @@ export function WorkTaskPage() {
           <p>
             Виконати до: <time dateTime={shown.deadlineAt}>{formatDeadline(shown.deadlineAt)}</time>
           </p>
+          <ChatPanel taskId={shown.id} status={shown.status} />
         </>
       )}
 

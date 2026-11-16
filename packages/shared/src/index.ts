@@ -8,6 +8,7 @@ export * from './schemas/auth';
 export * from './schemas/profile';
 export * from './schemas/task';
 export * from './schemas/application';
+export * from './schemas/chat';
 export * from './schemas/notification';
 export * from './schemas/delivery';
 export * from './schemas/payments';

@@ -32,6 +32,7 @@ beforeEach(() => {
     vi.fn(async (url: string) => {
       if (url === '/api/me/work') return workList();
       if (url === '/api/tasks/t1') return taskDetails();
+      if (url === '/api/tasks/t1/messages') return json({ messages: [] });
       return json({ status: 'ok' });
     }),
   );

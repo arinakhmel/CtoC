@@ -2,10 +2,11 @@ import { LIMITS, type CreateTaskInput, type FeedQuery } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
-import { deleteRefusal, newTaskData } from './domain';
+import { chatStateOf, deleteRefusal, newTaskData } from './domain';
 import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed, assertTaskOwner } from './policy';
 import {
   cancelTaskWithoutExecutor,
+  findChatTask,
   findFeedCursor,
   findOpenTask,
   findTaskForDelete,
@@ -14,6 +15,7 @@ import {
   insertTask,
   listFeed,
   listTasksOfExecutor,
+  lockChatTask,
   lockOpenTask,
 } from './repo';
 
@@ -106,4 +108,19 @@ export async function deleteTask(user: User, id: string): Promise<void> {
       throw new ApiError(deleteRefusal(now ?? task));
     }
   });
+}
+
+/**
+ * US-23. What the chat module needs to know about a task: the two people who may chat and whether the chat is open,
+ * read-only or not yet open (INV-22). An unknown task is 404. The chat module calls this, not the tasks table (ADR-0002).
+ */
+export async function getTaskForChat(id: string) {
+  const task = await findChatTask(id);
+  if (!task) throw new ApiError('NOT_FOUND');
+  return { id: task.id, customerId: task.customerId, executorId: task.executorId, chat: chatStateOf(task.status) };
+}
+
+/** US-23. First statement of the send transaction: a conditional update that fails with CHAT_CLOSED if the chat closed meanwhile. */
+export async function lockTaskForChat(tx: Prisma.TransactionClient, taskId: string, userId: string): Promise<void> {
+  if ((await lockChatTask(tx, taskId, userId)) === 0) throw new ApiError('CHAT_CLOSED');
 }
