@@ -66,6 +66,36 @@ describe('Candidate list of a task: US-24', () => {
     });
   });
 
+  it('US-24 the list is cut at 100 applicants and `truncated` says so; with 100 or fewer it is false', async () => {
+    const task = await createTask(owner.user.id);
+    const students = await prisma.$transaction(
+      Array.from({ length: 101 }, (_, i) =>
+        prisma.user.create({
+          data: { email: `many${i}@university.edu.ua`, passwordHash: 'x', displayName: `Студент ${i}`, role: 'student', emailConfirmedAt: new Date(), studentVerifiedAt: new Date() },
+        }),
+      ),
+    );
+    await prisma.application.createMany({
+      data: students.slice(0, 100).map((s, i) => ({ taskId: task.id, studentId: s.id, status: 'sent', createdAt: new Date(Date.UTC(2026, 10, 1, 0, 0, i)) })),
+    });
+
+    const exact = await list(task.id, owner.cookie);
+    expect(exact.body.applications).toHaveLength(100);
+    expect(exact.body.truncated).toBe(false);
+
+    await createApplication(task.id, students[100]!.id, { createdAt: new Date(Date.UTC(2026, 10, 2)) });
+    const cut = await list(task.id, owner.cookie);
+    expect(cut.body.applications).toHaveLength(100);
+    expect(cut.body.truncated).toBe(true);
+  });
+
+  it('US-24 the answer is not cached: personal data has Cache-Control no-store on every API route, not only the balance', async () => {
+    const task = await createTask(owner.user.id);
+    expect((await list(task.id, owner.cookie)).headers['cache-control']).toBe('no-store');
+    expect((await api().get('/api/me/notifications').set('Cookie', owner.cookie)).headers['cache-control']).toBe('no-store');
+    expect((await api().get('/api/health')).status).toBe(200);
+  });
+
   it('US-24 sc.1 an applicant shows only the public profile: no email, role or hash, and no price', async () => {
     const task = await createTask(owner.user.id);
     const student = await loginAs('student');

@@ -21,15 +21,21 @@ export const insertLedgerEntry = (tx: Tx, data: Prisma.LedgerEntryUncheckedCreat
 
 export const findEscrowByKey = (idempotencyKey: string) => prisma.escrow.findUnique({ where: { idempotencyKey } });
 
+/** US-26. Makes sure the balance row exists (0 on the first top-up). It changes nothing if it is there. */
+export const ensureBalance = (tx: Tx, ownerId: string) =>
+  tx.balance.upsert({ where: { ownerId }, create: { ownerId, availableKopecks: 0 }, update: {} });
+
 /**
- * US-26. One statement: creates the balance on the first top-up, adds to it afterwards. The increment is done by the
- * database, so two top-ups at once are both applied (ADR-0007).
+ * US-26 (ADR-0007). A conditional write: it adds the amount only if the result stays within `maxKopecks`, so the column
+ * can never pass the 32-bit integer of the database. The increment is done by the database, so two top-ups at once are
+ * both applied. `count` 0 means the cap would be exceeded.
  */
-export const incrementBalance = (tx: Tx, ownerId: string, amountKopecks: number) =>
-  tx.balance.upsert({
-    where: { ownerId },
-    create: { ownerId, availableKopecks: amountKopecks },
-    update: { availableKopecks: { increment: amountKopecks } },
+export const incrementBalanceWithin = (tx: Tx, ownerId: string, amountKopecks: number, maxKopecks: number) =>
+  tx.balance.updateMany({
+    where: { ownerId, availableKopecks: { lte: maxKopecks - amountKopecks } },
+    data: { availableKopecks: { increment: amountKopecks } },
   });
+
+export const findBalanceTx = (tx: Tx, ownerId: string) => tx.balance.findUniqueOrThrow({ where: { ownerId } });
 
 export const findBalance = (ownerId: string) => prisma.balance.findUnique({ where: { ownerId } });

@@ -45,7 +45,8 @@ export function TaskPage({ page }: { page: PageConfig }) {
           <p>
             Виконати до: <time dateTime={task.data.deadlineAt}>{formatDeadline(task.data.deadlineAt)}</time>
           </p>
-          <ApplyButton taskId={task.data.id} />
+          {/* Only the executor's view carries `status` (api.md §4.13a): an assigned task cannot be applied to. */}
+          {task.data.status === undefined && <ApplyButton taskId={task.data.id} />}
         </>
       )}
 

@@ -42,7 +42,7 @@ export async function getTask(user: User, id: string) {
  * Only the race reaches this: a task that is already out of the feed is 404 NOT_FOUND from `getTask` before the transaction.
  */
 export async function assertTaskOpen(tx: Prisma.TransactionClient, id: string): Promise<void> {
-  if ((await lockOpenTask(tx, id, new Date())).count === 0) throw new ApiError('TASK_NOT_OPEN');
+  if ((await lockOpenTask(tx, id, new Date())) === 0) throw new ApiError('TASK_NOT_OPEN');
 }
 
 /**
@@ -104,7 +104,7 @@ export async function deleteTask(user: User, id: string): Promise<void> {
   assertTaskOwner(task, user);
 
   await prisma.$transaction(async (tx) => {
-    const moved = await cancelTaskWithoutExecutor(tx, id, user.id);
+    const moved = await cancelTaskWithoutExecutor(tx, id, user.id, new Date());
     if (moved.count === 0) {
       const now = await findTaskState(tx, id);
       throw new ApiError(deleteRefusal(now ?? task));

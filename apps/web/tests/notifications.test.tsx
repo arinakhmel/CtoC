@@ -38,6 +38,17 @@ afterEach(() => vi.unstubAllGlobals());
 
 const open = () => render(<RouterProvider router={createTestRouter(['/notifications'])} future={providerFuture} />);
 
+describe('/notifications links (US-21)', () => {
+  it('US-21 «Вас обрано виконавцем» links to the executor card of the task; a payload of another shape gives no link', async () => {
+    listResponse = () => json({ notifications: [note(false), { ...note(true), id: 'n2', payload: { unexpected: true } }] });
+    open();
+
+    const links = await screen.findAllByRole('link', { name: 'Відкрити завдання' });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute('href', '/work/t1');
+  });
+});
+
 describe('/notifications centre (US-21)', () => {
   it('US-21 sc.1 the student sees «Вас обрано виконавцем завдання [Назва]» marked as new', async () => {
     open();

@@ -54,6 +54,16 @@ describe('/me/applications «Мої відгуки» (US-20)', () => {
     expect(within(item).getByText('Відхилено')).toBeInTheDocument();
   });
 
+  it('US-20 an accepted application links to the executor card /work/:taskId; a rejected one has no link (the feed page would be a 404)', async () => {
+    listResponse = () => json({ applications: [row('accepted', 'Прийнято завдання'), row('rejected', 'Відхилене завдання'), row('sent', 'Нове завдання')] });
+    open();
+
+    expect(await screen.findByRole('link', { name: 'Прийнято завдання' })).toHaveAttribute('href', '/work/t1');
+    expect(screen.getByRole('link', { name: 'Нове завдання' })).toHaveAttribute('href', '/tasks/t1');
+    expect(screen.queryByRole('link', { name: 'Відхилене завдання' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Відхилене завдання' })).toBeInTheDocument();
+  });
+
   it('US-20 with no applications the page says so and links to the feed', async () => {
     listResponse = () => json({ applications: [] });
     open();

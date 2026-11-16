@@ -68,13 +68,16 @@ export async function getCandidates(user: User, taskId: string) {
   const task = await getTaskOwnerView(taskId);
   assertOwnsTask(task, user);
 
-  const rows = await listApplicationsOfTask(taskId, LIMITS.candidatesMax);
+  // One more than the cap, to know whether the list was cut (the page says so).
+  const found = await listApplicationsOfTask(taskId, LIMITS.candidatesMax + 1);
+  const truncated = found.length > LIMITS.candidatesMax;
+  const rows = truncated ? found.slice(0, LIMITS.candidatesMax) : found;
   const cards = await getPublicProfiles(rows.map((row) => row.studentId));
   const candidates = rows.flatMap((row) => {
     const student = cards.get(row.studentId);
     return student ? [{ row, student }] : [];
   });
-  return { task, candidates };
+  return { task, candidates, truncated };
 }
 
 export type OwnedTask = Awaited<ReturnType<typeof getTaskOwnerView>>;

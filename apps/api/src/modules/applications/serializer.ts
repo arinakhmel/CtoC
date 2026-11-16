@@ -19,7 +19,6 @@ export const serializeMyApplication = (application: MyApplicationRow) => ({
   task: { id: application.task.id, title: application.task.title, priceKopecks: application.task.priceKopecks },
 });
 
-/**
 /** The public profile card of a student as the identity service returns it (api.md §4.9). */
 export interface CandidateStudent {
   id: string;

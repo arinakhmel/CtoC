@@ -40,7 +40,7 @@ export const MESSAGES_UK: Record<ErrorCode, string> = {
   VERIFICATION_PENDING: "Ваш документ уже очікує перевірки",
   ALREADY_VERIFIED: "Статус студента вже підтверджено",
   ALREADY_APPLIED: "Ви вже подали відгук на це завдання",
-  TASK_NOT_OPEN: "Завдання вже недоступне для відгуків",
+  TASK_NOT_OPEN: "Завдання вже недоступне",
   TASK_ALREADY_ASSIGNED: "Виконавця вже обрано",
   TASK_HAS_EXECUTOR: "Завдання з виконавцем не можна видалити",
   APPLICATION_NOT_PENDING: "Рішення щодо відгуку вже ухвалено",

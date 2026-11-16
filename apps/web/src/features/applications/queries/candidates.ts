@@ -10,6 +10,8 @@ export interface Candidate extends Application {
 export interface CandidatesResponse {
   task: { id: string; title: string; status: TaskStatus; priceKopecks: number };
   applications: Candidate[];
+  /** True when the task has more applicants than the list holds (api.md §4.3d). */
+  truncated?: boolean;
 }
 
 export const candidatesKey = (taskId: string) => ['applications', 'task', taskId] as const;

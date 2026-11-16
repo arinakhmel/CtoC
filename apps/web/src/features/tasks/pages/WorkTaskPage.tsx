@@ -12,7 +12,8 @@ const messageFor = (code: string): string =>
 
 /**
  * /work/:taskId: US-22. The executor's card of the active task: the full terms, the deadline in the browser's local time
- * zone (sc.3) and the agreed price. The chat, the result upload and the revision comment come with their own stories.
+ * zone (sc.3) and the agreed price, and the chat with the customer (US-23). The result upload and the revision comment come
+ * with their own stories.
  */
 export function WorkTaskPage() {
   const { taskId = '' } = useParams();

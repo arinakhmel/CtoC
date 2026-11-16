@@ -1,8 +1,9 @@
-import { MESSAGES_UK, TASK_STATUS_UK } from '@ctoc/shared';
+import { LIMITS, MESSAGES_UK, TASK_STATUS_UK } from '@ctoc/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CandidateList } from '../../applications/components/CandidateList';
-import { useCandidates } from '../../applications/queries/candidates';
+import { candidatesKey, useCandidates } from '../../applications/queries/candidates';
 import { ChatPanel } from '../../chat/components/ChatPanel';
 import { ApiClientError } from '../../../lib/api';
 import { formatUah } from '../../../lib/money';
@@ -15,13 +16,14 @@ const CHAT_STATUSES = ['in_progress', 'in_review', 'revision', 'done', 'cancelle
 
 /**
  * /c/tasks/:id: US-24. The customer's page of one of their tasks: the applicants with the verified badge, skills and a
- * link to the profile, and from assignment on the chat with the executor (US-23). Selecting an executor, the result and
- * the review come with their own stories.
+ * link to the profile, the select button with its confirmation (US-25), and from assignment on the chat with the executor
+ * (US-23). The result and the review come with their own stories.
  */
 export function CustomerTaskPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const candidates = useCandidates(id);
+  const client = useQueryClient();
 
   const errorCode = candidates.isError ? (candidates.error instanceof ApiClientError ? candidates.error.code : 'UNKNOWN_ERROR') : null;
 
@@ -52,9 +54,18 @@ export function CustomerTaskPage() {
           <p>Фіксована ціна: {formatUah(data.task.priceKopecks)}</p>
           <section aria-labelledby="candidates-title">
             <h2 id="candidates-title">Відгуки студентів</h2>
+            {data.truncated && <p role="status">Показано перші {LIMITS.candidatesMax} відгуків, решту поки не видно.</p>}
             <CandidateList taskId={data.task.id} candidates={data.applications} canSelect={data.task.status === 'published'} priceKopecks={data.task.priceKopecks} />
           </section>
-          {CHAT_STATUSES.includes(data.task.status) && <ChatPanel taskId={data.task.id} status={data.task.status} heading="Чат із виконавцем" />}
+          {CHAT_STATUSES.includes(data.task.status) && (
+            <ChatPanel
+              taskId={data.task.id}
+              status={data.task.status}
+              heading="Чат із виконавцем"
+              // The chat closed since this page was loaded: this page takes its status from the candidate list.
+              onClosed={() => void client.invalidateQueries({ queryKey: candidatesKey(id) })}
+            />
+          )}
         </>
       )}
     </article>

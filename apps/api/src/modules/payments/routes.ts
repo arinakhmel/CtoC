@@ -1,6 +1,7 @@
 import { sandboxTopUpSchema, type SandboxTopUpInput } from '@ctoc/shared';
 import { Router, type RequestHandler } from 'express';
 import { requireUser } from '../../http/auth';
+import { rateLimit } from '../../http/rate-limit';
 import { validateBody } from '../../http/validate';
 import { assertCanReadBalance, assertCanTopUp } from './policy';
 import { serializeBalance } from './serializer';
@@ -19,14 +20,13 @@ const requireReadAccess: RequestHandler = (req, _res, next) => {
 export function paymentsRouter(): Router {
   const router = Router();
 
-  // no-store, like the public profile: a balance that just changed (a top-up, a hold) must show on the next request.
+  // no-store comes from the API-wide middleware of app.ts: a balance that just changed must show on the next request.
   router.get('/me/balance', requireUser, requireReadAccess, async (req, res) => {
-    res.setHeader('Cache-Control', 'no-store');
     res.json(serializeBalance(await getMyBalance(req.user!)));
   });
 
   // SANDBOX (A-06): money from nowhere, labelled on the page. Not part of the PaymentProvider port.
-  router.post('/me/balance/sandbox-topup', requireUser, requireTopUpAccess, validateBody(sandboxTopUpSchema), async (req, res) => {
+  router.post('/me/balance/sandbox-topup', requireUser, requireTopUpAccess, rateLimit({ max: 30, windowMs: 60_000 }), validateBody(sandboxTopUpSchema), async (req, res) => {
     res.json(serializeBalance(await topUpBalance(req.user!, req.body as SandboxTopUpInput)));
   });
 

@@ -54,6 +54,24 @@ describe('POST /api/tasks/:id/applications: US-18', () => {
     expect(rows[0]).toMatchObject({ studentId: user.id, status: 'sent' });
   });
 
+  it('US-18 an application does not change the task (its updatedAt stays as it was)', async () => {
+    const student = await loginAs();
+    const task = await publish();
+    const before = (await prisma.task.findUniqueOrThrow({ where: { id: task.id } })).updatedAt;
+
+    expect((await apply(task.id, {}, student.cookie)).status).toBe(201);
+
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: task.id } })).updatedAt.getTime()).toBe(before.getTime());
+  });
+
+  it('US-18 a task whose deadline has passed is not open: 404 and no application', async () => {
+    const student = await loginAs();
+    const task = await publish({ deadlineAt: new Date(Date.now() - 1000) });
+
+    expect((await apply(task.id, {}, student.cookie)).status).toBe(404);
+    expect(await prisma.application.count()).toBe(0);
+  });
+
   it('US-18 sc.2 a second application to the same task is 409 ALREADY_APPLIED and creates no second row', async () => {
     const { cookie } = await loginAs();
     const task = await publish();

@@ -25,6 +25,8 @@ export const LIMITS = {
   feedPage: { default: 20, max: 50 },
   myWorkMax: 100,
   sandboxTopUp: { min: 100, max: PRICE_MAX_KOPECKS },
+  /** The highest balance of one account, in kopecks (10 000 000 UAH). Far below the 32-bit integer of the database column. */
+  balanceMaxKopecks: 1_000_000_000,
   candidatesMax: 100,
   chatPage: { max: 100 },
   notificationsPage: { default: 20, max: 50, unreadMax: 200 },

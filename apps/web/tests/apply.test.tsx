@@ -36,6 +36,22 @@ async function openTask() {
   return screen.findByRole('button', { name: 'Відгукнутися' });
 }
 
+describe('/tasks/:id of the executor (US-18)', () => {
+  it('US-18 the executor of an assigned task sees its details and no apply buttons', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url === '/api/tasks/t1' ? json({ task: { ...task, status: 'in_progress', assignedAt: '2026-11-11T10:00:00.000Z' } }) : json({ status: 'ok' }),
+      ),
+    );
+    render(<RouterProvider router={createTestRouter(['/tasks/t1'])} future={providerFuture} />);
+
+    expect(await screen.findByRole('heading', { name: 'Завдання 1' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Відгукнутися' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Відгукнутися із запискою' })).not.toBeInTheDocument();
+  });
+});
+
 describe('«Відгукнутися» on /tasks/:id (US-18)', () => {
   it('US-18 sc.1 one press sends the application with no price and confirms it', async () => {
     const user = userEvent.setup();
@@ -92,7 +108,7 @@ describe('«Відгукнутися» on /tasks/:id (US-18)', () => {
 
     await user.click(button);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Завдання вже недоступне для відгуків');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Завдання вже недоступне');
   });
 });
 

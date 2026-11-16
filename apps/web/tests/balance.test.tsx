@@ -30,6 +30,30 @@ const open = () => render(<RouterProvider router={createTestRouter(['/c/balance'
 const posts = () => fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST');
 const field = () => screen.findByLabelText('Сума, грн');
 
+describe('/c/balance amount field (US-26)', () => {
+  it.each(['1e3', '0x10', '10.999', 'abc', '-5'])('US-26 sc.2 the text «%s» is not an amount: an error is shown and nothing is sent', async (text) => {
+    const user = userEvent.setup();
+    open();
+
+    await user.type(await field(), text);
+    await user.click(screen.getByRole('button', { name: 'Поповнити (тест)' }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(posts()).toHaveLength(0);
+  });
+
+  it('US-26 a comma and two decimals are an amount: 10,50 is sent as 1050 kopecks', async () => {
+    const user = userEvent.setup();
+    open();
+
+    await user.type(await field(), '10,50');
+    await user.click(screen.getByRole('button', { name: 'Поповнити (тест)' }));
+
+    expect(await screen.findByText('Баланс поповнено на 10,50 грн.')).toBeInTheDocument();
+    expect(JSON.parse(String(posts()[0]![1].body))).toEqual({ amountKopecks: 1050 });
+  });
+});
+
 describe('/c/balance (US-26)', () => {
   it('US-26 the page shows the available balance and says it is a test mode with no real money', async () => {
     open();

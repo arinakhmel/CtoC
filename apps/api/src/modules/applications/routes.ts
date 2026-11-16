@@ -52,8 +52,8 @@ export function applicationsRouter(): Router {
   });
 
   router.get('/tasks/:id/applications', requireUser, requireOwnerAccess, async (req, res) => {
-    const { task, candidates } = await getCandidates(req.user!, String(req.params.id));
-    res.json({ task: serializeOwnerTask(task), applications: candidates.map(({ row, student }) => serializeCandidate(row, student)) });
+    const { task, candidates, truncated } = await getCandidates(req.user!, String(req.params.id));
+    res.json({ task: serializeOwnerTask(task), applications: candidates.map(({ row, student }) => serializeCandidate(row, student)), truncated });
   });
 
   router.post('/tasks/:id/assign', requireUser, requireOwnedTask, validateBody(assignExecutorSchema), async (req, res) => {

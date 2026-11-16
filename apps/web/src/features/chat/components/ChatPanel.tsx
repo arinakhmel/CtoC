@@ -18,7 +18,18 @@ const codeOf = (error: unknown): string => (error instanceof ApiClientError ? er
  * After the task is done or cancelled the chat is read-only (INV-22): the history stays, the form is replaced by a note.
  * `heading` names the other side: the executor sees «Чат із замовником» (the default), the customer «Чат із виконавцем».
  */
-export function ChatPanel({ taskId, status, heading = 'Чат із замовником' }: { taskId: string; status?: TaskStatus; heading?: string }) {
+export function ChatPanel({
+  taskId,
+  status,
+  heading = 'Чат із замовником',
+  onClosed,
+}: {
+  taskId: string;
+  status?: TaskStatus;
+  heading?: string;
+  /** Called when the API says the chat is closed (409 CHAT_CLOSED): the page that owns the task status fetches it again. */
+  onClosed?: () => void;
+}) {
   const readOnly = status === 'done' || status === 'cancelled';
   const navigate = useNavigate();
   const messages = useMessages(taskId);
@@ -38,6 +49,12 @@ export function ChatPanel({ taskId, status, heading = 'Чат із замовн�
   useEffect(() => {
     if (loadCode === 'AUTH_REQUIRED' || sendCode === 'AUTH_REQUIRED') navigate('/login', { replace: true });
   }, [loadCode, sendCode, navigate]);
+
+  useEffect(() => {
+    if (sendCode === 'CHAT_CLOSED') onClosed?.();
+    // `onClosed` is a fresh function on every render of the page; the code is the trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendCode]);
 
   const shownError = [loadCode, sendCode].find((code) => code && code !== 'AUTH_REQUIRED');
 

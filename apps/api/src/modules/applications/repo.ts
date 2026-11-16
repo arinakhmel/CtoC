@@ -25,7 +25,7 @@ export const listApplicationsOfStudent = (studentId: string) =>
     },
   });
 
-/** US-24. The applications of one task, in the order they came (oldest first), capped. */
+/** US-24. The applications of one task, in the order they came (oldest first), at most `limit`. */
 export const listApplicationsOfTask = (taskId: string, limit: number) =>
   prisma.application.findMany({ where: { taskId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: limit });
 

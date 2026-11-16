@@ -55,6 +55,11 @@ export function createApp(options: AppOptions = {}): Express {
     });
   }
 
+  // Every API answer is personal or changes at once (a balance, a chat, a badge): nothing is cached (api.md Conventions).
+  app.use('/api', (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
   app.use(express.json({ limit: '100kb' }));
   app.use(sessionMiddleware);
   app.use(originCheck);

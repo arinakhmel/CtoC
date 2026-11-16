@@ -45,7 +45,14 @@ export function MyApplicationsPage({ page }: { page: PageConfig }) {
             <li key={application.id}>
               <article aria-labelledby={`application-${application.id}`}>
                 <h2 id={`application-${application.id}`}>
-                  <Link to={`/tasks/${application.task.id}`}>{application.task.title}</Link>
+                  {/* The feed page answers only for an open task: an accepted application goes to the executor's card, a rejected one has no page to open. */}
+                  {application.status === 'rejected' ? (
+                    application.task.title
+                  ) : (
+                    <Link to={application.status === 'accepted' ? `/work/${application.task.id}` : `/tasks/${application.task.id}`}>
+                      {application.task.title}
+                    </Link>
+                  )}
                 </h2>
                 <p>
                   Статус: <strong>{APPLICATION_STATUS_UK[application.status] ?? application.status}</strong>

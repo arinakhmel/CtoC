@@ -1,6 +1,7 @@
 import type { User } from '@prisma/client';
 import { assertStudentWithConfirmedEmail } from '../../http/access';
 import { ApiError } from '../../errors';
+import { isVerifiedStudent } from '../identity/domain';
 
 /** Access "S-" (api.md, decision OQ-19): any student with a confirmed email reads the feed. Only applying needs verification. */
 export const assertCanReadFeed = (user: User): void => assertStudentWithConfirmedEmail(user);
@@ -14,7 +15,7 @@ export function assertCanCreateTask(user: User): void {
 /** Access "S+" of api.md (US-22): a verified student with a confirmed email lists the tasks they work on. */
 export function assertCanListMyWork(user: User): void {
   assertStudentWithConfirmedEmail(user);
-  if (user.studentVerifiedAt === null) throw new ApiError('STUDENT_NOT_VERIFIED');
+  if (!isVerifiedStudent(user)) throw new ApiError('STUDENT_NOT_VERIFIED');
 }
 
 /** Access "Own" of api.md (US-22 sc.2): a customer with a confirmed email. That the task is theirs is checked against the row. */

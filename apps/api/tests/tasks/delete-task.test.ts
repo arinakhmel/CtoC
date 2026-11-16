@@ -51,6 +51,19 @@ describe('DELETE /api/tasks/:id: US-22', () => {
     expect(row.executorId).toBe(student.user.id);
   });
 
+  it('US-22 sc.2 an owner cancels a task without an executor: 204, status cancelled and cancelled_at is set', async () => {
+    const owner = await loginAs('customer');
+    const task = await createTask(owner.user.id, { publishedAt: new Date() });
+    const before = Date.now();
+
+    const res = await del(task.id, owner.cookie);
+
+    expect(res.status).toBe(204);
+    const row = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+    expect(row.status).toBe('cancelled');
+    expect(row.cancelledAt?.getTime()).toBeGreaterThanOrEqual(before - 1000);
+  });
+
   // INV-13 race: an executor is set after the owner's task was read and before the cancelling update (assign, US-25, will do this).
   // The client is patched by hand and put back in `finally`: `vi.spyOn` does not restore a Prisma client method.
   it('US-22 sc.2 an executor assigned between the read and the update is still 409 TASK_HAS_EXECUTOR and the task is not cancelled', async () => {

@@ -35,11 +35,13 @@ export const findOpenTask = (id: string, now: Date) =>
 /**
  * US-18. Runs on the transaction client. A conditional write, not a read: it takes the SQLite write lock at the first
  * statement of the transaction (a deferred BEGIN would otherwise lock only at the insert, after the check), and its
- * `count` says whether the task is still open at this moment (ADR-0007 §1). It sets `status` to the value the row
- * already has, so the only side effect is `updatedAt`.
+ * number of rows it changed says whether the task is still open at this moment (ADR-0007 §1). It is raw SQL that sets
+ * `status` to the value the row already has, so that `updatedAt` is not touched: an application is not a change of the
+ * task. The conditions are those of `feedWhere` (INV-06); dates are stored as integer milliseconds.
  */
-export const lockOpenTask = (tx: Prisma.TransactionClient, id: string, now: Date) =>
-  tx.task.updateMany({ where: { id, ...feedWhere(now) }, data: { status: 'published' } });
+export const lockOpenTask = async (tx: Prisma.TransactionClient, id: string, now: Date): Promise<number> =>
+  tx.$executeRaw`UPDATE "tasks" SET "status" = "status"
+    WHERE "id" = ${id} AND "status" = ${ASSIGNABLE_STATUS} AND "executor_id" IS NULL AND "deadline_at" > ${now.getTime()} AND "published_at" IS NOT NULL`;
 
 /** Any task that was published, even if it has left the feed since (assigned, expired), so paging never breaks mid-way. */
 export const findFeedCursor = (id: string) =>
@@ -84,10 +86,10 @@ export const findTaskForDelete = (id: string) =>
  * US-22 sc.2 (INV-13, ADR-0007). A conditional update: it cancels only an own task with no executor in a cancellable
  * state. `count` 0 means the task changed or never qualified, and the caller answers 409.
  */
-export const cancelTaskWithoutExecutor = (tx: Prisma.TransactionClient, id: string, customerId: string) =>
+export const cancelTaskWithoutExecutor = (tx: Prisma.TransactionClient, id: string, customerId: string, now: Date) =>
   tx.task.updateMany({
     where: { id, customerId, executorId: null, status: { in: [...CANCELLABLE_BY_OWNER] } },
-    data: { status: CANCELLED },
+    data: { status: CANCELLED, cancelledAt: now },
   });
 
 export const findTaskState = (tx: Prisma.TransactionClient, id: string) =>

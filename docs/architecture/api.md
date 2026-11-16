@@ -13,6 +13,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | Uploads | `multipart/form-data` with the field `file`. |
 | Money | Integer kopecks in fields ending in `Kopecks`. |
 | Time | ISO-8601 UTC strings. |
+| Caching | Every `/api` answer has `Cache-Control: no-store` (set once for the whole API): balances, chats, notifications, lists and badges are personal or change at once. |
 | Ids | Opaque strings (UUID). |
 | Lists | Feed and lists use `?cursor=<id>&limit=20`. Chat and notifications use `?after=<id>` for polling. |
 | Hidden resources | If a resource exists but the caller may not know it exists, the answer is 404, not 403 (for example an unpublished task in the feed). If the caller knows the resource and lacks rights, the answer is 403 (US-23/S3, US-31/S2, US-39/S3). |
@@ -102,7 +103,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 |---|---|---|---|---|---|
 | GET | `/api/me/balance` | US-26, US-34 | S+ · C | 200 (body: §4.1a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` |
 | GET | `/api/me/finance` | US-35 | S+ | 200 | |
-| POST | `/api/me/balance/sandbox-topup` | US-26 (OQ-09) | C | 200 (body: §4.1a) | 400 `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
+| POST | `/api/me/balance/sandbox-topup` | US-26 (OQ-09) | C | 200 (body: §4.1a) | 400 `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` · 429 `RATE_LIMITED` |
 | POST | `/api/me/withdrawals` | US-36 | S+ | 201 | 400 `CARD_INVALID` · 422 `INSUFFICIENT_BALANCE` |
 | GET | `/api/me/withdrawals` | US-36 | S+ | 200 | |
 
@@ -194,7 +195,7 @@ Messages marked **[AC]** are quoted from a Gherkin scenario and must match exact
 | 409 | `VERIFICATION_PENDING` | A request is already waiting. | «Ваш документ уже очікує перевірки» | INV-04 |
 | 409 | `ALREADY_VERIFIED` | Already a verified student. | «Статус студента вже підтверджено» | US-08 |
 | 409 | `ALREADY_APPLIED` | Second application to the same task. | **[AC]** «Ви вже подали відгук на це завдання» | US-18/S2 |
-| 409 | `TASK_NOT_OPEN` | Task left the feed between the visibility check and the insert (taken, unpublished or expired in that moment). A task that is already out of the feed is 404 `NOT_FOUND` (OQ-24). | «Завдання вже недоступне для відгуків» | US-18/S1 |
+| 409 | `TASK_NOT_OPEN` | Apply: the task left the feed between the visibility check and the insert (taken, unpublished or expired in that moment); a task already out of the feed is 404 `NOT_FOUND` (OQ-24). Assign: the task is not `published`, its deadline has passed, or its price changed since it was read. | «Завдання вже недоступне» | US-18/S1, US-25 |
 | 409 | `TASK_ALREADY_ASSIGNED` | An executor is already selected. | «Виконавця вже обрано» | US-25/S2 |
 | 409 | `TASK_HAS_EXECUTOR` | Delete or unpublish after an executor was selected. | «Завдання з виконавцем не можна видалити» | US-22/S2 |
 | 409 | `APPLICATION_NOT_PENDING` | The application was already decided. | «Рішення щодо відгуку вже ухвалено» | US-20 |
@@ -261,7 +262,7 @@ Another tab already assigned an executor (US-25/S2):
 
 `GET` returns the caller's available balance in kopecks, 0 if there is no balance yet. The answer has `Cache-Control: no-store`, so a balance that just changed shows on the next request. Access "S+ · C": a customer with a confirmed email, or a verified student. Each reads only their own balance. US-34 shows the student's earnings through the same endpoint.
 
-`POST` is the **sandbox** funding (OQ-09, A-06): money from nowhere, so a customer can reserve a task before any real payment exists. Access "C" (a customer with a confirmed email). The page says it is a test mode. The body is `{ "amountKopecks": 50000 }`: a whole number from 100 (1 UAH) to 2 000 000 (20 000 UAH), anything else is 400 `VALIDATION_FAILED`. The owner is the session and the ledger kind is fixed, so other keys are ignored. It is one transaction: the balance goes up and a positive `topup` ledger entry is written, so the balance equals the sum of its entries (INV-20). It is not idempotent: each call is a top-up. It is not part of the `PaymentProvider` port.
+`POST` is the **sandbox** funding (OQ-09, A-06): money from nowhere, so a customer can reserve a task before any real payment exists. Access "C" (a customer with a confirmed email). The page says it is a test mode. The body is `{ "amountKopecks": 50000 }`: a whole number from 100 (1 UAH) to 2 000 000 (20 000 UAH), anything else is 400 `VALIDATION_FAILED`. The balance never passes 1 000 000 000 kopecks (10 000 000 UAH), well inside the 32-bit integer of the column: a top-up that would pass it is 400 `VALIDATION_FAILED` and changes nothing. At most 30 top-ups a minute per client address, else 429 `RATE_LIMITED`. The owner is the session and the ledger kind is fixed, so other keys are ignored. It is one transaction: the balance goes up and a positive `topup` ledger entry is written, so the balance equals the sum of its entries (INV-20). It is not idempotent: each call is a top-up. It is not part of the `PaymentProvider` port.
 
 ```json
 200 OK
@@ -377,11 +378,12 @@ A notification is created inside the business transaction it reports (INV-23), t
 
 Access "Own": the customer who owns the task. A student is 403 `ROLE_FORBIDDEN`, another customer 403 `NOT_TASK_OWNER`, an unknown task 404. The list is oldest first, at most 100. It is read-only. The task header (`task`) is there because the owner has no other endpoint for the task yet (OQ-31).
 
-Each applicant is the application (§4.3) plus the public profile of the student (§4.9): `verified` is `studentVerifiedAt IS NOT NULL` as it is now (INV-03), so a student whose verification was revoked after applying shows `false` (US-24/S2, W-01). No email, role or hash, and no price.
+The answer has `truncated`: `true` when the task has more than 100 applicants and the list was cut, so the page can say so. Each applicant is the application (§4.3) plus the public profile of the student (§4.9): `verified` is `studentVerifiedAt IS NOT NULL` as it is now (INV-03), so a student whose verification was revoked after applying shows `false` (US-24/S2, W-01). No email, role or hash, and no price.
 
 ```json
 200 OK
 { "task": { "id": "7d0c…", "title": "Логотип для кав’ярні", "status": "published", "priceKopecks": 50000 },
+  "truncated": false,
   "applications": [
     { "id": "a91e…", "taskId": "7d0c…", "status": "sent", "note": "Маю досвід", "createdAt": "2026-11-12T09:15:00Z",
       "student": { "id": "5b2f…", "displayName": "Олена Коваль", "verified": true, "skills": ["HTML", "Java"], "bio": "Студентка 2 курсу" } }
