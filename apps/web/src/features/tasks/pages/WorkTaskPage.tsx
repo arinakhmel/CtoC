@@ -57,7 +57,7 @@ export function WorkTaskPage() {
           <p>
             Виконати до: <time dateTime={shown.deadlineAt}>{formatDeadline(shown.deadlineAt)}</time>
           </p>
-          <ChatPanel taskId={shown.id} />
+          <ChatPanel taskId={shown.id} status={shown.status} />
         </>
       )}
 

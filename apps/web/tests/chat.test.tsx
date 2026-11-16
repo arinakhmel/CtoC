@@ -30,13 +30,17 @@ const msg = (id: string, body: string, mine: boolean, from: 'customer' | 'execut
 
 let messages: ReturnType<typeof msg>[];
 let postResponse: ((init: RequestInit) => Response) | null;
+let listResponse: (() => Response) | null;
+let taskStatus: string;
 let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   messages = [];
   postResponse = null;
+  listResponse = null;
+  taskStatus = 'in_progress';
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-    if (url === '/api/tasks/t1') return json({ task: work });
+    if (url === '/api/tasks/t1') return json({ task: { ...work, status: taskStatus } });
     if (url === '/api/tasks/t1/messages' && init?.method === 'POST') {
       if (postResponse) return postResponse(init);
       const { body } = JSON.parse(String(init.body)) as { body: string };
@@ -44,7 +48,7 @@ beforeEach(() => {
       messages = [...messages, created];
       return json({ message: created }, 201);
     }
-    if (url === '/api/tasks/t1/messages') return json({ messages });
+    if (url === '/api/tasks/t1/messages') return listResponse ? listResponse() : json({ messages });
     return json({ status: 'ok' });
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -56,6 +60,7 @@ afterEach(() => {
 
 const open = () => render(<RouterProvider router={createTestRouter(['/work/t1'])} future={providerFuture} />);
 const posts = () => fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST');
+const listCalls = () => fetchMock.mock.calls.filter(([url, init]) => url === '/api/tasks/t1/messages' && init?.method !== 'POST');
 
 describe('Chat on /work/:taskId (US-23)', () => {
   it('US-23 sc.1 the student types a message, presses «Надіслати», and it appears in the chat', async () => {
@@ -119,5 +124,43 @@ describe('Chat on /work/:taskId (US-23)', () => {
     await user.click(screen.getByRole('button', { name: 'Надіслати' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Чат закрито');
+  });
+
+  it.each([['done'], ['cancelled']])('US-23 INV-22 a %s task shows the history and no form: the chat is read-only', async (status) => {
+    taskStatus = status;
+    messages = [msg('m1', 'Остання домовленість', false, 'customer')];
+    open();
+
+    const log = await screen.findByRole('log', { name: 'Повідомлення чату' });
+    expect(await within(log).findByText('Остання домовленість', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(/Чат закрито/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Повідомлення')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Надіслати' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['NOT_CHAT_PARTICIPANT', 403],
+    ['NOT_FOUND', 404],
+  ])('US-23 sc.3 after %s the chat shows the error and stops polling', async (code, status) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    listResponse = () => apiError(code, status);
+    open();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    const callsAfterFirst = listCalls().length;
+    await vi.advanceTimersByTimeAsync(CHAT_POLL_MS * 3 + 100);
+
+    expect(listCalls()).toHaveLength(callsAfterFirst);
+  });
+
+  it('US-23 sc.1 a healthy chat keeps polling every 5 seconds', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    open();
+    expect(await screen.findByText('Повідомлень поки немає.')).toBeInTheDocument();
+    const before = listCalls().length;
+
+    await vi.advanceTimersByTimeAsync(CHAT_POLL_MS * 2 + 100);
+
+    expect(listCalls().length).toBeGreaterThan(before);
   });
 });

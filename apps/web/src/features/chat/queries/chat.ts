@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, apiPost } from '../../../lib/api';
+import { ApiClientError, apiFetch, apiPost } from '../../../lib/api';
 
 export interface ChatMessage {
   id: string;
@@ -14,12 +14,15 @@ export const CHAT_POLL_MS = 5000;
 
 export const chatKey = (taskId: string) => ['chat', taskId] as const;
 
+/** An answer that will not change by asking again: not signed in, not a participant, or no such task. Polling stops (api.md §4.3c). */
+const isFinalAccessError = (error: unknown): boolean => error instanceof ApiClientError && [401, 403, 404].includes(error.status);
+
 /** GET /api/tasks/:id/messages (api.md §4.3c). The whole latest page is fetched each time, so a missed row is never lost. */
 export const useMessages = (taskId: string) =>
   useQuery({
     queryKey: chatKey(taskId),
     queryFn: () => apiFetch<{ messages: ChatMessage[] }>(`/tasks/${encodeURIComponent(taskId)}/messages`).then((body) => body.messages),
-    refetchInterval: CHAT_POLL_MS,
+    refetchInterval: (query) => (isFinalAccessError(query.state.error) ? false : CHAT_POLL_MS),
   });
 
 /** POST /api/tasks/:id/messages. The list is fetched again afterwards. */
