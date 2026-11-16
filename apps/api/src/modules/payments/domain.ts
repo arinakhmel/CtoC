@@ -9,3 +9,8 @@ export const holdEntry = (taskId: string, customerId: string, amountKopecks: num
   amountKopecks: -amountKopecks,
   taskId,
 });
+
+export const LEDGER_TOPUP = 'topup' as const;
+
+/** US-26 (OQ-09). The sandbox top-up adds to the customer's balance: a positive entry on that balance (INV-20). */
+export const topUpEntry = (ownerId: string, amountKopecks: number) => ({ ownerId, kind: LEDGER_TOPUP, amountKopecks });
