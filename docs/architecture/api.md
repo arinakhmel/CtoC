@@ -93,8 +93,8 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 |---|---|---|---|---|---|
 | GET | `/api/tasks/:id/messages?after=` | US-23 | Own · Ex | 200 | 403 `NOT_CHAT_PARTICIPANT` |
 | POST | `/api/tasks/:id/messages` | US-23 | Own · Ex | 201 | 400 `MESSAGE_EMPTY`, `MESSAGE_TOO_LONG` · 403 `NOT_CHAT_PARTICIPANT` · 409 `CHAT_CLOSED` |
-| GET | `/api/me/notifications?after=` | US-21, US-30, US-47, US-48, US-49 | A | 200 | |
-| POST | `/api/me/notifications/:id/read` | US-21/S3 | A (recipient) | 204 | 404 |
+| GET | `/api/me/notifications?after=&limit=` | US-21, US-30, US-47, US-48, US-49 | A | 200 (body: §4.3b) | 400 `VALIDATION_FAILED` (bad `limit` or `after`) · 401 `AUTH_REQUIRED` |
+| POST | `/api/me/notifications/:id/read` | US-21/S3 | A (recipient) | 204 (repeat is a no-op 204) | 401 `AUTH_REQUIRED` · 404 `NOT_FOUND` (not yours, or unknown) |
 
 ### Payments
 
@@ -319,6 +319,22 @@ US-20. The caller's own applications, newest first, at most 100 (OQ-26). Access 
     "task": { "id": "7d0c…", "title": "Логотип для кав’ярні", "priceKopecks": 50000 } }
 ] }
 ```
+
+### 4.3b `GET /api/me/notifications` (notification centre)
+
+US-21. The caller's own notifications (ids are UUIDv7, so they sort by time). Without `after`: every unread one first (up to 200, newest first), then the newest read ones, `limit` of them (default 20, at most 50). So an old unread notification is listed however many newer read ones exist (sc.3). With `after=<id>`: only the rows newer than that id, newest first, at most `limit`, for polling. `text` is built by the server from `type` and `payload`.
+
+```json
+200 OK
+{ "notifications": [
+  { "id": "0192…", "type": "executor_selected",
+    "text": "Вас обрано виконавцем завдання Парсер сайту",
+    "payload": { "taskId": "7d0c…", "taskTitle": "Парсер сайту" },
+    "read": false, "createdAt": "2026-11-12T09:15:00Z" }
+] }
+```
+
+A notification is created inside the business transaction it reports (INV-23), through `notifyExecutorSelected(tx, …)` of the notifications service. If that transaction fails, no notification exists (US-21/S2).
 
 ### 4.4 `POST /api/tasks` (create task, with field-level validation)
 

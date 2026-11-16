@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { applicationsRouter } from './applications/routes';
 import { devRouter } from './dev/routes';
 import { identityRouter } from './identity/routes';
+import { notificationsRouter } from './notifications/routes';
 import { tasksRouter } from './tasks/routes';
 import { verificationRouter } from './verification/routes';
 
@@ -16,6 +17,7 @@ export function createModulesRouter(): Router {
   router.use(verificationRouter());
   router.use(tasksRouter());
   router.use(applicationsRouter());
+  router.use(notificationsRouter());
   router.use(devRouter());
   return router;
 }

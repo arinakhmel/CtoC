@@ -20,4 +20,5 @@ export const LIMITS = {
   resultFilesMax: 10,
   cardNumberLength: 16,
   feedPage: { default: 20, max: 50 },
+  notificationsPage: { default: 20, max: 50, unreadMax: 200 },
 } as const;
