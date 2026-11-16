@@ -60,6 +60,7 @@ afterEach(() => {
 
 const open = () => render(<RouterProvider router={createTestRouter(['/work/t1'])} future={providerFuture} />);
 const posts = () => fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST');
+const taskCalls = () => fetchMock.mock.calls.filter(([url]) => url === '/api/tasks/t1');
 const listCalls = () => fetchMock.mock.calls.filter(([url, init]) => url === '/api/tasks/t1/messages' && init?.method !== 'POST');
 
 describe('Chat on /work/:taskId (US-23)', () => {
@@ -113,6 +114,11 @@ describe('Chat on /work/:taskId (US-23)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Повідомлення занадто довге');
     expect(posts()).toHaveLength(0);
+    // the error is tied to the field for screen readers
+    const field = screen.getByLabelText('Повідомлення');
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(field).toHaveAttribute('aria-describedby', 'chat-body-error');
+    expect(document.getElementById('chat-body-error')).toHaveTextContent('Повідомлення занадто довге');
   });
 
   it('US-23 the API code CHAT_CLOSED is shown by its Ukrainian text', async () => {
@@ -126,14 +132,33 @@ describe('Chat on /work/:taskId (US-23)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Чат закрито');
   });
 
-  it.each([['done'], ['cancelled']])('US-23 INV-22 a %s task shows the history and no form: the chat is read-only', async (status) => {
+  it('US-23 INV-22 when sending fails with CHAT_CLOSED the task is fetched again and the panel turns read-only without a reload', async () => {
+    postResponse = () => apiError('CHAT_CLOSED', 409);
+    const user = userEvent.setup();
+    open();
+    await user.type(await screen.findByLabelText('Повідомлення'), 'Привіт');
+    const before = taskCalls().length;
+
+    taskStatus = 'done'; // the task was accepted meanwhile, in another tab
+    await user.click(screen.getByRole('button', { name: 'Надіслати' }));
+
+    expect(await screen.findByText(/Чат закрито: завдання завершене/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Повідомлення')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Надіслати' })).not.toBeInTheDocument();
+    expect(taskCalls().length).toBeGreaterThan(before);
+  });
+
+  it.each([
+    ['done', 'завдання завершене'],
+    ['cancelled', 'завдання скасоване'],
+  ])('US-23 INV-22 a %s task shows the history and no form: the chat is read-only', async (status, note) => {
     taskStatus = status;
     messages = [msg('m1', 'Остання домовленість', false, 'customer')];
     open();
 
     const log = await screen.findByRole('log', { name: 'Повідомлення чату' });
     expect(await within(log).findByText('Остання домовленість', { exact: false })).toBeInTheDocument();
-    expect(screen.getByText(/Чат закрито/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`Чат закрито: ${note}`))).toBeInTheDocument();
     expect(screen.queryByLabelText('Повідомлення')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Надіслати' })).not.toBeInTheDocument();
   });

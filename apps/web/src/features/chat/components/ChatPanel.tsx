@@ -31,7 +31,7 @@ export function ChatPanel({ taskId, status }: { taskId: string; status?: TaskSta
   } = useForm<{ body: string }>({ resolver: zodResolver(createMessageSchema), defaultValues: { body: '' } });
 
   const loadCode = messages.isError ? codeOf(messages.error) : null;
-  const sendCode = send.isError ? codeOf(send.error) : null;
+  const sendCode = send.isError && !readOnly ? codeOf(send.error) : null;
   const empty = (watch('body') ?? '').trim().length === 0;
 
   useEffect(() => {
@@ -60,7 +60,9 @@ export function ChatPanel({ taskId, status }: { taskId: string; status?: TaskSta
       {shownError && <p role="alert">{messageFor(shownError)}</p>}
 
       {readOnly ? (
-        <p role="status">Чат закрито: завдання завершене. Історія повідомлень залишається доступною.</p>
+        <p role="status">
+          Чат закрито: завдання {status === 'cancelled' ? 'скасоване' : 'завершене'}. Історія повідомлень залишається доступною.
+        </p>
       ) : (
         <form
           aria-label="Нове повідомлення"
@@ -68,9 +70,19 @@ export function ChatPanel({ taskId, status }: { taskId: string; status?: TaskSta
           onSubmit={handleSubmit((values) => send.mutate(values.body, { onSuccess: () => reset({ body: '' }) }))}
         >
           <label htmlFor="chat-body">Повідомлення</label>
-          <textarea id="chat-body" rows={3} aria-invalid={errors.body ? true : undefined} {...register('body')} />
+          <textarea
+            id="chat-body"
+            rows={3}
+            aria-invalid={errors.body ? true : undefined}
+            aria-describedby={errors.body ? 'chat-body-error' : undefined}
+            {...register('body')}
+          />
           <p>Не більше {LIMITS.messageMax} символів.</p>
-          {errors.body && <p role="alert">{messageFor(String(errors.body.message))}</p>}
+          {errors.body && (
+            <p id="chat-body-error" role="alert">
+              {messageFor(String(errors.body.message))}
+            </p>
+          )}
           <button type="submit" disabled={empty || send.isPending}>
             Надіслати
           </button>

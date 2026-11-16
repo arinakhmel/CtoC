@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiClientError, apiFetch, apiPost } from '../../../lib/api';
+import { taskKey } from '../../tasks/queries/task';
 
 export interface ChatMessage {
   id: string;
@@ -25,12 +26,21 @@ export const useMessages = (taskId: string) =>
     refetchInterval: (query) => (isFinalAccessError(query.state.error) ? false : CHAT_POLL_MS),
   });
 
-/** POST /api/tasks/:id/messages. The list is fetched again afterwards. */
+/**
+ * POST /api/tasks/:id/messages. The list is fetched again afterwards. A 409 CHAT_CLOSED means the task changed since the
+ * page was loaded (done or cancelled), so the task is fetched again too and the panel becomes read-only without a reload.
+ */
 export const useSendMessage = (taskId: string) => {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: string) =>
       apiPost<{ message: ChatMessage }>(`/tasks/${encodeURIComponent(taskId)}/messages`, { body }).then((result) => result.message),
     onSuccess: () => client.invalidateQueries({ queryKey: chatKey(taskId) }),
+    onError: (error) => {
+      if (error instanceof ApiClientError && error.code === 'CHAT_CLOSED') {
+        void client.invalidateQueries({ queryKey: taskKey(taskId) });
+        void client.invalidateQueries({ queryKey: chatKey(taskId) });
+      }
+    },
   });
 };
