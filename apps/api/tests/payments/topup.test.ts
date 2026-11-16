@@ -197,6 +197,12 @@ describe('GET /api/me/balance: US-26', () => {
     expect((await balance(customer.cookie)).body.balance.availableKopecks).toBe(12_345);
   });
 
+  it('US-26 the balance is not cached: Cache-Control no-store, so a top-up or a hold shows on the next request', async () => {
+    const res = await balance(customer.cookie);
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+  });
+
   it('US-26 everyone reads only their own balance', async () => {
     const other = await loginAs('customer');
     await topUp({ amountKopecks: 50_000 }, customer.cookie);

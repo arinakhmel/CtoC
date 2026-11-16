@@ -259,7 +259,7 @@ Another tab already assigned an executor (US-25/S2):
 
 ### 4.1a `GET /api/me/balance` and `POST /api/me/balance/sandbox-topup` (US-26)
 
-`GET` returns the caller's available balance in kopecks, 0 if there is no balance yet. Access "S+ · C": a customer with a confirmed email, or a verified student. Each reads only their own balance. US-34 shows the student's earnings through the same endpoint.
+`GET` returns the caller's available balance in kopecks, 0 if there is no balance yet. The answer has `Cache-Control: no-store`, so a balance that just changed shows on the next request. Access "S+ · C": a customer with a confirmed email, or a verified student. Each reads only their own balance. US-34 shows the student's earnings through the same endpoint.
 
 `POST` is the **sandbox** funding (OQ-09, A-06): money from nowhere, so a customer can reserve a task before any real payment exists. Access "C" (a customer with a confirmed email). The page says it is a test mode. The body is `{ "amountKopecks": 50000 }`: a whole number from 100 (1 UAH) to 2 000 000 (20 000 UAH), anything else is 400 `VALIDATION_FAILED`. The owner is the session and the ledger kind is fixed, so other keys are ignored. It is one transaction: the balance goes up and a positive `topup` ledger entry is written, so the balance equals the sum of its entries (INV-20). It is not idempotent: each call is a top-up. It is not part of the `PaymentProvider` port.
 

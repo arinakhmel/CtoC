@@ -19,7 +19,9 @@ const requireReadAccess: RequestHandler = (req, _res, next) => {
 export function paymentsRouter(): Router {
   const router = Router();
 
+  // no-store, like the public profile: a balance that just changed (a top-up, a hold) must show on the next request.
   router.get('/me/balance', requireUser, requireReadAccess, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
     res.json(serializeBalance(await getMyBalance(req.user!)));
   });
 
