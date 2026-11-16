@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { LIMITS } from '@ctoc/shared';
 import { prisma } from '../../platform/db';
+import { mergeUnreadFirst } from './domain';
 
 /** US-21. Runs on the transaction client of the business action, so the notification commits or rolls back with it (INV-23). */
 export const insertNotification = (tx: Prisma.TransactionClient, data: Prisma.NotificationUncheckedCreateInput) =>
@@ -25,7 +26,7 @@ export async function listNotificationsOfUser(userId: string, limit: number, aft
     orderBy: { id: 'desc' },
     take: limit,
   });
-  return [...unread, ...read];
+  return mergeUnreadFirst(unread, read);
 }
 
 /** A conditional update: only the recipient's unread row changes (ADR-0007). `count` 0 means it was already read or is not theirs. */

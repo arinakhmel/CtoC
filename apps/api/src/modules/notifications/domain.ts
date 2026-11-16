@@ -25,3 +25,12 @@ export function notificationText(type: string, payload: unknown): string {
   }
   return 'Нове сповіщення';
 }
+
+/**
+ * US-21 sc.3. Every unread row first, then the read rows that are not already in the list. The two lists are read in
+ * separate queries, so a notification marked read in between would be in both: it is kept once, in its unread place.
+ */
+export function mergeUnreadFirst<T extends { id: string }>(unread: T[], read: T[]): T[] {
+  const seen = new Set(unread.map((row) => row.id));
+  return [...unread, ...read.filter((row) => !seen.has(row.id))];
+}
