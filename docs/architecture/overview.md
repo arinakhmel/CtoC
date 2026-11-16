@@ -175,7 +175,7 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 | `/me/profile` | Edit skills and bio | S- / S+ | US-10, US-11, US-38/S3 |
 | `/me/verification` | Upload a student document and see its status | S- | US-08, US-39/S2 |
 | `/feed` | Task feed | S- | US-12, US-13, US-14, US-15 |
-| `/tasks/:id` | Task details and apply dialog with note. Applying needs S+. A non-verified student is prompted to verify. | S- (apply: S+) | US-13, US-15, US-18, US-19, US-42 |
+| `/tasks/:id` | Task details, an apply button and an inline note block (OQ-25). Applying needs S+. A non-verified student is prompted to verify. | S- (apply: S+) | US-13, US-15, US-18, US-19, US-42 |
 | `/me/applications` | "Мої відгуки" with statuses | S- / S+ | US-20 |
 | `/me/work` | "Мої активні завдання" | S+ | US-22, US-29 |
 | `/work/:taskId` | Workspace: terms, chat, result upload and submit, revision comment | S+ (executor) | US-22, US-23, US-27, US-28, US-29, US-32, US-33 |
