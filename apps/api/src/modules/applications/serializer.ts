@@ -8,3 +8,13 @@ export const serializeApplication = (application: Pick<Application, 'id' | 'task
   note: application.note,
   createdAt: application.createdAt.toISOString(),
 });
+
+type MyApplicationRow = Pick<Application, 'id' | 'taskId' | 'status' | 'note' | 'createdAt'> & {
+  task: { id: string; title: string; priceKopecks: number };
+};
+
+/** api.md §4.3a. The task is shown as a title, its fixed price and its id for the link. Nothing of the customer. */
+export const serializeMyApplication = (application: MyApplicationRow) => ({
+  ...serializeApplication(application),
+  task: { id: application.task.id, title: application.task.title, priceKopecks: application.task.priceKopecks },
+});

@@ -4,8 +4,8 @@ import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { assertTaskOpen, getTask } from '../tasks/service';
 import { newApplicationData } from './domain';
-import { assertCanApply } from './policy';
-import { insertApplication } from './repo';
+import { assertCanApply, assertCanReadMyApplications } from './policy';
+import { insertApplication, listApplicationsOfStudent } from './repo';
 
 /**
  * US-18 (and US-19 for the note). `input` is already validated by `validateBody`.
@@ -33,4 +33,14 @@ export async function createApplication(user: User, taskId: string, input: Creat
     }
     throw error;
   }
+}
+
+/**
+ * US-20. The student's own applications with their current status, newest first. The status is read as stored: it is
+ * changed only by the customer's actions (US-25 assign, reject), never here. Only rows of the caller are read, so
+ * there is no other student's data to hide.
+ */
+export async function getMyApplications(user: User) {
+  assertCanReadMyApplications(user);
+  return listApplicationsOfStudent(user.id);
 }

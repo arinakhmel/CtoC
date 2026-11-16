@@ -24,6 +24,12 @@ export const taskStatusSchema = z.enum(TASK_STATUSES);
 export const APPLICATION_STATUSES = ['sent', 'accepted', 'rejected'] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 export const applicationStatusSchema = z.enum(APPLICATION_STATUSES);
+/** The words the student sees (US-20 [AC], domain-model.md §2). One place, so US-24 and US-25 show the same labels. */
+export const APPLICATION_STATUS_UK: Record<ApplicationStatus, string> = {
+  sent: 'Надіслано',
+  accepted: 'Прийнято',
+  rejected: 'Відхилено',
+};
 
 /** Student verification request (drives the student role). domain-model.md §3.2. */
 export const VERIFICATION_STATUSES = ['pending', 'approved', 'rejected', 'revoked'] as const;

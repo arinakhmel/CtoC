@@ -86,7 +86,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/me/applications",
-    title: "Мої відгуки with statuses",
+    title: "Мої відгуки",
     access: "S- / S+",
     stories: ["US-20"],
   },

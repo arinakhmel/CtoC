@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createApplicationSchema, createTaskSchema, feedQuerySchema, LIMITS, moderationRejectSchema } from '../src';
+import { APPLICATION_STATUS_UK, APPLICATION_STATUSES, createApplicationSchema, createTaskSchema, feedQuerySchema, LIMITS, moderationRejectSchema } from '../src';
 import { codesOf, fieldsOf } from './helpers';
 
 const inOneWeek = () => new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
@@ -98,5 +98,12 @@ describe('US-18, US-19 and US-42 application', () => {
   it('US-42 sc.2, US-13 sc.2: a forged price is stripped, the application has no price', () => {
     const parsed = createApplicationSchema.parse({ note: 'hi', priceKopecks: 100, price: 1 });
     expect(parsed).toEqual({ note: 'hi' });
+  });
+});
+
+describe('US-20 application status labels', () => {
+  it('US-20 sc.1-3: every status has its Ukrainian label (Надіслано, Прийнято, Відхилено)', () => {
+    expect(APPLICATION_STATUS_UK).toEqual({ sent: 'Надіслано', accepted: 'Прийнято', rejected: 'Відхилено' });
+    expect(Object.keys(APPLICATION_STATUS_UK).sort()).toEqual([...APPLICATION_STATUSES].sort());
   });
 });

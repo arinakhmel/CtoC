@@ -70,7 +70,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
 | POST | `/api/tasks/:id/applications` | US-18, US-19, US-42 | S+ | 201 | 400 `NOTE_TOO_LONG` · 403 `STUDENT_NOT_VERIFIED` · 404 `NOT_FOUND` (not in the feed: not published, assigned, expired or unknown) · 409 `ALREADY_APPLIED`, `TASK_NOT_OPEN` (race only) |
-| GET | `/api/me/applications` | US-20 | S- | 200 | |
+| GET | `/api/me/applications` | US-20 | S- | 200 (body: §4.3a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | GET | `/api/tasks/:id/applications` | US-24, US-25 | Own | 200 | 403 `NOT_TASK_OWNER` |
 | POST | `/api/tasks/:id/applications/:appId/reject` | US-20/S3 | Own | 200 | 403 · 409 `APPLICATION_NOT_PENDING` |
 | POST | `/api/tasks/:id/assign` | US-25, US-26, US-21 | Own | 200 | 403 `NOT_TASK_OWNER` · 404 `NOT_FOUND` (application) · 409 `TASK_ALREADY_ASSIGNED`, `TASK_NOT_OPEN` · 422 `INSUFFICIENT_FUNDS` |
@@ -305,6 +305,19 @@ A second call (US-18/S2):
 ```json
 409 Conflict
 { "error": { "code": "ALREADY_APPLIED", "message": "Ви вже подали відгук на це завдання" } }
+```
+
+### 4.3a `GET /api/me/applications` (my applications)
+
+US-20. The caller's own applications, newest first, at most 100 (OQ-26). Access "S-": a student with a confirmed email, verified or not. The status is the stored one (`sent`, `accepted`, `rejected`); the UI shows «Надіслано», «Прийнято», «Відхилено».
+
+```json
+200 OK
+{ "applications": [
+  { "id": "a91e…", "taskId": "7d0c…", "status": "sent", "note": null,
+    "createdAt": "2026-11-12T09:15:00Z",
+    "task": { "id": "7d0c…", "title": "Логотип для кав’ярні", "priceKopecks": 50000 } }
+] }
 ```
 
 ### 4.4 `POST /api/tasks` (create task, with field-level validation)
