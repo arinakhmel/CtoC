@@ -1,10 +1,10 @@
 import type { CreateTaskInput, FeedQuery } from '@ctoc/shared';
-import type { User } from '@prisma/client';
+import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { newTaskData } from './domain';
 import { assertCanCreateTask, assertCanReadFeed } from './policy';
-import { findFeedCursor, findOpenTask, insertTask, listFeed } from './repo';
+import { findFeedCursor, findOpenTask, insertTask, listFeed, lockOpenTask } from './repo';
 
 /**
  * US-13. The details of one task, with the fixed price set by the customer. A task that is not in the feed
@@ -15,6 +15,19 @@ export async function getTask(user: User, id: string) {
   const task = await findOpenTask(id, new Date());
   if (!task) throw new ApiError('NOT_FOUND');
   return task;
+}
+
+/**
+ * US-18. Called by the applications service as the first statement of its transaction. A task that left the feed
+ * meanwhile (assigned, unpublished, expired) is 409 TASK_NOT_OPEN.
+ *
+ * It is a conditional `updateMany` with the `count` checked (ADR-0007 §1). The write takes the SQLite write lock
+ * before the insert, so assign (US-25) cannot run between the check and the insert (ADR-0004: one writer at a time).
+ * The (task, student) unique index (INV-09) stays the guard for duplicates. On Postgres the same statement takes a row lock.
+ * Only the race reaches this: a task that is already out of the feed is 404 NOT_FOUND from `getTask` before the transaction.
+ */
+export async function assertTaskOpen(tx: Prisma.TransactionClient, id: string): Promise<void> {
+  if ((await lockOpenTask(tx, id, new Date())).count === 0) throw new ApiError('TASK_NOT_OPEN');
 }
 
 /**

@@ -31,6 +31,15 @@ const cardSelect = {
 export const findOpenTask = (id: string, now: Date) =>
   prisma.task.findFirst({ where: { id, ...feedWhere(now) }, select: cardSelect });
 
+/**
+ * US-18. Runs on the transaction client. A conditional write, not a read: it takes the SQLite write lock at the first
+ * statement of the transaction (a deferred BEGIN would otherwise lock only at the insert, after the check), and its
+ * `count` says whether the task is still open at this moment (ADR-0007 §1). It sets `status` to the value the row
+ * already has, so the only side effect is `updatedAt`.
+ */
+export const lockOpenTask = (tx: Prisma.TransactionClient, id: string, now: Date) =>
+  tx.task.updateMany({ where: { id, ...feedWhere(now) }, data: { status: 'published' } });
+
 /** Any task that was published, even if it has left the feed since (assigned, expired), so paging never breaks mid-way. */
 export const findFeedCursor = (id: string) =>
   prisma.task.findFirst({ where: { id, publishedAt: { not: null } }, select: { id: true, publishedAt: true } });

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { applicationsRouter } from './applications/routes';
 import { devRouter } from './dev/routes';
 import { identityRouter } from './identity/routes';
 import { tasksRouter } from './tasks/routes';
@@ -14,6 +15,7 @@ export function createModulesRouter(): Router {
   router.use(identityRouter());
   router.use(verificationRouter());
   router.use(tasksRouter());
+  router.use(applicationsRouter());
   router.use(devRouter());
   return router;
 }

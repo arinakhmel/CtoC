@@ -122,4 +122,4 @@ describe('GET /api/tasks/:id: US-13 sc.1', () => {
   });
 });
 
-// US-13 sc.2 (a forged priceKopecks in POST /api/tasks/:id/applications is stripped, 201, W-05) needs the endpoint of US-18/US-19.
+// US-13 sc.2 (a forged priceKopecks in POST /api/tasks/:id/applications is stripped, 201, W-05) is tested in tests/applications/apply.test.ts.

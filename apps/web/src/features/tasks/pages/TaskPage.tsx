@@ -2,6 +2,7 @@ import { MESSAGES_UK } from '@ctoc/shared';
 import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
+import { ApplyButton } from '../../applications/components/ApplyButton';
 import { formatDeadline } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { PriceBlock } from '../components/PriceBlock';
@@ -44,6 +45,7 @@ export function TaskPage({ page }: { page: PageConfig }) {
           <p>
             Виконати до: <time dateTime={task.data.deadlineAt}>{formatDeadline(task.data.deadlineAt)}</time>
           </p>
+          <ApplyButton taskId={task.data.id} />
         </>
       )}
 
