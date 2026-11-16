@@ -20,3 +20,16 @@ export const insertEscrow = (tx: Tx, data: Prisma.EscrowUncheckedCreateInput) =>
 export const insertLedgerEntry = (tx: Tx, data: Prisma.LedgerEntryUncheckedCreateInput) => tx.ledgerEntry.create({ data });
 
 export const findEscrowByKey = (idempotencyKey: string) => prisma.escrow.findUnique({ where: { idempotencyKey } });
+
+/**
+ * US-26. One statement: creates the balance on the first top-up, adds to it afterwards. The increment is done by the
+ * database, so two top-ups at once are both applied (ADR-0007).
+ */
+export const incrementBalance = (tx: Tx, ownerId: string, amountKopecks: number) =>
+  tx.balance.upsert({
+    where: { ownerId },
+    create: { ownerId, availableKopecks: amountKopecks },
+    update: { availableKopecks: { increment: amountKopecks } },
+  });
+
+export const findBalance = (ownerId: string) => prisma.balance.findUnique({ where: { ownerId } });

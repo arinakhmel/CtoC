@@ -100,9 +100,9 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| GET | `/api/me/balance` | US-34 | S+ · C | 200 | |
+| GET | `/api/me/balance` | US-26, US-34 | S+ · C | 200 (body: §4.1a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` |
 | GET | `/api/me/finance` | US-35 | S+ | 200 | |
-| POST | `/api/me/balance/sandbox-topup` | US-26 (OQ-09) | C | 200 | 400 `VALIDATION_FAILED` |
+| POST | `/api/me/balance/sandbox-topup` | US-26 (OQ-09) | C | 200 (body: §4.1a) | 400 `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | POST | `/api/me/withdrawals` | US-36 | S+ | 201 | 400 `CARD_INVALID` · 422 `INSUFFICIENT_BALANCE` |
 | GET | `/api/me/withdrawals` | US-36 | S+ | 200 | |
 
@@ -255,6 +255,17 @@ Another tab already assigned an executor (US-25/S2):
 ```json
 409 Conflict
 { "error": { "code": "TASK_ALREADY_ASSIGNED", "message": "Виконавця вже обрано" } }
+```
+
+### 4.1a `GET /api/me/balance` and `POST /api/me/balance/sandbox-topup` (US-26)
+
+`GET` returns the caller's available balance in kopecks, 0 if there is no balance yet. Access "S+ · C": a customer with a confirmed email, or a verified student. Each reads only their own balance. US-34 shows the student's earnings through the same endpoint.
+
+`POST` is the **sandbox** funding (OQ-09, A-06): money from nowhere, so a customer can reserve a task before any real payment exists. Access "C" (a customer with a confirmed email). The page says it is a test mode. The body is `{ "amountKopecks": 50000 }`: a whole number from 100 (1 UAH) to 2 000 000 (20 000 UAH), anything else is 400 `VALIDATION_FAILED`. The owner is the session and the ledger kind is fixed, so other keys are ignored. It is one transaction: the balance goes up and a positive `topup` ledger entry is written, so the balance equals the sum of its entries (INV-20). It is not idempotent: each call is a top-up. It is not part of the `PaymentProvider` port.
+
+```json
+200 OK
+{ "balance": { "availableKopecks": 50000 } }
 ```
 
 ### 4.2 `POST /api/tasks/:id/accept` (accept result)

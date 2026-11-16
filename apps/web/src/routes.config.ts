@@ -134,7 +134,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/c/balance",
-    title: "Sandbox balance top-up",
+    title: "Баланс і тестове поповнення",
     access: "C",
     stories: ["US-26"],
   },
