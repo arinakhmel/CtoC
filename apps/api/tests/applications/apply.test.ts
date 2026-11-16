@@ -178,7 +178,19 @@ describe('POST /api/tasks/:id/applications: US-18', () => {
     expect(await prisma.application.count({ where: { studentId: user.id } })).toBe(0);
   });
 
-  it('US-18 with a note (US-19): 201 and the note is stored; a note over the limit is 400 NOTE_TOO_LONG', async () => {
+  it('US-19 sc.1 a note is stored with the application and returned: 201', async () => {
+    const { cookie } = await loginAs();
+    const task = await publish();
+    const note = 'Маю досвід у подібних лабораторних роботах';
+
+    const res = await apply(task.id, { note }, cookie);
+
+    expect(res.status).toBe(201);
+    expect(res.body.application.note).toBe(note);
+    expect((await prisma.application.findFirstOrThrow({ where: { taskId: task.id } })).note).toBe(note);
+  });
+
+  it('US-19 sc.2 a note over 500 characters is 400 NOTE_TOO_LONG and no application is created; 500 is accepted', async () => {
     const { cookie } = await loginAs();
     const task = await publish();
 
@@ -187,9 +199,23 @@ describe('POST /api/tasks/:id/applications: US-18', () => {
     expect(tooLong.body.error.code).toBe('NOTE_TOO_LONG');
     expect(await prisma.application.count()).toBe(0);
 
-    const ok = await apply(task.id, { note: 'Маю досвід у подібних лабораторних роботах' }, cookie);
-    expect(ok.status).toBe(201);
-    expect(ok.body.application.note).toBe('Маю досвід у подібних лабораторних роботах');
+    const edge = await apply(task.id, { note: 'а'.repeat(500) }, cookie);
+    expect(edge.status).toBe(201);
+  });
+
+  it.each([
+    ['no note', {}],
+    ['an empty note', { note: '' }],
+    ['a whitespace-only note', { note: '   ' }],
+  ])('US-19 sc.3 %s is optional: 201 and the note is null', async (_name, body) => {
+    const { cookie } = await loginAs();
+    const task = await publish();
+
+    const res = await apply(task.id, body, cookie);
+
+    expect(res.status).toBe(201);
+    expect(res.body.application.note).toBeNull();
+    expect((await prisma.application.findFirstOrThrow({ where: { taskId: task.id } })).note).toBeNull();
   });
 
   it('US-18 an unverified student gets 403 before the body is validated', async () => {

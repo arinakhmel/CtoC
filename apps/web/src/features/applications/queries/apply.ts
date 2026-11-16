@@ -10,11 +10,11 @@ export interface Application {
 }
 
 /**
- * POST /api/tasks/:id/applications (api.md §4.3). US-18: one click, so the body is empty. There is no price field
- * (US-13, US-42). The note of US-19 is added by that story.
+ * POST /api/tasks/:id/applications (api.md §4.3). US-18: one click, so the body is empty. US-19: the body is
+ * `{ note }` when the student wrote one. There is no price field (US-13, US-42).
  */
 export const useApply = (taskId: string) =>
   useMutation({
-    mutationFn: () =>
-      apiPost<{ application: Application }>(`/tasks/${encodeURIComponent(taskId)}/applications`, {}).then((body) => body.application),
+    mutationFn: (note?: string) =>
+      apiPost<{ application: Application }>(`/tasks/${encodeURIComponent(taskId)}/applications`, note ? { note } : {}).then((body) => body.application),
   });

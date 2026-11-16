@@ -95,3 +95,61 @@ describe('«Відгукнутися» on /tasks/:id (US-18)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Завдання вже недоступне для відгуків');
   });
 });
+
+describe('Note with the application on /tasks/:id (US-19)', () => {
+  const postBody = () => {
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+    return post ? JSON.parse(String(post[1]?.body)) : undefined;
+  };
+  const NOTE_LABEL = 'Записка замовнику (необов’язково)';
+
+  it('US-19 sc.1 the student writes a note, presses «Підтвердити» and the note is sent with the application', async () => {
+    applyResponse = () => json({ application: { ...application, note: 'Маю досвід у подібних лабораторних роботах' } }, 201);
+    const user = userEvent.setup();
+    await openTask();
+
+    await user.click(screen.getByRole('button', { name: 'Відгукнутися із запискою' }));
+    await user.type(screen.getByLabelText(NOTE_LABEL), 'Маю досвід у подібних лабораторних роботах');
+    await user.click(screen.getByRole('button', { name: 'Підтвердити' }));
+
+    expect(await screen.findByText('Відгук надіслано')).toHaveAttribute('role', 'status');
+    expect(postBody()).toEqual({ note: 'Маю досвід у подібних лабораторних роботах' });
+  });
+
+  it('US-19 sc.2 a note over 500 characters is blocked with the length message and nothing is sent', async () => {
+    const user = userEvent.setup();
+    await openTask();
+
+    await user.click(screen.getByRole('button', { name: 'Відгукнутися із запискою' }));
+    await user.click(screen.getByLabelText(NOTE_LABEL));
+    await user.paste('а'.repeat(501));
+    await user.click(screen.getByRole('button', { name: 'Підтвердити' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Записка перевищує допустиму довжину');
+    expect(screen.getByText('501 / 500')).toBeInTheDocument();
+    expect(postBody()).toBeUndefined();
+  });
+
+  it('US-19 sc.2 the API code NOTE_TOO_LONG is shown by its Ukrainian text', async () => {
+    applyResponse = () => apiError('NOTE_TOO_LONG', 400);
+    const user = userEvent.setup();
+    await openTask();
+
+    await user.click(screen.getByRole('button', { name: 'Відгукнутися із запискою' }));
+    await user.type(screen.getByLabelText(NOTE_LABEL), 'Привіт');
+    await user.click(screen.getByRole('button', { name: 'Підтвердити' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Записка перевищує допустиму довжину');
+  });
+
+  it('US-19 sc.3 an empty note is sent as no note and the application succeeds', async () => {
+    const user = userEvent.setup();
+    await openTask();
+
+    await user.click(screen.getByRole('button', { name: 'Відгукнутися із запискою' }));
+    await user.click(screen.getByRole('button', { name: 'Підтвердити' }));
+
+    expect(await screen.findByText('Відгук надіслано')).toBeInTheDocument();
+    expect(postBody()).toEqual({});
+  });
+});

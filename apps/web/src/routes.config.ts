@@ -80,7 +80,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/tasks/:id",
-    title: "Task details and apply dialog with note. Applying needs S+. A non-verified student is prompted to verify.",
+    title: "Task details, an apply button and an inline note block (OQ-25). Applying needs S+. A non-verified student is prompted to verify.",
     access: "S- (apply: S+)",
     stories: ["US-13", "US-15", "US-18", "US-19", "US-42"],
   },
