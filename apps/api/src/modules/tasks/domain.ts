@@ -20,3 +20,14 @@ export const CANCELLED = 'cancelled' as const;
 /** Why the owner's delete did not change anything: an executor exists (INV-13, US-22 sc.2), or the state does not allow it. */
 export const deleteRefusal = (task: { executorId: string | null }): 'TASK_HAS_EXECUTOR' | 'INVALID_TRANSITION' =>
   task.executorId !== null ? 'TASK_HAS_EXECUTOR' : 'INVALID_TRANSITION';
+
+/**
+ * domain-model.md INV-22, A-20. The chat of a task: open from assignment until the task is `done` or `cancelled`
+ * (read-only after that), and not open before an executor is chosen.
+ */
+export const CHAT_OPEN_STATUSES = ['in_progress', 'in_review', 'revision'] as const;
+export type ChatState = 'open' | 'readonly' | 'notopen';
+export function chatStateOf(status: string): ChatState {
+  if ((CHAT_OPEN_STATUSES as readonly string[]).includes(status)) return 'open';
+  return status === 'done' || status === 'cancelled' ? 'readonly' : 'notopen';
+}

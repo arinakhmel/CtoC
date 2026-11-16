@@ -91,8 +91,8 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| GET | `/api/tasks/:id/messages?after=` | US-23 | Own · Ex | 200 | 403 `NOT_CHAT_PARTICIPANT` |
-| POST | `/api/tasks/:id/messages` | US-23 | Own · Ex | 201 | 400 `MESSAGE_EMPTY`, `MESSAGE_TOO_LONG` · 403 `NOT_CHAT_PARTICIPANT` · 409 `CHAT_CLOSED` |
+| GET | `/api/tasks/:id/messages?after=` | US-23 | Own · Ex | 200 (body: §4.3c) | 400 `VALIDATION_FAILED` (bad `after`) · 401 `AUTH_REQUIRED` · 403 `NOT_CHAT_PARTICIPANT` · 404 `NOT_FOUND` |
+| POST | `/api/tasks/:id/messages` | US-23 | Own · Ex | 201 (body: §4.3c) | 400 `MESSAGE_EMPTY`, `MESSAGE_TOO_LONG` · 401 `AUTH_REQUIRED` · 403 `NOT_CHAT_PARTICIPANT` · 404 `NOT_FOUND` · 409 `CHAT_CLOSED` |
 | GET | `/api/me/notifications?after=&limit=` | US-21, US-30, US-47, US-48, US-49 | A | 200 (body: §4.3b) | 400 `VALIDATION_FAILED` (bad `limit` or `after`) · 401 `AUTH_REQUIRED` |
 | POST | `/api/me/notifications/:id/read` | US-21/S3 | A (recipient) | 204 (repeat is a no-op 204) | 401 `AUTH_REQUIRED` · 404 `NOT_FOUND` (not yours, or unknown) |
 
@@ -203,7 +203,7 @@ Messages marked **[AC]** are quoted from a Gherkin scenario and must match exact
 | 409 | `ALREADY_IN_REVIEW` | Submitting again while in `in_review`. | «Результат уже на перевірці» | US-28/S3 |
 | 409 | `TASK_NOT_IN_REVIEW` | Accept or return when not in `in_review`. | «Немає результату на перевірці» | US-32/CL |
 | 409 | `TASK_ALREADY_DONE` | Accept or return after `done`. | «Угоду вже завершено» | US-31/S3, US-32/S2 |
-| 409 | `CHAT_CLOSED` | Writing after `done` or `cancelled`. | «Чат закрито» | A-20 |
+| 409 | `CHAT_CLOSED` | Writing after `done` or `cancelled`, or before an executor is chosen (the chat is not open yet). | «Чат закрито» | A-20 |
 | 409 | `ALREADY_DECIDED` | Second moderator decision. | «Рішення вже ухвалено» | NFR-18 |
 | 409 | `DOMAIN_EXISTS` | Duplicate university domain. | «Домен уже є у списку» | A-17 |
 | 409 | `INVALID_TRANSITION` | Any other illegal state change. | «Дія недоступна в поточному статусі» | domain-model §3 |
@@ -335,6 +335,30 @@ US-21. The caller's own notifications (ids are UUIDv7, so they sort by time). Wi
 ```
 
 A notification is created inside the business transaction it reports (INV-23), through `notifyExecutorSelected(tx, …)` of the notifications service. If that transaction fails, no notification exists (US-21/S2).
+
+### 4.3c Chat of a task (US-23)
+
+`GET /api/tasks/:id/messages?after=<id>` and `POST /api/tasks/:id/messages`. Access "Own · Ex": the customer who owns the task and its executor (INV-22). Access is checked before the query or the body: an outsider with a bad body gets 403, not 400. An unknown task is 404.
+
+- The chat is open from assignment (`in_progress`, `in_review`, `revision`) and read-only after `done` or `cancelled`. Before an executor is chosen it is not open: GET is 200 with an empty list, POST is 409 `CHAT_CLOSED` (OQ-30).
+- GET returns the messages oldest first, at most 100. Without `after` it is the latest 100. With `after=<id>` only the messages newer than that id, for polling. The web app polls every 5 seconds (W-18).
+- POST takes `{ "body": "…" }`, trimmed, 1 to 2000 characters. The sender is the session and the task is the URL; other keys are ignored. The send is one transaction: a conditional update that proves the sender is a participant and the chat is still open, then the insert.
+- A message shows `mine` (for the caller) and `from` (`customer` or `executor`). No names, ids of the other side or emails.
+
+```json
+201 Created
+{ "message": { "id": "0192…", "body": "Добрий день! Уточніть формат файлів.",
+               "createdAt": "2026-11-12T09:15:00Z", "mine": true, "from": "executor" } }
+
+200 OK
+{ "messages": [ { "id": "0192…", "body": "Надішліть у форматі SVG",
+                  "createdAt": "2026-11-12T09:20:00Z", "mine": false, "from": "customer" } ] }
+```
+
+```json
+403 Forbidden
+{ "error": { "code": "NOT_CHAT_PARTICIPANT", "message": "Доступ заборонено" } }
+```
 
 ### 4.4 `POST /api/tasks` (create task, with field-level validation)
 

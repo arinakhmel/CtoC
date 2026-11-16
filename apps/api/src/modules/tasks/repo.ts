@@ -1,6 +1,6 @@
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../platform/db';
-import { CANCELLABLE_BY_OWNER, CANCELLED } from './domain';
+import { CANCELLABLE_BY_OWNER, CANCELLED, CHAT_OPEN_STATUSES } from './domain';
 
 /**
  * INV-06: the feed holds only published tasks that have no executor and a future deadline.
@@ -92,3 +92,17 @@ export const cancelTaskWithoutExecutor = (tx: Prisma.TransactionClient, id: stri
 
 export const findTaskState = (tx: Prisma.TransactionClient, id: string) =>
   tx.task.findUnique({ where: { id }, select: { executorId: true } });
+
+/** US-23. Who may chat on a task and in which state it is. */
+export const findChatTask = (id: string) =>
+  prisma.task.findUnique({ where: { id }, select: { id: true, customerId: true, executorId: true, status: true } });
+
+/**
+ * US-23 (INV-22, ADR-0007). A conditional write, not a read: it takes the SQLite write lock first and the number of rows
+ * it changed says that the sender is the owner or the executor and the chat is still open at this moment. Zero rows means
+ * it closed meanwhile. It sets `status` to the value the row already has, and is raw SQL so that `updatedAt` is not
+ * touched: chat traffic must not look like a change of the task.
+ */
+export const lockChatTask = (tx: Prisma.TransactionClient, id: string, userId: string): Promise<number> =>
+  tx.$executeRaw`UPDATE "tasks" SET "status" = "status"
+    WHERE "id" = ${id} AND "status" IN (${Prisma.join([...CHAT_OPEN_STATUSES])}) AND ("customer_id" = ${userId} OR "executor_id" = ${userId})`;

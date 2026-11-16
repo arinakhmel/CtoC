@@ -219,6 +219,8 @@ stateDiagram-v2
 | `done` | «Виконано» | no | released |
 | `cancelled` | «Скасовано» (proposed) | no | refunded or none |
 
+Chat (INV-22, A-20, US-23): open in `in_progress`, `in_review` and `revision`; read-only in `done` and `cancelled`; not open in `pending_moderation`, `published` and `rejected`. `CHAT_OPEN_STATUSES` in the tasks module is this list.
+
 Forbidden, answered with 409:
 - any transition out of `done`, `rejected` or `cancelled` (US-31/S3, US-32/S2);
 - a second executor (US-25/S2);
