@@ -101,7 +101,7 @@ describe('/c/tasks/:id candidates (US-24)', () => {
     status = 'in_progress';
     applications = [candidate('a1', student('u1', 'Олена Коваль', true))];
     open();
-    expect(await screen.findByRole('heading', { name: 'Чат із замовником' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Чат із виконавцем' })).toBeInTheDocument();
   });
 
   it.each([
@@ -112,7 +112,7 @@ describe('/c/tasks/:id candidates (US-24)', () => {
     applications = [candidate('a1', student('u1', 'Олена Коваль', true))];
     open();
 
-    expect(await screen.findByRole('heading', { name: 'Чат із замовником' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Чат із виконавцем' })).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`Чат закрито: ${note}`))).toBeInTheDocument();
     expect(screen.queryByLabelText('Повідомлення')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Надіслати' })).not.toBeInTheDocument();
@@ -122,7 +122,7 @@ describe('/c/tasks/:id candidates (US-24)', () => {
     applications = [candidate('a1', student('u1', 'Олена Коваль', true))];
     open();
     await screen.findByRole('article', { name: 'Олена Коваль' });
-    expect(screen.queryByRole('heading', { name: 'Чат із замовником' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Чат із виконавцем' })).not.toBeInTheDocument();
   });
 
   it.each([

@@ -78,6 +78,12 @@ describe('Chat on /work/:taskId (US-23)', () => {
     expect(screen.getByLabelText('Повідомлення')).toHaveValue('');
   });
 
+  it("US-23 the executor's chat has the default heading «Чат із замовником» (the customer's page passes its own)", async () => {
+    open();
+    expect(await screen.findByRole('heading', { name: 'Чат із замовником' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Чат із виконавцем' })).not.toBeInTheDocument();
+  });
+
   it('US-23 sc.1 a message of the customer shows up on the next poll, without a reload', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     open();

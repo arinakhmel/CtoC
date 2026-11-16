@@ -54,7 +54,7 @@ export function CustomerTaskPage() {
             <h2 id="candidates-title">Відгуки студентів</h2>
             <CandidateList candidates={data.applications} />
           </section>
-          {CHAT_STATUSES.includes(data.task.status) && <ChatPanel taskId={data.task.id} status={data.task.status} />}
+          {CHAT_STATUSES.includes(data.task.status) && <ChatPanel taskId={data.task.id} status={data.task.status} heading="Чат із виконавцем" />}
         </>
       )}
     </article>
