@@ -24,7 +24,11 @@ export function WorkTaskPage() {
     if (errorCode === 'AUTH_REQUIRED') navigate('/login', { replace: true });
   }, [errorCode, navigate]);
 
-  const shown = task.data && !task.isError ? task.data : null;
+  // Only the executor's view carries `status` (api.md §4.13a). A task a student merely sees in the feed has none, and is
+  // not shown as an agreed task here.
+  const loaded = task.data && !task.isError ? task.data : null;
+  const shown = loaded?.status ? loaded : null;
+  const notMine = loaded !== null && shown === null;
 
   return (
     <article aria-labelledby="page-title">
@@ -39,13 +43,13 @@ export function WorkTaskPage() {
 
       {task.isPending && <p role="status">Завантаження…</p>}
 
+      {notMine && <p role="alert">{MESSAGES_UK.NOT_FOUND}</p>}
+
       {shown && (
         <>
-          {shown.status && (
-            <p>
-              Статус: <strong>{TASK_STATUS_UK[shown.status as TaskStatus]}</strong>
-            </p>
-          )}
+          <p>
+            Статус: <strong>{TASK_STATUS_UK[shown.status as TaskStatus]}</strong>
+          </p>
           <h2>Умови завдання</h2>
           <p>{shown.description}</p>
           <PriceBlock priceKopecks={shown.priceKopecks} netKopecks={shown.netKopecks} grossLabel="Узгоджена ціна" />

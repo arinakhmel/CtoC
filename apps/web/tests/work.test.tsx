@@ -95,6 +95,16 @@ describe('/work/:taskId card (US-22)', () => {
     expect(nyTime.textContent).toMatch(/20\.05\.2030.*11:30/);
   });
 
+  it('US-22 sc.1 a feed task that is not the student\'s (no status in the answer) is not shown as an agreed task', async () => {
+    const { status: _status, assignedAt: _assignedAt, ...feedTask } = work;
+    taskDetails = () => json({ task: feedTask });
+    openCard();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не знайдено');
+    expect(screen.queryByText('Узгоджена ціна')).not.toBeInTheDocument();
+    expect(screen.queryByText('Потрібен логотип', { exact: false })).not.toBeInTheDocument();
+  });
+
   it('US-22 a task that is not the student\'s shows the not-found message', async () => {
     taskDetails = () => apiError('NOT_FOUND', 404);
     openCard();
