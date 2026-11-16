@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { prisma as appPrisma } from '../../src/platform/db';
 import { hashSessionId } from '../../src/modules/identity/domain';
 import { api } from '../helpers/app';
 import { prisma, resetDb } from '../helpers/db';
@@ -139,6 +140,30 @@ describe('POST /api/tasks/:id/applications: US-18', () => {
     const res = await apply(task.id, {}, cookie);
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(await prisma.application.count()).toBe(0);
+  });
+
+  it('US-18 sc.1 a task taken between the feed check and the insert is 409 TASK_NOT_OPEN and gets no application', async () => {
+    const { cookie } = await loginAs();
+    const other = await loginAs();
+    const task = await publish();
+    // The executor is set after the feed check (getTask) and before the transaction opens: the race of US-25.
+    // The client is patched by hand and put back in `finally`: `vi.spyOn` does not restore a Prisma client method.
+    const original = appPrisma.$transaction;
+    appPrisma.$transaction = (async (...args: unknown[]) => {
+      appPrisma.$transaction = original;
+      await prisma.task.update({ where: { id: task.id }, data: { executorId: other.user.id, status: 'in_progress' } });
+      return (original as (...a: unknown[]) => unknown).apply(appPrisma, args);
+    }) as never;
+    let res;
+    try {
+      res = await apply(task.id, {}, cookie);
+    } finally {
+      appPrisma.$transaction = original;
+    }
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('TASK_NOT_OPEN');
     expect(await prisma.application.count()).toBe(0);
   });
 

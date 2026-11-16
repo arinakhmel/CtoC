@@ -4,7 +4,7 @@ import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { newTaskData } from './domain';
 import { assertCanCreateTask, assertCanReadFeed } from './policy';
-import { countOpenTask, findFeedCursor, findOpenTask, insertTask, listFeed } from './repo';
+import { findFeedCursor, findOpenTask, insertTask, listFeed, lockOpenTask } from './repo';
 
 /**
  * US-13. The details of one task, with the fixed price set by the customer. A task that is not in the feed
@@ -18,17 +18,16 @@ export async function getTask(user: User, id: string) {
 }
 
 /**
- * US-18. Called by the applications service inside its transaction, so the task cannot be taken between the check
- * and the insert. A task that left the feed meanwhile (assigned, unpublished, expired) is 409 TASK_NOT_OPEN.
+ * US-18. Called by the applications service as the first statement of its transaction. A task that left the feed
+ * meanwhile (assigned, unpublished, expired) is 409 TASK_NOT_OPEN.
  *
- * Deliberate exception to "check-then-act is a conditional updateMany" (ADR-0007 §1): the transaction only inserts a
- * row and changes nothing this check guards, and the real uniqueness rule (INV-09) is the (task, student) unique index.
- * SQLite serialises writers (ADR-0004), so assign (US-25) cannot run between the count and the insert. On Postgres this
- * needs a row lock (`FOR UPDATE`) or a serializable retry, as in the ADR-0007 note "If we move to Postgres".
+ * It is a conditional `updateMany` with the `count` checked (ADR-0007 §1). The write takes the SQLite write lock
+ * before the insert, so assign (US-25) cannot run between the check and the insert (ADR-0004: one writer at a time).
+ * The (task, student) unique index (INV-09) stays the guard for duplicates. On Postgres the same statement takes a row lock.
  * Only the race reaches this: a task that is already out of the feed is 404 NOT_FOUND from `getTask` before the transaction.
  */
 export async function assertTaskOpen(tx: Prisma.TransactionClient, id: string): Promise<void> {
-  if ((await countOpenTask(tx, id, new Date())) === 0) throw new ApiError('TASK_NOT_OPEN');
+  if ((await lockOpenTask(tx, id, new Date())).count === 0) throw new ApiError('TASK_NOT_OPEN');
 }
 
 /**
