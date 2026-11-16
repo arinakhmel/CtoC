@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../../../lib/api';
+import type { TaskStatus } from '@ctoc/shared';
 import type { FeedTask } from './feed';
 
-export type TaskDetails = FeedTask;
+/** The executor also gets `status` and `assignedAt` (api.md §4.13a, US-22). */
+export type TaskDetails = FeedTask & { status?: TaskStatus; assignedAt?: string | null };
 
 export const taskKey = (id: string) => ['tasks', 'detail', id] as const;
 

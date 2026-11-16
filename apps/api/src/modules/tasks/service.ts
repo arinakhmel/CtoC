@@ -1,10 +1,21 @@
-import type { CreateTaskInput, FeedQuery } from '@ctoc/shared';
+import { LIMITS, type CreateTaskInput, type FeedQuery } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
-import { newTaskData } from './domain';
-import { assertCanCreateTask, assertCanReadFeed } from './policy';
-import { findFeedCursor, findOpenTask, insertTask, listFeed, lockOpenTask } from './repo';
+import { deleteRefusal, newTaskData } from './domain';
+import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed, assertTaskOwner } from './policy';
+import {
+  cancelTaskWithoutExecutor,
+  findFeedCursor,
+  findOpenTask,
+  findTaskForDelete,
+  findTaskOfExecutor,
+  findTaskState,
+  insertTask,
+  listFeed,
+  listTasksOfExecutor,
+  lockOpenTask,
+} from './repo';
 
 /**
  * US-13. The details of one task, with the fixed price set by the customer. A task that is not in the feed
@@ -55,4 +66,44 @@ export async function getFeed(user: User, query: FeedQuery) {
 export async function createTask(user: User, input: CreateTaskInput) {
   assertCanCreateTask(user);
   return prisma.$transaction((tx) => insertTask(tx, newTaskData(input, user.id)));
+}
+
+/**
+ * US-22 sc.1. The details of a task for a student: the executor of the task reads it in any state, with its status,
+ * because an assigned task has left the feed. Everyone else gets the feed rule (INV-06). `getTask` stays feed-only,
+ * so applying to a task (US-18) does not change.
+ */
+export async function getTaskDetails(user: User, id: string) {
+  assertCanReadFeed(user);
+  const own = await findTaskOfExecutor(id, user.id);
+  if (own) return { task: own, asExecutor: true as const };
+  const task = await findOpenTask(id, new Date());
+  if (!task) throw new ApiError('NOT_FOUND');
+  return { task, asExecutor: false as const };
+}
+
+/** US-22 sc.1. «Мої активні завдання»: the tasks the caller works on. Only rows of the caller are read. */
+export async function getMyWork(user: User) {
+  assertCanListMyWork(user);
+  return listTasksOfExecutor(user.id, LIMITS.myWorkMax);
+}
+
+/**
+ * US-22 sc.2 (INV-13, A-08). The owner cancels a task that has no executor. Unknown id is 404, someone else's task is
+ * 403 NOT_TASK_OWNER, a task with an executor is 409 TASK_HAS_EXECUTOR so the student does not lose the terms, and a task
+ * in a state that cannot be cancelled is 409 INVALID_TRANSITION. The change is one conditional update (ADR-0007).
+ */
+export async function deleteTask(user: User, id: string): Promise<void> {
+  assertCanDeleteTask(user);
+  const task = await findTaskForDelete(id);
+  if (!task) throw new ApiError('NOT_FOUND');
+  assertTaskOwner(task, user);
+
+  await prisma.$transaction(async (tx) => {
+    const moved = await cancelTaskWithoutExecutor(tx, id, user.id);
+    if (moved.count === 0) {
+      const now = await findTaskState(tx, id);
+      throw new ApiError(deleteRefusal(now ?? task));
+    }
+  });
 }

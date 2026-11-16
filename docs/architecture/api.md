@@ -60,10 +60,10 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
 | GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S- (any student with a confirmed email) | 200 (body: §4.12) | 400 `VALIDATION_FAILED` (bad `limit` or `cursor`) · 401 `AUTH_REQUIRED` · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
-| GET | `/api/tasks/:id` | US-13, US-15, US-22 | S- (published) · Own · Ex · M | 200 | 404 `NOT_FOUND` |
+| GET | `/api/tasks/:id` | US-13, US-15, US-22 | S- (published) · Ex (own assigned task) · Own · M | 200 (body: §4.13, executor: §4.13a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` · 404 `NOT_FOUND` |
 | POST | `/api/tasks` | US-16, US-17, US-40/S3 | C (confirmed) | 201, always `pending_moderation` | 400 `VALIDATION_FAILED`, `TITLE_TOO_SHORT`, `PRICE_BELOW_MIN`, `PRICE_ABOVE_MAX`, `DEADLINE_IN_PAST` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | GET | `/api/my/tasks` | US-50 | C | 200 (each task with `applicationsCount`) | |
-| DELETE | `/api/tasks/:id` | US-22/S2, US-50, A-08 | Own | 204 | 403 `NOT_TASK_OWNER` · 409 `TASK_HAS_EXECUTOR` |
+| DELETE | `/api/tasks/:id` | US-22/S2, US-50, A-08 | Own | 204 | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` · 409 `TASK_HAS_EXECUTOR`, `INVALID_TRANSITION` |
 
 ### Applications and executor selection
 
@@ -79,7 +79,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| GET | `/api/me/work` | US-22, US-29 | S+ (executor) | 200: the student's tasks as executor, with status | |
+| GET | `/api/me/work` | US-22, US-29 | S+ (executor) | 200 (body: §4.13a): the student's tasks as executor, with status | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` |
 | POST | `/api/tasks/:id/result/files` | US-27 | Ex | 201 | 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_TOO_LARGE`, `TOO_MANY_FILES` · 403 `NOT_EXECUTOR` · 409 `RESULT_LOCKED` |
 | DELETE | `/api/tasks/:id/result/files/:fileId` | US-29/S3 | Ex | 204 | 403 · 409 `RESULT_LOCKED` |
 | POST | `/api/tasks/:id/result/submit` | US-28, US-29, US-32/S1 | Ex | 200 | 403 `NOT_EXECUTOR` · 409 `NO_RESULT_FILES`, `ALREADY_IN_REVIEW`, `INVALID_TRANSITION` |
@@ -531,4 +531,20 @@ GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
 
 - Access: the same as the feed (any student with a confirmed email), checked first: 401 `AUTH_REQUIRED`, 403 `ROLE_FORBIDDEN`, 403 `EMAIL_NOT_CONFIRMED`.
 - Visibility for a student is the feed rule (INV-06). A task that is pending, rejected, cancelled, taken or expired is 404 `NOT_FOUND`, so its existence is not leaked (US-14/S2).
-- The owner, the executor and the moderator read other states through this endpoint with US-14, US-22 and US-40. This section is extended then.
+- The executor of the task reads it in any state (§4.13a, US-22). The owner and the moderator read other states with US-40 and US-50. This section is extended then.
+
+### 4.13a The executor's view of a task (US-22)
+
+`GET /api/tasks/:id` for the executor of the task, and each item of `GET /api/me/work`: the §4.13 fields plus `status` and `assignedAt`. An assigned task has left the feed, so only its executor can read it; another student still gets 404 `NOT_FOUND`. No customer or moderation fields.
+
+```json
+200 OK
+{ "task": { "id": "7d0c…", "title": "Логотип для кав’ярні", "description": "…",
+            "priceKopecks": 50000, "commissionKopecks": 5000, "netKopecks": 45000,
+            "deadlineAt": "2030-05-20T15:30:00Z", "publishedAt": "2026-11-10T10:00:00Z",
+            "status": "in_progress", "assignedAt": "2026-11-11T10:00:00Z" } }
+```
+
+`GET /api/me/work` returns `{ "tasks": [ … ] }`: the tasks where the caller is the executor, in every status, last assigned first, at most 100 (OQ-29).
+
+`DELETE /api/tasks/:id` (US-22/S2, INV-13): the owner cancels a task that has no executor. 204 and the task becomes `cancelled` from `pending_moderation` or `published`. With an executor: 409 `TASK_HAS_EXECUTOR`, nothing changes. In any other state (rejected, cancelled, done): 409 `INVALID_TRANSITION`. Someone else's task: 403 `NOT_TASK_OWNER`. It is one conditional update.

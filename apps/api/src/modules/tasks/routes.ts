@@ -2,13 +2,23 @@ import { createTaskSchema, feedQuerySchema, type CreateTaskInput, type FeedQuery
 import { Router, type RequestHandler } from 'express';
 import { requireUser } from '../../http/auth';
 import { parsedQuery, validateBody, validateQuery } from '../../http/validate';
-import { assertCanCreateTask, assertCanReadFeed } from './policy';
-import { serializeFeedTask, serializeOwnTask } from './serializer';
-import { createTask, getFeed, getTask } from './service';
+import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed } from './policy';
+import { serializeFeedTask, serializeOwnTask, serializeWorkTask } from './serializer';
+import { createTask, deleteTask, getFeed, getMyWork, getTaskDetails } from './service';
 
 /** The access check as a step of its own, so it runs before the query is validated (403 before 400). */
 const requireFeedAccess: RequestHandler = (req, _res, next) => {
   assertCanReadFeed(req.user!);
+  next();
+};
+
+const requireWorkAccess: RequestHandler = (req, _res, next) => {
+  assertCanListMyWork(req.user!);
+  next();
+};
+
+const requireDeleteAccess: RequestHandler = (req, _res, next) => {
+  assertCanDeleteTask(req.user!);
   next();
 };
 
@@ -26,8 +36,18 @@ export function tasksRouter(): Router {
   });
 
   router.get('/tasks/:id', requireUser, requireFeedAccess, async (req, res) => {
-    const task = await getTask(req.user!, String(req.params.id));
-    res.json({ task: serializeFeedTask(task) });
+    const { task, asExecutor } = await getTaskDetails(req.user!, String(req.params.id));
+    res.json({ task: asExecutor ? serializeWorkTask(task) : serializeFeedTask(task) });
+  });
+
+  router.get('/me/work', requireUser, requireWorkAccess, async (req, res) => {
+    const tasks = await getMyWork(req.user!);
+    res.json({ tasks: tasks.map(serializeWorkTask) });
+  });
+
+  router.delete('/tasks/:id', requireUser, requireDeleteAccess, async (req, res) => {
+    await deleteTask(req.user!, String(req.params.id));
+    res.status(204).end();
   });
 
   router.post('/tasks', requireUser, requireCreateAccess, validateBody(createTaskSchema), async (req, res) => {
