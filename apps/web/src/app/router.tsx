@@ -5,6 +5,7 @@ import { ConfirmEmailPage } from '../features/identity/pages/ConfirmEmailPage';
 import { LoginPage } from '../features/identity/pages/LoginPage';
 import { MyProfilePage } from '../features/identity/pages/MyProfilePage';
 import { ProfilePage } from '../features/identity/pages/ProfilePage';
+import { MyApplicationsPage } from '../features/applications/pages/MyApplicationsPage';
 import { FeedPage } from '../features/tasks/pages/FeedPage';
 import { NewTaskPage } from '../features/tasks/pages/NewTaskPage';
 import { TaskPage } from '../features/tasks/pages/TaskPage';
@@ -24,6 +25,7 @@ const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
   '/confirm-email': (page) => <ConfirmEmailPage page={page} />,
   '/feed': (page) => <FeedPage page={page} />,
   '/tasks/:id': (page) => <TaskPage page={page} />,
+  '/me/applications': (page) => <MyApplicationsPage page={page} />,
   '/c/tasks/new': (page) => <NewTaskPage page={page} />,
 };
 const renderPage = (page: PageConfig) => IMPLEMENTED[page.path]?.(page) ?? <PageStub page={page} />;
