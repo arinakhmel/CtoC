@@ -5,7 +5,7 @@ import type { Candidate } from '../queries/candidates';
 /**
  * US-24. The applicants of a task. Each name is a plain link to the public profile /u/:userId (sc.1): it opens as a page,
  * not a dialog or a new window, so on a phone it fills the screen (sc.3). The badge shows only when the student is
- * verified now (sc.2, INV-03).
+ * verified now (sc.2, INV-03). The bio («Про мене») shows as plain text when the student wrote one (sc.1).
  */
 export function CandidateList({ candidates }: { candidates: Candidate[] }) {
   if (candidates.length === 0) return <p role="status">Відгуків поки немає.</p>;
@@ -19,6 +19,7 @@ export function CandidateList({ candidates }: { candidates: Candidate[] }) {
               <Link to={`/u/${candidate.student.id}`}>{candidate.student.displayName}</Link>
             </h3>
             {candidate.student.verified && <p className="badge badge-verified">Верифікований студент</p>}
+            {candidate.student.bio !== '' && <p className="bio">Про мене: {candidate.student.bio}</p>}
             {candidate.student.skills.length > 0 && (
               <ul aria-label="Навички" className="skills">
                 {candidate.student.skills.map((name) => (

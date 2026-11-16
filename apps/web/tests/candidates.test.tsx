@@ -9,7 +9,7 @@ import { createTestRouter, providerFuture } from '../src/app/router';
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 const apiError = (code: string, status: number) => json({ error: { code, message: 'x' } }, status);
 
-const student = (id: string, displayName: string, verified: boolean, skills: string[] = []) => ({ id, displayName, verified, skills, bio: '' });
+const student = (id: string, displayName: string, verified: boolean, skills: string[] = [], bio = '') => ({ id, displayName, verified, skills, bio });
 const candidate = (id: string, who: ReturnType<typeof student>, note: string | null = null) => ({
   id,
   taskId: 't1',
@@ -54,6 +54,19 @@ describe('/c/tasks/:id candidates (US-24)', () => {
     expect(within(item).getByText(/Маю досвід/)).toBeInTheDocument();
     expect(within(item).getByRole('link', { name: 'Олена Коваль' })).toHaveAttribute('href', '/u/u1');
     expect(screen.getByRole('heading', { level: 1, name: 'Логотип для кав’ярні' })).toBeInTheDocument();
+  });
+
+  it('US-24 sc.1 the bio of a student is shown as text when there is one, and nothing when it is empty', async () => {
+    applications = [
+      candidate('a1', student('u1', 'Олена Коваль', true, [], 'Студентка 2 курсу, пишу на Java')),
+      candidate('a2', student('u2', 'Петро Іваненко', true)),
+    ];
+    open();
+
+    const withBio = await screen.findByRole('article', { name: 'Олена Коваль' });
+    expect(within(withBio).getByText('Про мене: Студентка 2 курсу, пишу на Java')).toBeInTheDocument();
+    const withoutBio = screen.getByRole('article', { name: 'Петро Іваненко' });
+    expect(within(withoutBio).queryByText(/Про мене/)).not.toBeInTheDocument();
   });
 
   it('US-24 sc.2 an applicant who is not verified has no badge', async () => {
