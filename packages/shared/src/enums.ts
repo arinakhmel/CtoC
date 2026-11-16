@@ -19,6 +19,17 @@ export const TASK_STATUSES = [
 ] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const taskStatusSchema = z.enum(TASK_STATUSES);
+/** The words the user sees for a task status (US-22). One place, so the lists and cards show the same labels. */
+export const TASK_STATUS_UK: Record<TaskStatus, string> = {
+  pending_moderation: 'На модерації',
+  published: 'Опубліковано',
+  rejected: 'Відхилено модератором',
+  in_progress: 'У роботі',
+  in_review: 'На перевірці',
+  revision: 'На доопрацюванні',
+  done: 'Завершено',
+  cancelled: 'Скасовано',
+};
 
 /** Application (Відгук). domain-model.md §3.3. */
 export const APPLICATION_STATUSES = ['sent', 'accepted', 'rejected'] as const;

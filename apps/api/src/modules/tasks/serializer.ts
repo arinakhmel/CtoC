@@ -34,3 +34,10 @@ export const serializeOwnTask = (task: Pick<Task, 'id' | 'title' | 'description'
   status: task.status,
   createdAt: task.createdAt.toISOString(),
 });
+
+/** api.md §4.13a. The executor's view: the feed fields plus `status` and `assignedAt`. Still no customer or moderation fields. */
+export const serializeWorkTask = (task: FeedTaskRow & Pick<Task, 'status' | 'assignedAt'>) => ({
+  ...serializeFeedTask(task),
+  status: task.status,
+  assignedAt: task.assignedAt?.toISOString() ?? null,
+});
