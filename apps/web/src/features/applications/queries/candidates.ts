@@ -8,7 +8,7 @@ export interface Candidate extends Application {
 }
 
 export interface CandidatesResponse {
-  task: { id: string; title: string; status: TaskStatus; priceKopecks: number };
+  task: { id: string; title: string; status: TaskStatus; priceKopecks: number; deadlineAt?: string; hasExecutor?: boolean };
   applications: Candidate[];
   /** True when the task has more applicants than the list holds (api.md §4.3d). */
   truncated?: boolean;

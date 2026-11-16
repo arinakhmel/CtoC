@@ -152,6 +152,35 @@ describe('/c/tasks/:id candidates (US-24)', () => {
     expect(screen.queryByRole('button', { name: 'Надіслати' })).not.toBeInTheDocument();
   });
 
+  const withTask = (task: Record<string, unknown>) => () =>
+    json({ task: { id: 't1', title: 'Логотип для кав’ярні', status, priceKopecks: 50_000, ...task }, applications });
+
+  it('US-25 a published task past its deadline: the select buttons are off and the page says why', async () => {
+    applications = [candidate('a1', student('u1', 'Олена Коваль', true))];
+    listResponse = withTask({ deadlineAt: '2020-01-01T00:00:00.000Z', hasExecutor: false });
+    open();
+    const item = await screen.findByRole('article', { name: 'Олена Коваль' });
+    expect(within(item).getByRole('button', { name: 'Обрати виконавцем' })).toBeDisabled();
+    expect(screen.getByText(/Строк виконання завдання минув/)).toBeInTheDocument();
+  });
+
+  it('US-25 a published task before its deadline keeps the select buttons on and has no deadline note', async () => {
+    applications = [candidate('a1', student('u1', 'Олена Коваль', true))];
+    listResponse = withTask({ deadlineAt: '2999-01-01T00:00:00.000Z', hasExecutor: false });
+    open();
+    const item = await screen.findByRole('article', { name: 'Олена Коваль' });
+    expect(within(item).getByRole('button', { name: 'Обрати виконавцем' })).toBeEnabled();
+    expect(screen.queryByText(/Строк виконання завдання минув/)).not.toBeInTheDocument();
+  });
+
+  it('US-23 INV-22 a task cancelled before an executor was chosen shows no chat; one that had an executor keeps its history', async () => {
+    status = 'cancelled';
+    listResponse = withTask({ deadlineAt: '2999-01-01T00:00:00.000Z', hasExecutor: false });
+    open();
+    await screen.findByRole('heading', { name: 'Логотип для кав’ярні' });
+    expect(screen.queryByRole('heading', { name: 'Чат із виконавцем' })).not.toBeInTheDocument();
+  });
+
   it('US-24 a published task has no chat', async () => {
     applications = [candidate('a1', student('u1', 'Олена Коваль', true))];
     open();

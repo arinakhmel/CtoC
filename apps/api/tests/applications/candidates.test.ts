@@ -53,7 +53,14 @@ describe('Candidate list of a task: US-24', () => {
     const res = await list(task.id, owner.cookie);
 
     expect(res.status).toBe(200);
-    expect(res.body.task).toEqual({ id: task.id, title: 'Логотип для кав’ярні', status: 'published', priceKopecks: 50_000 });
+    expect(res.body.task).toEqual({
+      id: task.id,
+      title: 'Логотип для кав’ярні',
+      status: 'published',
+      priceKopecks: 50_000,
+      deadlineAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T.*Z$/),
+      hasExecutor: false,
+    });
     expect(res.body.applications).toHaveLength(2);
     expect(res.body.applications.map((a: { student: { displayName: string } }) => a.student.displayName)).toEqual(['Петро Іваненко', 'Олена Коваль']);
     expect(res.body.applications[0]).toMatchObject({ status: 'sent', note: 'Маю досвід', student: { id: petro.user.id, verified: true, skills: [], bio: '' } });

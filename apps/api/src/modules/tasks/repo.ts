@@ -111,7 +111,7 @@ export const lockChatTask = (tx: Prisma.TransactionClient, id: string, userId: s
 
 /** US-24. The owner's row of a task, to check ownership and to head the candidate list. */
 export const findTaskOwnerView = (id: string) =>
-  prisma.task.findUnique({ where: { id }, select: { id: true, customerId: true, title: true, status: true, priceKopecks: true, executorId: true } });
+  prisma.task.findUnique({ where: { id }, select: { id: true, customerId: true, title: true, status: true, priceKopecks: true, executorId: true, deadlineAt: true } });
 
 /**
  * US-25 sc.1, sc.2 (INV-10, ADR-0007). The one conditional update that gives a task its executor: only the owner's task, still

@@ -73,7 +73,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | POST | `/api/tasks/:id/applications` | US-18, US-19, US-42 | S+ | 201 | 400 `NOTE_TOO_LONG` · 403 `STUDENT_NOT_VERIFIED` · 404 `NOT_FOUND` (not in the feed: not published, assigned, expired or unknown) · 409 `ALREADY_APPLIED`, `TASK_NOT_OPEN` (race only) |
 | GET | `/api/me/applications` | US-20 | S- | 200 (body: §4.3a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | GET | `/api/tasks/:id/applications` | US-24, US-25 | Own | 200 (body: §4.3d) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` |
-| POST | `/api/tasks/:id/applications/:appId/reject` | US-20/S3 | Own | 200 | 403 · 409 `APPLICATION_NOT_PENDING` |
+| POST | `/api/tasks/:id/applications/:appId/reject` | US-20/S3 | Own | *Planned, not implemented yet (W-20).* 200 | 403 · 409 `APPLICATION_NOT_PENDING` |
 | POST | `/api/tasks/:id/assign` | US-25, US-26, US-21 | Own | 200 (body: §4.1) | 400 `VALIDATION_FAILED` (no `applicationId`, or a bad `Idempotency-Key`) · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` (task, or an application that is not this task's) · 409 `TASK_ALREADY_ASSIGNED`, `TASK_NOT_OPEN`, `APPLICATION_NOT_PENDING` · 422 `INSUFFICIENT_FUNDS` |
 
 ### Delivery and acceptance
@@ -376,13 +376,14 @@ A notification is created inside the business transaction it reports (INV-23), t
 
 ### 4.3d `GET /api/tasks/:id/applications` (the owner's candidate list, US-24)
 
-Access "Own": the customer who owns the task. A student is 403 `ROLE_FORBIDDEN`, another customer 403 `NOT_TASK_OWNER`, an unknown task 404. The list is oldest first, at most 100. It is read-only. The task header (`task`) is there because the owner has no other endpoint for the task yet (OQ-31).
+Access "Own": the customer who owns the task. A student is 403 `ROLE_FORBIDDEN`, another customer 403 `NOT_TASK_OWNER`, an unknown task 404. The list is oldest first, at most 100. It is read-only. The task header (`task`) is there because the owner has no other endpoint for the task yet (OQ-31). It carries `deadlineAt` (the page turns the select off after it) and `hasExecutor` (a cancelled task that never had one shows no chat).
 
 The answer has `truncated`: `true` when the task has more than 100 applicants and the list was cut, so the page can say so. Each applicant is the application (§4.3) plus the public profile of the student (§4.9): `verified` is `studentVerifiedAt IS NOT NULL` as it is now (INV-03), so a student whose verification was revoked after applying shows `false` (US-24/S2, W-01). No email, role or hash, and no price.
 
 ```json
 200 OK
-{ "task": { "id": "7d0c…", "title": "Логотип для кав’ярні", "status": "published", "priceKopecks": 50000 },
+{ "task": { "id": "7d0c…", "title": "Логотип для кав’ярні", "status": "published", "priceKopecks": 50000,
+            "deadlineAt": "2030-05-20T15:30:00Z", "hasExecutor": false },
   "truncated": false,
   "applications": [
     { "id": "a91e…", "taskId": "7d0c…", "status": "sent", "note": "Маю досвід", "createdAt": "2026-11-12T09:15:00Z",

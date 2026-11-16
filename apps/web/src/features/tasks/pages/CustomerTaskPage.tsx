@@ -32,6 +32,11 @@ export function CustomerTaskPage() {
   }, [errorCode, navigate]);
 
   const data = candidates.data && !candidates.isError ? candidates.data : null;
+  // A published task past its deadline cannot be selected for (409 TASK_NOT_OPEN), so the buttons are off and the page says why.
+  const deadlinePassed = data?.task.deadlineAt !== undefined && new Date(data.task.deadlineAt).getTime() <= Date.now();
+  const canSelect = data?.task.status === 'published' && !deadlinePassed;
+  // A task cancelled before an executor was chosen never had a chat. `hasExecutor` is absent in older answers: then show it.
+  const showChat = data !== null && CHAT_STATUSES.includes(data.task.status) && !(data.task.status === 'cancelled' && data.task.hasExecutor === false);
 
   return (
     <article aria-labelledby="page-title">
@@ -54,10 +59,13 @@ export function CustomerTaskPage() {
           <p>Фіксована ціна: {formatUah(data.task.priceKopecks)}</p>
           <section aria-labelledby="candidates-title">
             <h2 id="candidates-title">Відгуки студентів</h2>
+            {data.task.status === 'published' && deadlinePassed && (
+              <p role="status">Строк виконання завдання минув, тому обрати виконавця вже не можна.</p>
+            )}
             {data.truncated && <p role="status">Показано перші {LIMITS.candidatesMax} відгуків, решту поки не видно.</p>}
-            <CandidateList taskId={data.task.id} candidates={data.applications} canSelect={data.task.status === 'published'} priceKopecks={data.task.priceKopecks} />
+            <CandidateList taskId={data.task.id} candidates={data.applications} canSelect={canSelect} priceKopecks={data.task.priceKopecks} />
           </section>
-          {CHAT_STATUSES.includes(data.task.status) && (
+          {showChat && (
             <ChatPanel
               taskId={data.task.id}
               status={data.task.status}

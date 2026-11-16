@@ -66,14 +66,16 @@ export function ChatPanel({
 
       {messages.isSuccess && messages.data.length === 0 && <p role="status">Повідомлень поки немає.</p>}
 
-      <ul role="log" aria-label="Повідомлення чату">
-        {(messages.data ?? []).map((message) => (
-          <li key={message.id}>
-            <strong>{message.mine ? 'Ви' : message.from === 'customer' ? 'Замовник' : 'Студент'}:</strong> {message.body}{' '}
-            <time dateTime={message.createdAt}>{formatDeadline(message.createdAt)}</time>
-          </li>
-        ))}
-      </ul>
+      <div role="log" aria-label="Повідомлення чату">
+        <ul>
+          {(messages.data ?? []).map((message) => (
+            <li key={message.id}>
+              <strong>{message.mine ? 'Ви' : message.from === 'customer' ? 'Замовник' : 'Студент'}:</strong> {message.body}{' '}
+              <time dateTime={message.createdAt}>{formatDeadline(message.createdAt)}</time>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {shownError && <p role="alert">{messageFor(shownError)}</p>}
 

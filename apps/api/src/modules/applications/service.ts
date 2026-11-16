@@ -7,6 +7,7 @@ import { getPublicProfiles } from '../identity/service';
 import { notifyExecutorSelected } from '../notifications/service';
 import { getEscrowByKey, holdEscrow } from '../payments/service';
 import { assertTaskOpen, assignTask, getTask, getTaskOwnerView } from '../tasks/service';
+import { IN_PROGRESS } from '../tasks/domain';
 import { newApplicationData } from './domain';
 import { assertCanApply, assertCanAssign, assertCanListCandidates, assertCanReadMyApplications, assertOwnsTask } from './policy';
 import {
@@ -123,7 +124,7 @@ export async function assignExecutor(user: User, task: OwnedTask, input: AssignE
       const rejected = await rejectOtherApplications(tx, task.id, application.id, now);
       await notifyExecutorSelected(tx, application.studentId, { id: task.id, title: task.title });
       return {
-        task: { id: task.id, status: 'in_progress', executorId: application.studentId, priceKopecks: task.priceKopecks },
+        task: { id: task.id, status: IN_PROGRESS, executorId: application.studentId, priceKopecks: task.priceKopecks },
         escrow,
         acceptedId: application.id as string | null,
         rejectedCount: rejected.count,

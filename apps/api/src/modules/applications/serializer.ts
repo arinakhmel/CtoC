@@ -37,11 +37,20 @@ export const serializeCandidate = (application: Application, student: CandidateS
   student: { id: student.id, displayName: student.displayName, verified: student.verified, skills: student.skills, bio: student.bio },
 });
 
-export const serializeOwnerTask = (task: { id: string; title: string; status: string; priceKopecks: number }) => ({
+export const serializeOwnerTask = (task: {
+  id: string;
+  title: string;
+  status: string;
+  priceKopecks: number;
+  deadlineAt: Date;
+  executorId: string | null;
+}) => ({
   id: task.id,
   title: task.title,
   status: task.status,
   priceKopecks: task.priceKopecks,
+  deadlineAt: task.deadlineAt.toISOString(),
+  hasExecutor: task.executorId !== null,
 });
 
 /** api.md §4.1. The result of selecting an executor. No ids of other applicants' students, no balances. */
