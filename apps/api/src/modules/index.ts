@@ -1,6 +1,10 @@
 import { Router } from 'express';
+import { applicationsRouter } from './applications/routes';
+import { chatRouter } from './chat/routes';
 import { devRouter } from './dev/routes';
 import { identityRouter } from './identity/routes';
+import { notificationsRouter } from './notifications/routes';
+import { paymentsRouter } from './payments/routes';
 import { tasksRouter } from './tasks/routes';
 import { verificationRouter } from './verification/routes';
 
@@ -14,6 +18,10 @@ export function createModulesRouter(): Router {
   router.use(identityRouter());
   router.use(verificationRouter());
   router.use(tasksRouter());
+  router.use(applicationsRouter());
+  router.use(notificationsRouter());
+  router.use(chatRouter());
+  router.use(paymentsRouter());
   router.use(devRouter());
   return router;
 }

@@ -13,6 +13,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | Uploads | `multipart/form-data` with the field `file`. |
 | Money | Integer kopecks in fields ending in `Kopecks`. |
 | Time | ISO-8601 UTC strings. |
+| Caching | Every `/api` answer has `Cache-Control: no-store` (set once for the whole API): balances, chats, notifications, lists and badges are personal or change at once. |
 | Ids | Opaque strings (UUID). |
 | Lists | Feed and lists use `?cursor=<id>&limit=20`. Chat and notifications use `?after=<id>` for polling. |
 | Hidden resources | If a resource exists but the caller may not know it exists, the answer is 404, not 403 (for example an unpublished task in the feed). If the caller knows the resource and lacks rights, the answer is 403 (US-23/S3, US-31/S2, US-39/S3). |
@@ -60,26 +61,26 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
 | GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S- (any student with a confirmed email) | 200 (body: §4.12) | 400 `VALIDATION_FAILED` (bad `limit` or `cursor`) · 401 `AUTH_REQUIRED` · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
-| GET | `/api/tasks/:id` | US-13, US-15, US-22 | S- (published) · Own · Ex · M | 200 | 404 `NOT_FOUND` |
+| GET | `/api/tasks/:id` | US-13, US-15, US-22 | S- (published) · Ex (own assigned task) · Own · M | 200 (body: §4.13, executor: §4.13a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` · 404 `NOT_FOUND` |
 | POST | `/api/tasks` | US-16, US-17, US-40/S3 | C (confirmed) | 201, always `pending_moderation` | 400 `VALIDATION_FAILED`, `TITLE_TOO_SHORT`, `PRICE_BELOW_MIN`, `PRICE_ABOVE_MAX`, `DEADLINE_IN_PAST` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | GET | `/api/my/tasks` | US-50 | C | 200 (each task with `applicationsCount`) | |
-| DELETE | `/api/tasks/:id` | US-22/S2, US-50, A-08 | Own | 204 | 403 `NOT_TASK_OWNER` · 409 `TASK_HAS_EXECUTOR` |
+| DELETE | `/api/tasks/:id` | US-22/S2, US-50, A-08 | Own | 204 | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` · 409 `TASK_HAS_EXECUTOR`, `INVALID_TRANSITION` |
 
 ### Applications and executor selection
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| POST | `/api/tasks/:id/applications` | US-18, US-19, US-42 | S+ | 201 | 400 `NOTE_TOO_LONG` · 403 `STUDENT_NOT_VERIFIED` · 404 `NOT_FOUND` (not published) · 409 `ALREADY_APPLIED`, `TASK_NOT_OPEN` |
-| GET | `/api/me/applications` | US-20 | S- | 200 | |
-| GET | `/api/tasks/:id/applications` | US-24, US-25 | Own | 200 | 403 `NOT_TASK_OWNER` |
-| POST | `/api/tasks/:id/applications/:appId/reject` | US-20/S3 | Own | 200 | 403 · 409 `APPLICATION_NOT_PENDING` |
-| POST | `/api/tasks/:id/assign` | US-25, US-26, US-21 | Own | 200 | 403 `NOT_TASK_OWNER` · 404 `NOT_FOUND` (application) · 409 `TASK_ALREADY_ASSIGNED`, `TASK_NOT_OPEN` · 422 `INSUFFICIENT_FUNDS` |
+| POST | `/api/tasks/:id/applications` | US-18, US-19, US-42 | S+ | 201 | 400 `NOTE_TOO_LONG` · 403 `STUDENT_NOT_VERIFIED` · 404 `NOT_FOUND` (not in the feed: not published, assigned, expired or unknown) · 409 `ALREADY_APPLIED`, `TASK_NOT_OPEN` (race only) |
+| GET | `/api/me/applications` | US-20 | S- | 200 (body: §4.3a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
+| GET | `/api/tasks/:id/applications` | US-24, US-25 | Own | 200 (body: §4.3d) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` |
+| POST | `/api/tasks/:id/applications/:appId/reject` | US-20/S3 | Own | *Planned, not implemented yet (W-20).* 200 | 403 · 409 `APPLICATION_NOT_PENDING` |
+| POST | `/api/tasks/:id/assign` | US-25, US-26, US-21 | Own | 200 (body: §4.1) | 400 `VALIDATION_FAILED` (no `applicationId`, or a bad `Idempotency-Key`) · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` (task, or an application that is not this task's) · 409 `TASK_ALREADY_ASSIGNED`, `TASK_NOT_OPEN`, `APPLICATION_NOT_PENDING` · 422 `INSUFFICIENT_FUNDS` |
 
 ### Delivery and acceptance
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| GET | `/api/me/work` | US-22, US-29 | S+ (executor) | 200: the student's tasks as executor, with status | |
+| GET | `/api/me/work` | US-22, US-29 | S+ (executor) | 200 (body: §4.13a): the student's tasks as executor, with status | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` |
 | POST | `/api/tasks/:id/result/files` | US-27 | Ex | 201 | 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_TOO_LARGE`, `TOO_MANY_FILES` · 403 `NOT_EXECUTOR` · 409 `RESULT_LOCKED` |
 | DELETE | `/api/tasks/:id/result/files/:fileId` | US-29/S3 | Ex | 204 | 403 · 409 `RESULT_LOCKED` |
 | POST | `/api/tasks/:id/result/submit` | US-28, US-29, US-32/S1 | Ex | 200 | 403 `NOT_EXECUTOR` · 409 `NO_RESULT_FILES`, `ALREADY_IN_REVIEW`, `INVALID_TRANSITION` |
@@ -91,18 +92,18 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| GET | `/api/tasks/:id/messages?after=` | US-23 | Own · Ex | 200 | 403 `NOT_CHAT_PARTICIPANT` |
-| POST | `/api/tasks/:id/messages` | US-23 | Own · Ex | 201 | 400 `MESSAGE_EMPTY`, `MESSAGE_TOO_LONG` · 403 `NOT_CHAT_PARTICIPANT` · 409 `CHAT_CLOSED` |
-| GET | `/api/me/notifications?after=` | US-21, US-30, US-47, US-48, US-49 | A | 200 | |
-| POST | `/api/me/notifications/:id/read` | US-21/S3 | A (recipient) | 204 | 404 |
+| GET | `/api/tasks/:id/messages?after=` | US-23 | Own · Ex | 200 (body: §4.3c) | 400 `VALIDATION_FAILED` (bad `after`) · 401 `AUTH_REQUIRED` · 403 `NOT_CHAT_PARTICIPANT` · 404 `NOT_FOUND` |
+| POST | `/api/tasks/:id/messages` | US-23 | Own · Ex | 201 (body: §4.3c) | 400 `MESSAGE_EMPTY`, `MESSAGE_TOO_LONG` · 401 `AUTH_REQUIRED` · 403 `NOT_CHAT_PARTICIPANT` · 404 `NOT_FOUND` · 409 `CHAT_CLOSED` |
+| GET | `/api/me/notifications?after=&limit=` | US-21, US-30, US-47, US-48, US-49 | A | 200 (body: §4.3b) | 400 `VALIDATION_FAILED` (bad `limit` or `after`) · 401 `AUTH_REQUIRED` |
+| POST | `/api/me/notifications/:id/read` | US-21/S3 | A (recipient) | 204 (repeat is a no-op 204) | 401 `AUTH_REQUIRED` · 404 `NOT_FOUND` (not yours, or unknown) |
 
 ### Payments
 
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
-| GET | `/api/me/balance` | US-34 | S+ · C | 200 | |
+| GET | `/api/me/balance` | US-26, US-34 | S+ · C | 200 (body: §4.1a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` |
 | GET | `/api/me/finance` | US-35 | S+ | 200 | |
-| POST | `/api/me/balance/sandbox-topup` | US-26 (OQ-09) | C | 200 | 400 `VALIDATION_FAILED` |
+| POST | `/api/me/balance/sandbox-topup` | US-26 (OQ-09) | C | 200 (body: §4.1a) | 400 `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` · 429 `RATE_LIMITED` |
 | POST | `/api/me/withdrawals` | US-36 | S+ | 201 | 400 `CARD_INVALID` · 422 `INSUFFICIENT_BALANCE` |
 | GET | `/api/me/withdrawals` | US-36 | S+ | 200 | |
 
@@ -194,7 +195,7 @@ Messages marked **[AC]** are quoted from a Gherkin scenario and must match exact
 | 409 | `VERIFICATION_PENDING` | A request is already waiting. | «Ваш документ уже очікує перевірки» | INV-04 |
 | 409 | `ALREADY_VERIFIED` | Already a verified student. | «Статус студента вже підтверджено» | US-08 |
 | 409 | `ALREADY_APPLIED` | Second application to the same task. | **[AC]** «Ви вже подали відгук на це завдання» | US-18/S2 |
-| 409 | `TASK_NOT_OPEN` | Task is not `published`, or already has an executor. | «Завдання вже недоступне для відгуків» | US-18/S1 |
+| 409 | `TASK_NOT_OPEN` | Apply: the task left the feed between the visibility check and the insert (taken, unpublished or expired in that moment); a task already out of the feed is 404 `NOT_FOUND` (OQ-24). Assign: the task is not `published`, its deadline has passed, or its price changed since it was read. | «Завдання вже недоступне» | US-18/S1, US-25 |
 | 409 | `TASK_ALREADY_ASSIGNED` | An executor is already selected. | «Виконавця вже обрано» | US-25/S2 |
 | 409 | `TASK_HAS_EXECUTOR` | Delete or unpublish after an executor was selected. | «Завдання з виконавцем не можна видалити» | US-22/S2 |
 | 409 | `APPLICATION_NOT_PENDING` | The application was already decided. | «Рішення щодо відгуку вже ухвалено» | US-20 |
@@ -203,7 +204,7 @@ Messages marked **[AC]** are quoted from a Gherkin scenario and must match exact
 | 409 | `ALREADY_IN_REVIEW` | Submitting again while in `in_review`. | «Результат уже на перевірці» | US-28/S3 |
 | 409 | `TASK_NOT_IN_REVIEW` | Accept or return when not in `in_review`. | «Немає результату на перевірці» | US-32/CL |
 | 409 | `TASK_ALREADY_DONE` | Accept or return after `done`. | «Угоду вже завершено» | US-31/S3, US-32/S2 |
-| 409 | `CHAT_CLOSED` | Writing after `done` or `cancelled`. | «Чат закрито» | A-20 |
+| 409 | `CHAT_CLOSED` | Writing after `done` or `cancelled`, or before an executor is chosen (the chat is not open yet). | «Чат закрито» | A-20 |
 | 409 | `ALREADY_DECIDED` | Second moderator decision. | «Рішення вже ухвалено» | NFR-18 |
 | 409 | `DOMAIN_EXISTS` | Duplicate university domain. | «Домен уже є у списку» | A-17 |
 | 409 | `INVALID_TRANSITION` | Any other illegal state change. | «Дія недоступна в поточному статусі» | domain-model §3 |
@@ -222,7 +223,9 @@ The 422, 429 and 500 codes go beyond the requested 400–409 set. They follow th
 
 This is one transaction: escrow hold, task `in_progress`, the chosen application `accepted`, the others `rejected`, and a notification (INV-11).
 
-The request carries an idempotency key, so a double-click or retry returns the same result (US-26/S3).
+The request carries an idempotency key, so a double-click or retry returns the same result (US-26/S3). The `Idempotency-Key` header is a client-made value of 8 to 100 characters (a UUID). With the same key again the first result is returned and nothing is charged twice. A key already used for another task is 400, also when two requests race for it. The same key with a different `applicationId` for the same task still returns the first result: the key names the attempt, not the application. For a repeat, the key is looked up first, so the `applicationId` of the repeat is not checked at all: even an id that belongs to another task gets the first result (200). It is harmless, because nothing is written or charged on a repeat. Without the header the server makes a key, so the first call works and a repeat is 409 `TASK_ALREADY_ASSIGNED` (OQ-32). Access is checked before the body: another customer's task is 403 even with a bad body.
+
+The steps, all in one transaction (INV-10, INV-11, INV-12): the task `published` → `in_progress` with the executor (the deadline must still be in the future, else 409 `TASK_NOT_OPEN`); the chosen `sent` application → `accepted` (409 `APPLICATION_NOT_PENDING` if it was decided); the conditional debit of the customer's balance, the escrow `held` and the `hold` ledger entry (422 `INSUFFICIENT_FUNDS` rolls everything back); every other `sent` application → `rejected`; the notification to the student.
 
 ```http
 POST /api/tasks/7d0c…/assign
@@ -253,6 +256,17 @@ Another tab already assigned an executor (US-25/S2):
 ```json
 409 Conflict
 { "error": { "code": "TASK_ALREADY_ASSIGNED", "message": "Виконавця вже обрано" } }
+```
+
+### 4.1a `GET /api/me/balance` and `POST /api/me/balance/sandbox-topup` (US-26)
+
+`GET` returns the caller's available balance in kopecks, 0 if there is no balance yet. The answer has `Cache-Control: no-store`, so a balance that just changed shows on the next request. Access "S+ · C": a customer with a confirmed email, or a verified student. Each reads only their own balance. US-34 shows the student's earnings through the same endpoint.
+
+`POST` is the **sandbox** funding (OQ-09, A-06): money from nowhere, so a customer can reserve a task before any real payment exists. Access "C" (a customer with a confirmed email). The page says it is a test mode. The body is `{ "amountKopecks": 50000 }`: a whole number from 100 (1 UAH) to 2 000 000 (20 000 UAH), anything else is 400 `VALIDATION_FAILED`. The balance never passes 1 000 000 000 kopecks (10 000 000 UAH), well inside the 32-bit integer of the column: a top-up that would pass it is 400 `VALIDATION_FAILED` and changes nothing. At most 30 top-ups a minute per client address, else 429 `RATE_LIMITED`. The owner is the session and the ledger kind is fixed, so other keys are ignored. It is one transaction: the balance goes up and a positive `topup` ledger entry is written, so the balance equals the sum of its entries (INV-20). It is not idempotent: each call is a top-up. It is not part of the `PaymentProvider` port.
+
+```json
+200 OK
+{ "balance": { "availableKopecks": 50000 } }
 ```
 
 ### 4.2 `POST /api/tasks/:id/accept` (accept result)
@@ -306,6 +320,78 @@ A second call (US-18/S2):
 409 Conflict
 { "error": { "code": "ALREADY_APPLIED", "message": "Ви вже подали відгук на це завдання" } }
 ```
+
+### 4.3a `GET /api/me/applications` (my applications)
+
+US-20. The caller's own applications, newest first, at most 100 (OQ-26). Access "S-": a student with a confirmed email, verified or not. The status is the stored one (`sent`, `accepted`, `rejected`); the UI shows «Надіслано», «Прийнято», «Відхилено».
+
+```json
+200 OK
+{ "applications": [
+  { "id": "a91e…", "taskId": "7d0c…", "status": "sent", "note": null,
+    "createdAt": "2026-11-12T09:15:00Z",
+    "task": { "id": "7d0c…", "title": "Логотип для кав’ярні", "priceKopecks": 50000 } }
+] }
+```
+
+### 4.3b `GET /api/me/notifications` (notification centre)
+
+US-21. The caller's own notifications (ids are UUIDv7, so they sort by time). Without `after`: every unread one first (up to 200, newest first), then the newest read ones, `limit` of them (default 20, at most 50). So an old unread notification is listed however many newer read ones exist (sc.3). With `after=<id>`: only the rows newer than that id, newest first, at most `limit`, for polling. `text` is built by the server from `type` and `payload`.
+
+```json
+200 OK
+{ "notifications": [
+  { "id": "0192…", "type": "executor_selected",
+    "text": "Вас обрано виконавцем завдання Парсер сайту",
+    "payload": { "taskId": "7d0c…", "taskTitle": "Парсер сайту" },
+    "read": false, "createdAt": "2026-11-12T09:15:00Z" }
+] }
+```
+
+A notification is created inside the business transaction it reports (INV-23), through `notifyExecutorSelected(tx, …)` of the notifications service. If that transaction fails, no notification exists (US-21/S2).
+
+### 4.3c Chat of a task (US-23)
+
+`GET /api/tasks/:id/messages?after=<id>` and `POST /api/tasks/:id/messages`. Access "Own · Ex": the customer who owns the task and its executor (INV-22). Access is checked before the query or the body: an outsider with a bad body gets 403, not 400. An unknown task is 404.
+
+- The chat is open from assignment (`in_progress`, `in_review`, `revision`) and read-only after `done` or `cancelled`. Before an executor is chosen it is not open: GET is 200 with an empty list, POST is 409 `CHAT_CLOSED` (OQ-30).
+- GET returns the messages oldest first, at most 100. Without `after` it is the latest 100. With `after=<id>` only the messages newer than that id, for polling. The web app polls every 5 seconds (W-18).
+- POST takes `{ "body": "…" }`, trimmed, 1 to 2000 characters counted as Unicode code points (an emoji is one). The sender is the session and the task is the URL; other keys are ignored. The send is one transaction: a conditional update that proves the sender is a participant and the chat is still open, then the insert.
+- A message shows `mine` (for the caller) and `from` (`customer` or `executor`). No names, ids of the other side or emails.
+
+```json
+201 Created
+{ "message": { "id": "0192…", "body": "Добрий день! Уточніть формат файлів.",
+               "createdAt": "2026-11-12T09:15:00Z", "mine": true, "from": "executor" } }
+
+200 OK
+{ "messages": [ { "id": "0192…", "body": "Надішліть у форматі SVG",
+                  "createdAt": "2026-11-12T09:20:00Z", "mine": false, "from": "customer" } ] }
+```
+
+```json
+403 Forbidden
+{ "error": { "code": "NOT_CHAT_PARTICIPANT", "message": "Доступ заборонено" } }
+```
+
+### 4.3d `GET /api/tasks/:id/applications` (the owner's candidate list, US-24)
+
+Access "Own": the customer who owns the task. A student is 403 `ROLE_FORBIDDEN`, another customer 403 `NOT_TASK_OWNER`, an unknown task 404. The list is oldest first, at most 100. It is read-only. The task header (`task`) is there because the owner has no other endpoint for the task yet (OQ-31). It carries `deadlineAt` (the page turns the select off after it) and `hasExecutor` (a cancelled task that never had one shows no chat).
+
+The answer has `truncated`: `true` when the task has more than 100 applicants and the list was cut, so the page can say so. Each applicant is the application (§4.3) plus the public profile of the student (§4.9): `verified` is `studentVerifiedAt IS NOT NULL` as it is now (INV-03), so a student whose verification was revoked after applying shows `false` (US-24/S2, W-01). No email, role or hash, and no price.
+
+```json
+200 OK
+{ "task": { "id": "7d0c…", "title": "Логотип для кав’ярні", "status": "published", "priceKopecks": 50000,
+            "deadlineAt": "2030-05-20T15:30:00Z", "hasExecutor": false },
+  "truncated": false,
+  "applications": [
+    { "id": "a91e…", "taskId": "7d0c…", "status": "sent", "note": "Маю досвід", "createdAt": "2026-11-12T09:15:00Z",
+      "student": { "id": "5b2f…", "displayName": "Олена Коваль", "verified": true, "skills": ["HTML", "Java"], "bio": "Студентка 2 курсу" } }
+  ] }
+```
+
+The name links to `/u/:userId` (§4.9), a public page.
 
 ### 4.4 `POST /api/tasks` (create task, with field-level validation)
 
@@ -502,4 +588,20 @@ GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
 
 - Access: the same as the feed (any student with a confirmed email), checked first: 401 `AUTH_REQUIRED`, 403 `ROLE_FORBIDDEN`, 403 `EMAIL_NOT_CONFIRMED`.
 - Visibility for a student is the feed rule (INV-06). A task that is pending, rejected, cancelled, taken or expired is 404 `NOT_FOUND`, so its existence is not leaked (US-14/S2).
-- The owner, the executor and the moderator read other states through this endpoint with US-14, US-22 and US-40. This section is extended then.
+- The executor of the task reads it in any state (§4.13a, US-22). The owner and the moderator read other states with US-40 and US-50. This section is extended then.
+
+### 4.13a The executor's view of a task (US-22)
+
+`GET /api/tasks/:id` for the executor of the task, and each item of `GET /api/me/work`: the §4.13 fields plus `status` and `assignedAt`. An assigned task has left the feed, so only its executor can read it; another student still gets 404 `NOT_FOUND`. No customer or moderation fields.
+
+```json
+200 OK
+{ "task": { "id": "7d0c…", "title": "Логотип для кав’ярні", "description": "…",
+            "priceKopecks": 50000, "commissionKopecks": 5000, "netKopecks": 45000,
+            "deadlineAt": "2030-05-20T15:30:00Z", "publishedAt": "2026-11-10T10:00:00Z",
+            "status": "in_progress", "assignedAt": "2026-11-11T10:00:00Z" } }
+```
+
+`GET /api/me/work` returns `{ "tasks": [ … ] }`: the tasks where the caller is the executor, in every status, last assigned first, at most 100 (OQ-29).
+
+`DELETE /api/tasks/:id` (US-22/S2, INV-13): the owner cancels a task that has no executor. 204 and the task becomes `cancelled` from `pending_moderation` or `published`. With an executor: 409 `TASK_HAS_EXECUTOR`, nothing changes. In any other state (rejected, cancelled, done): 409 `INVALID_TRANSITION`. Someone else's task: 403 `NOT_TASK_OWNER`. It is one conditional update.

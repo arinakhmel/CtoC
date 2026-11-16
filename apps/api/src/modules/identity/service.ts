@@ -21,6 +21,7 @@ import {
   deleteExpiredSessions,
   consumeToken,
   findTokenByHash,
+  findProfilesOf,
   findSkillByName,
   findStudentById,
   findUserByEmail,
@@ -37,6 +38,7 @@ import {
   upsertBio,
   findBio,
 } from './repo';
+import { serializeProfileCard } from './serializer';
 
 const appUrl = () => process.env.APP_URL ?? 'http://localhost:5173';
 
@@ -158,6 +160,23 @@ export async function getPublicProfile(userId: string) {
   const user = await findStudentById(userId);
   if (!user) throw new ApiError('NOT_FOUND');
   return { user, skills: sortSkillNames(await listSkillNames(user.id)), bio: await findBio(user.id) };
+}
+
+/**
+ * US-24. The public profile cards of several students at once, by id: for a list that shows each applicant. A card is the
+ * profile of api.md §4.9 (id, name, verified, skills, bio), built here so that other modules get it ready and never import
+ * the identity serializer (ADR-0002 rule 4). An id that is not a student account is absent from the map, like the 404 of
+ * the single lookup.
+ */
+export async function getPublicProfiles(userIds: string[]) {
+  const { users, skillRows, bioRows } = await findProfilesOf([...new Set(userIds)]);
+  const profiles = new Map<string, ReturnType<typeof serializeProfileCard>>();
+  for (const user of users) {
+    const skills = skillRows.filter((row) => row.userId === user.id).map((row) => row.skill.name);
+    const bio = bioRows.find((row) => row.userId === user.id)?.bio ?? '';
+    profiles.set(user.id, serializeProfileCard(user, sortSkillNames(skills), bio));
+  }
+  return profiles;
 }
 
 /**

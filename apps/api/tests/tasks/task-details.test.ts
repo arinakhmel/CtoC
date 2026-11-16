@@ -84,8 +84,9 @@ describe('GET /api/tasks/:id: US-13 sc.1', () => {
   });
 
   it('US-13 sc.1 a task with an executor or a past deadline is 404 NOT_FOUND (same visibility as the feed)', async () => {
-    const { cookie, user } = await loginAs();
-    const taken = await publish({ executorId: user.id, status: 'in_progress' });
+    const { cookie } = await loginAs();
+    const executor = await loginAs(); // another student: the executor of the task itself reads it (US-22)
+    const taken = await publish({ executorId: executor.user.id, status: 'in_progress' });
     const expired = await publish({ deadlineAt: new Date(Date.now() - 3600_000) });
     expect((await getTask(taken.id, cookie)).status).toBe(404);
     expect((await getTask(expired.id, cookie)).status).toBe(404);
@@ -122,4 +123,4 @@ describe('GET /api/tasks/:id: US-13 sc.1', () => {
   });
 });
 
-// US-13 sc.2 (a forged priceKopecks in POST /api/tasks/:id/applications is stripped, 201, W-05) needs the endpoint of US-18/US-19.
+// US-13 sc.2 (a forged priceKopecks in POST /api/tasks/:id/applications is stripped, 201, W-05) is tested in tests/applications/apply.test.ts.

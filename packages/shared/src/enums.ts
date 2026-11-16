@@ -19,11 +19,28 @@ export const TASK_STATUSES = [
 ] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const taskStatusSchema = z.enum(TASK_STATUSES);
+/** The words the user sees for a task status. The labels of domain-model.md §3.1 (one place, so lists and cards agree). */
+export const TASK_STATUS_UK: Record<TaskStatus, string> = {
+  pending_moderation: 'На модерації',
+  published: 'Опубліковано',
+  rejected: 'Відхилено',
+  in_progress: 'В роботі',
+  in_review: 'На перевірці',
+  revision: 'На доопрацюванні',
+  done: 'Виконано',
+  cancelled: 'Скасовано',
+};
 
 /** Application (Відгук). domain-model.md §3.3. */
 export const APPLICATION_STATUSES = ['sent', 'accepted', 'rejected'] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 export const applicationStatusSchema = z.enum(APPLICATION_STATUSES);
+/** The words the student sees (US-20 [AC], domain-model.md §2). One place, so US-24 and US-25 show the same labels. */
+export const APPLICATION_STATUS_UK: Record<ApplicationStatus, string> = {
+  sent: 'Надіслано',
+  accepted: 'Прийнято',
+  rejected: 'Відхилено',
+};
 
 /** Student verification request (drives the student role). domain-model.md §3.2. */
 export const VERIFICATION_STATUSES = ['pending', 'approved', 'rejected', 'revoked'] as const;

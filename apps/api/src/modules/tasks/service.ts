@@ -1,10 +1,25 @@
-import type { CreateTaskInput, FeedQuery } from '@ctoc/shared';
-import type { User } from '@prisma/client';
+import { LIMITS, type CreateTaskInput, type FeedQuery } from '@ctoc/shared';
+import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
-import { newTaskData } from './domain';
-import { assertCanCreateTask, assertCanReadFeed } from './policy';
-import { findFeedCursor, findOpenTask, insertTask, listFeed } from './repo';
+import { assignRefusal, chatStateOf, deleteRefusal, newTaskData } from './domain';
+import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed, assertTaskOwner } from './policy';
+import {
+  assignTaskTx,
+  cancelTaskWithoutExecutor,
+  findChatTask,
+  findFeedCursor,
+  findTaskOwnerView,
+  findOpenTask,
+  findTaskForDelete,
+  findTaskOfExecutor,
+  findTaskState,
+  insertTask,
+  listFeed,
+  listTasksOfExecutor,
+  lockChatTask,
+  lockOpenTask,
+} from './repo';
 
 /**
  * US-13. The details of one task, with the fixed price set by the customer. A task that is not in the feed
@@ -15,6 +30,19 @@ export async function getTask(user: User, id: string) {
   const task = await findOpenTask(id, new Date());
   if (!task) throw new ApiError('NOT_FOUND');
   return task;
+}
+
+/**
+ * US-18. Called by the applications service as the first statement of its transaction. A task that left the feed
+ * meanwhile (assigned, unpublished, expired) is 409 TASK_NOT_OPEN.
+ *
+ * It is a conditional `updateMany` with the `count` checked (ADR-0007 §1). The write takes the SQLite write lock
+ * before the insert, so assign (US-25) cannot run between the check and the insert (ADR-0004: one writer at a time).
+ * The (task, student) unique index (INV-09) stays the guard for duplicates. On Postgres the same statement takes a row lock.
+ * Only the race reaches this: a task that is already out of the feed is 404 NOT_FOUND from `getTask` before the transaction.
+ */
+export async function assertTaskOpen(tx: Prisma.TransactionClient, id: string): Promise<void> {
+  if ((await lockOpenTask(tx, id, new Date())) === 0) throw new ApiError('TASK_NOT_OPEN');
 }
 
 /**
@@ -42,4 +70,88 @@ export async function getFeed(user: User, query: FeedQuery) {
 export async function createTask(user: User, input: CreateTaskInput) {
   assertCanCreateTask(user);
   return prisma.$transaction((tx) => insertTask(tx, newTaskData(input, user.id)));
+}
+
+/**
+ * US-22 sc.1. The details of a task for a student: the executor of the task reads it in any state, with its status,
+ * because an assigned task has left the feed. Everyone else gets the feed rule (INV-06). `getTask` stays feed-only,
+ * so applying to a task (US-18) does not change.
+ */
+export async function getTaskDetails(user: User, id: string) {
+  assertCanReadFeed(user);
+  const own = await findTaskOfExecutor(id, user.id);
+  if (own) return { task: own, asExecutor: true as const };
+  const task = await findOpenTask(id, new Date());
+  if (!task) throw new ApiError('NOT_FOUND');
+  return { task, asExecutor: false as const };
+}
+
+/** US-22 sc.1. «Мої активні завдання»: the tasks the caller works on. Only rows of the caller are read. */
+export async function getMyWork(user: User) {
+  assertCanListMyWork(user);
+  return listTasksOfExecutor(user.id, LIMITS.myWorkMax);
+}
+
+/**
+ * US-22 sc.2 (INV-13, A-08). The owner cancels a task that has no executor. Unknown id is 404, someone else's task is
+ * 403 NOT_TASK_OWNER, a task with an executor is 409 TASK_HAS_EXECUTOR so the student does not lose the terms, and a task
+ * in a state that cannot be cancelled is 409 INVALID_TRANSITION. The change is one conditional update (ADR-0007).
+ */
+export async function deleteTask(user: User, id: string): Promise<void> {
+  assertCanDeleteTask(user);
+  const task = await findTaskForDelete(id);
+  if (!task) throw new ApiError('NOT_FOUND');
+  assertTaskOwner(task, user);
+
+  await prisma.$transaction(async (tx) => {
+    const moved = await cancelTaskWithoutExecutor(tx, id, user.id, new Date());
+    if (moved.count === 0) {
+      const now = await findTaskState(tx, id);
+      throw new ApiError(deleteRefusal(now ?? task));
+    }
+  });
+}
+
+/**
+ * US-23. What the chat module needs to know about a task: the two people who may chat and whether the chat is open,
+ * read-only or not yet open (INV-22). An unknown task is 404. The chat module calls this, not the tasks table (ADR-0002).
+ */
+export async function getTaskForChat(id: string) {
+  const task = await findChatTask(id);
+  if (!task) throw new ApiError('NOT_FOUND');
+  return { id: task.id, customerId: task.customerId, executorId: task.executorId, chat: chatStateOf(task.status) };
+}
+
+/** US-23. First statement of the send transaction: a conditional update that fails with CHAT_CLOSED if the chat closed meanwhile. */
+export async function lockTaskForChat(tx: Prisma.TransactionClient, taskId: string, userId: string): Promise<void> {
+  if ((await lockChatTask(tx, taskId, userId)) === 0) throw new ApiError('CHAT_CLOSED');
+}
+
+/**
+ * US-24. A task for its owner's candidate list: its owner, title, status and price. An unknown task is 404; whether the
+ * caller owns it is the caller's policy. The applications module calls this, not the tasks table (ADR-0002).
+ */
+export async function getTaskOwnerView(id: string) {
+  const task = await findTaskOwnerView(id);
+  if (!task) throw new ApiError('NOT_FOUND');
+  return task;
+}
+
+/**
+ * US-25. The task side of selecting an executor, on the caller's `tx` (ADR-0002 rule 1): one conditional update. 409
+ * TASK_ALREADY_ASSIGNED if an executor is already chosen, 409 TASK_NOT_OPEN if the task is not published, is past its deadline, or its
+ * price is no longer the one the escrow will take.
+ */
+export async function assignTask(
+  tx: Prisma.TransactionClient,
+  taskId: string,
+  ownerId: string,
+  executorId: string,
+  priceKopecks: number,
+): Promise<void> {
+  const moved = await assignTaskTx(tx, taskId, ownerId, executorId, priceKopecks, new Date());
+  if (moved.count === 0) {
+    const state = await findTaskState(tx, taskId);
+    throw new ApiError(assignRefusal(state ?? { executorId: null }));
+  }
 }

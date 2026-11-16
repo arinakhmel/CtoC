@@ -1,0 +1,41 @@
+import type { Prisma } from '@prisma/client';
+import { prisma } from '../../platform/db';
+
+type Tx = Prisma.TransactionClient;
+
+/**
+ * US-26 (ADR-0007, INV-20). A conditional write: it takes the amount out only if the balance covers it, and `count` 0
+ * means it does not (or there is no balance row). The CHECK available_kopecks >= 0 backs it up in the database.
+ */
+export const debitBalance = (tx: Tx, ownerId: string, amountKopecks: number) =>
+  tx.balance.updateMany({
+    where: { ownerId, availableKopecks: { gte: amountKopecks } },
+    data: { availableKopecks: { decrement: amountKopecks } },
+  });
+
+/** INV-12: the task_id and idempotency_key unique indexes allow one escrow per task and per key. */
+export const insertEscrow = (tx: Tx, data: Prisma.EscrowUncheckedCreateInput) => tx.escrow.create({ data });
+
+/** Append-only. The (task_id, kind) unique index allows one hold per task. */
+export const insertLedgerEntry = (tx: Tx, data: Prisma.LedgerEntryUncheckedCreateInput) => tx.ledgerEntry.create({ data });
+
+export const findEscrowByKey = (idempotencyKey: string) => prisma.escrow.findUnique({ where: { idempotencyKey } });
+
+/** US-26. Makes sure the balance row exists (0 on the first top-up). It changes nothing if it is there. */
+export const ensureBalance = (tx: Tx, ownerId: string) =>
+  tx.balance.upsert({ where: { ownerId }, create: { ownerId, availableKopecks: 0 }, update: {} });
+
+/**
+ * US-26 (ADR-0007). A conditional write: it adds the amount only if the result stays within `maxKopecks`, so the column
+ * can never pass the 32-bit integer of the database. The increment is done by the database, so two top-ups at once are
+ * both applied. `count` 0 means the cap would be exceeded.
+ */
+export const incrementBalanceWithin = (tx: Tx, ownerId: string, amountKopecks: number, maxKopecks: number) =>
+  tx.balance.updateMany({
+    where: { ownerId, availableKopecks: { lte: maxKopecks - amountKopecks } },
+    data: { availableKopecks: { increment: amountKopecks } },
+  });
+
+export const findBalanceTx = (tx: Tx, ownerId: string) => tx.balance.findUniqueOrThrow({ where: { ownerId } });
+
+export const findBalance = (ownerId: string) => prisma.balance.findUnique({ where: { ownerId } });

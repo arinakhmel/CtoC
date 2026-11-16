@@ -80,13 +80,13 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/tasks/:id",
-    title: "Task details and apply dialog with note. Applying needs S+. A non-verified student is prompted to verify.",
+    title: "Task details, an apply button and an inline note block (OQ-25). Applying needs S+. A non-verified student is prompted to verify.",
     access: "S- (apply: S+)",
     stories: ["US-13", "US-15", "US-18", "US-19", "US-42"],
   },
   {
     path: "/me/applications",
-    title: "Мої відгуки with statuses",
+    title: "Мої відгуки",
     access: "S- / S+",
     stories: ["US-20"],
   },
@@ -110,7 +110,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/notifications",
-    title: "Notification centre",
+    title: "Сповіщення",
     access: "A",
     stories: ["US-21", "US-30", "US-39", "US-47", "US-48", "US-49"],
   },
@@ -134,7 +134,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/c/balance",
-    title: "Sandbox balance top-up",
+    title: "Баланс і тестове поповнення",
     access: "C",
     stories: ["US-26"],
   },

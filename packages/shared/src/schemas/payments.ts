@@ -34,3 +34,17 @@ export const createWithdrawalSchema = z.object({
     .positive('VALIDATION_FAILED'),
   cardNumber: cardNumberSchema,
 });
+
+/**
+ * US-26 (OQ-09, A-06): the sandbox top-up of a customer's balance. An integer number of kopecks (ADR-0007), from 1 UAH to the
+ * highest price of a task (one top-up can pay for any task). Unknown keys are stripped: the owner is the session, the kind of
+ * ledger entry is fixed by the server.
+ */
+export const sandboxTopUpSchema = z.object({
+  amountKopecks: z
+    .number({ required_error: 'VALIDATION_FAILED', invalid_type_error: 'VALIDATION_FAILED' })
+    .int('VALIDATION_FAILED')
+    .min(LIMITS.sandboxTopUp.min, 'VALIDATION_FAILED')
+    .max(LIMITS.sandboxTopUp.max, 'VALIDATION_FAILED'),
+});
+export type SandboxTopUpInput = z.infer<typeof sandboxTopUpSchema>;

@@ -1,0 +1,66 @@
+import type { Application } from '@prisma/client';
+
+/** api.md §4.3. No price field: the application always carries the customer's fixed price (US-42). */
+export const serializeApplication = (application: Pick<Application, 'id' | 'taskId' | 'status' | 'note' | 'createdAt'>) => ({
+  id: application.id,
+  taskId: application.taskId,
+  status: application.status,
+  note: application.note,
+  createdAt: application.createdAt.toISOString(),
+});
+
+type MyApplicationRow = Pick<Application, 'id' | 'taskId' | 'status' | 'note' | 'createdAt'> & {
+  task: { id: string; title: string; priceKopecks: number };
+};
+
+/** api.md §4.3a. The task is shown as a title, its fixed price and its id for the link. Nothing of the customer. */
+export const serializeMyApplication = (application: MyApplicationRow) => ({
+  ...serializeApplication(application),
+  task: { id: application.task.id, title: application.task.title, priceKopecks: application.task.priceKopecks },
+});
+
+/** The public profile card of a student as the identity service returns it (api.md §4.9). */
+export interface CandidateStudent {
+  id: string;
+  displayName: string;
+  verified: boolean;
+  skills: string[];
+  bio: string;
+}
+
+/**
+ * api.md §4.3d. An applicant as the task owner sees them: the application and the public profile card of the student. No
+ * email, role or hash (§4.9). There is no price: the application carries the customer's fixed price (US-42).
+ */
+export const serializeCandidate = (application: Application, student: CandidateStudent) => ({
+  ...serializeApplication(application),
+  student: { id: student.id, displayName: student.displayName, verified: student.verified, skills: student.skills, bio: student.bio },
+});
+
+export const serializeOwnerTask = (task: {
+  id: string;
+  title: string;
+  status: string;
+  priceKopecks: number;
+  deadlineAt: Date;
+  executorId: string | null;
+}) => ({
+  id: task.id,
+  title: task.title,
+  status: task.status,
+  priceKopecks: task.priceKopecks,
+  deadlineAt: task.deadlineAt.toISOString(),
+  hasExecutor: task.executorId !== null,
+});
+
+/** api.md §4.1. The result of selecting an executor. No ids of other applicants' students, no balances. */
+export const serializeAssignment = (result: {
+  task: { id: string; status: string; executorId: string | null; priceKopecks: number };
+  escrow: { id: string; status: string; amountKopecks: number };
+  acceptedId: string | null;
+  rejectedCount: number;
+}) => ({
+  task: result.task,
+  escrow: { id: result.escrow.id, status: result.escrow.status, amountKopecks: result.escrow.amountKopecks },
+  applications: { accepted: result.acceptedId, rejectedCount: result.rejectedCount },
+});

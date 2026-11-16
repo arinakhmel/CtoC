@@ -57,10 +57,9 @@ export function identityRouter(): Router {
     res.json(serializeMe(req.user!));
   });
 
-  // Public (A-16). no-store: a badge granted by a moderator must show on the next request (US-09/S3).
+  // Public (A-16). no-store comes from the API-wide middleware of app.ts: a badge granted by a moderator must show on the next request (US-09/S3).
   router.get('/profiles/:userId', async (req, res) => {
     const { user, skills, bio } = await getPublicProfile(req.params.userId);
-    res.setHeader('Cache-Control', 'no-store');
     res.json(serializePublicProfile(user, skills, bio));
   });
 

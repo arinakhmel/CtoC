@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createApplicationSchema, createTaskSchema, feedQuerySchema, LIMITS, moderationRejectSchema } from '../src';
+import { APPLICATION_STATUS_UK, APPLICATION_STATUSES, TASK_STATUS_UK, TASK_STATUSES, createApplicationSchema, createTaskSchema, feedQuerySchema, LIMITS, moderationRejectSchema } from '../src';
 import { codesOf, fieldsOf } from './helpers';
 
 const inOneWeek = () => new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
@@ -98,5 +98,28 @@ describe('US-18, US-19 and US-42 application', () => {
   it('US-42 sc.2, US-13 sc.2: a forged price is stripped, the application has no price', () => {
     const parsed = createApplicationSchema.parse({ note: 'hi', priceKopecks: 100, price: 1 });
     expect(parsed).toEqual({ note: 'hi' });
+  });
+});
+
+describe('US-20 application status labels', () => {
+  it('US-20 sc.1-3: every status has its Ukrainian label (Надіслано, Прийнято, Відхилено)', () => {
+    expect(APPLICATION_STATUS_UK).toEqual({ sent: 'Надіслано', accepted: 'Прийнято', rejected: 'Відхилено' });
+    expect(Object.keys(APPLICATION_STATUS_UK).sort()).toEqual([...APPLICATION_STATUSES].sort());
+  });
+});
+
+describe('US-22 task status labels', () => {
+  it('US-22 the labels are those of domain-model.md §3.1, one for every status', () => {
+    expect(TASK_STATUS_UK).toEqual({
+      pending_moderation: 'На модерації',
+      published: 'Опубліковано',
+      rejected: 'Відхилено',
+      in_progress: 'В роботі',
+      in_review: 'На перевірці',
+      revision: 'На доопрацюванні',
+      done: 'Виконано',
+      cancelled: 'Скасовано',
+    });
+    expect(Object.keys(TASK_STATUS_UK).sort()).toEqual([...TASK_STATUSES].sort());
   });
 });
