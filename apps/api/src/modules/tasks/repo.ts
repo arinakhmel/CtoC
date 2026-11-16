@@ -106,3 +106,7 @@ export const findChatTask = (id: string) =>
 export const lockChatTask = (tx: Prisma.TransactionClient, id: string, userId: string): Promise<number> =>
   tx.$executeRaw`UPDATE "tasks" SET "status" = "status"
     WHERE "id" = ${id} AND "status" IN (${Prisma.join([...CHAT_OPEN_STATUSES])}) AND ("customer_id" = ${userId} OR "executor_id" = ${userId})`;
+
+/** US-24. The owner's row of a task, to check ownership and to head the candidate list. */
+export const findTaskOwnerView = (id: string) =>
+  prisma.task.findUnique({ where: { id }, select: { id: true, customerId: true, title: true, status: true, priceKopecks: true, executorId: true } });

@@ -71,3 +71,13 @@ export const upsertBio = (userId: string, bio: string) =>
 
 export const findBio = async (userId: string): Promise<string> =>
   (await prisma.studentProfile.findUnique({ where: { userId }, select: { bio: true } }))?.bio ?? '';
+
+/** US-24. The students among these ids, their skill names and their bios, in three queries (no query per student). */
+export async function findProfilesOf(userIds: string[]) {
+  const [users, skillRows, bioRows] = await Promise.all([
+    prisma.user.findMany({ where: { id: { in: userIds }, role: 'student' } }),
+    prisma.profileSkill.findMany({ where: { userId: { in: userIds } }, include: { skill: true } }),
+    prisma.studentProfile.findMany({ where: { userId: { in: userIds } }, select: { userId: true, bio: true } }),
+  ]);
+  return { users, skillRows, bioRows };
+}

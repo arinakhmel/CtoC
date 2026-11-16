@@ -16,8 +16,9 @@ const codeOf = (error: unknown): string => (error instanceof ApiClientError ? er
  * US-23. The chat of a task between its customer and its executor. The send button is off while the field is empty (sc.2);
  * the shared schema and the API check it again. The list refreshes every 5 seconds (sc.1, W-18).
  * After the task is done or cancelled the chat is read-only (INV-22): the history stays, the form is replaced by a note.
+ * `heading` names the other side: the executor sees «Чат із замовником» (the default), the customer «Чат із виконавцем».
  */
-export function ChatPanel({ taskId, status }: { taskId: string; status?: TaskStatus }) {
+export function ChatPanel({ taskId, status, heading = 'Чат із замовником' }: { taskId: string; status?: TaskStatus; heading?: string }) {
   const readOnly = status === 'done' || status === 'cancelled';
   const navigate = useNavigate();
   const messages = useMessages(taskId);
@@ -42,7 +43,7 @@ export function ChatPanel({ taskId, status }: { taskId: string; status?: TaskSta
 
   return (
     <section aria-labelledby="chat-title">
-      <h2 id="chat-title">Чат із замовником</h2>
+      <h2 id="chat-title">{heading}</h2>
 
       {messages.isPending && <p role="status">Завантаження…</p>}
 
