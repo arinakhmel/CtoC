@@ -10,14 +10,15 @@ import { createTask } from '../helpers/factories';
 /**
  * US-30. WHAT THESE TESTS ARE, AND ARE NOT.
  *
- * The real accept, `POST /api/tasks/:id/accept`, is US-31 and does not exist yet. These tests check the MECHANISM of US-30:
+ * These tests check the MECHANISM of US-30, on its own, without the accept (the real accept is US-31 and is tested through its
+ * endpoint in accept-result.test.ts, where US-30 sc.1, sc.2 and sc.3 are covered again, in the real transaction):
  * `notifyResultAccepted(tx, …)` writes the notification on the CALLER's transaction, with the exact text of the story, and the
  * notification centre lists it. The transaction that stands in for the accept is written in the test (`acceptLikeTransaction`):
  * it moves the task to `done`, which the real accept will also do, and then calls the function. It does NOT credit a payout
  * or release an escrow, so «Оплату нараховано» is not backed by money in these tests.
  *
- * Not covered here, and left for US-31 (OQ-38): sc.1 and sc.2 through the real accept endpoint, with the payout, the escrow and
- * the experience record in the same transaction. US-30 stays `partial` in traceability.md until then.
+ * The real chain, with the payout, the escrow, the experience record and this notification in one transaction (INV-18), is in
+ * accept-result.test.ts (OQ-38).
  */
 
 const ORIGIN = 'http://localhost:5173';
@@ -95,7 +96,7 @@ beforeEach(async () => {
   student = await loginAs('student');
 });
 
-describe('US-30 mechanism sc.1: the notification is written on the caller\'s transaction (not yet through the real accept)', () => {
+describe('US-30 mechanism sc.1: the notification is written on the caller\'s transaction (the real accept is in accept-result.test.ts)', () => {
   it('US-30 sc.1 [mechanism] the student reads the exact text, unread, with the task in the payload; the title is not in the text', async () => {
     const task = await reviewTask();
 
@@ -156,7 +157,7 @@ describe('US-30 mechanism sc.1: the notification is written on the caller\'s tra
   });
 });
 
-describe('US-30 mechanism sc.2: nothing is sent when the transaction does not commit (not yet through the real accept)', () => {
+describe('US-30 mechanism sc.2: nothing is sent when the transaction does not commit (the real accept is in accept-result.test.ts)', () => {
   it('US-30 sc.2 [mechanism] a failure after the notification rolls everything back: no notification, the task is still in_review', async () => {
     const task = await reviewTask();
 

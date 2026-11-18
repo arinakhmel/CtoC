@@ -4,19 +4,26 @@ import type { User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { getFileStorage } from '../../platform/ports/file-storage';
-import { notifyResultSubmitted } from '../notifications/service';
-import { getTaskForDelivery, lockTaskForDelivery, moveTaskToReview } from '../tasks/service';
+import { createExperienceRecord } from '../experience/service';
+import { notifyResultAccepted, notifyResultSubmitted } from '../notifications/service';
+import { payoutSplitOf } from '../payments/domain';
+import { releaseEscrow } from '../payments/service';
+import { getTaskForDelivery, lockTaskForDelivery, moveTaskToDone, moveTaskToReview } from '../tasks/service';
 import { claimedMime, hasRoomForAnotherFile, looksExecutable, takesFiles } from './domain';
-import { assertCanDownload, assertIsExecutor } from './policy';
+import { assertCanDownload, assertCanReadResult, assertIsExecutor, assertIsTaskOwner } from './policy';
 import {
+  acceptVersion,
   countFilesOfVersion,
   findCurrentVersion,
   findDraftVersion,
   findFileForDownload,
   findOpenVersion,
   findResultFileLink,
+  findSubmittedVersion,
+  findVersionForOwner,
   insertDraftVersion,
   insertResultFile,
+  isFileOfOwnedTaskUnderReview,
   markFileDeleted,
   nextVersionNumber,
   removeFileFromDraft,
@@ -140,18 +147,64 @@ export async function deleteResultFile(user: User, taskId: string, fileId: strin
     });
 }
 
-/** US-27 sc.1. The current result of a task, for its executor. */
+/**
+ * US-27 sc.1, US-31. The result of a task. The executor reads their own current version, a draft included. The customer who owns
+ * the task reads the latest version that was sent for review, accepted or returned, and never a draft (`null` while there is none).
+ */
 export async function getResult(user: User, taskId: string) {
   const task = await getTaskForDelivery(taskId);
-  assertIsExecutor(task, user);
-  return findCurrentVersion(task.id);
+  return assertCanReadResult(task, user) === 'executor' ? findCurrentVersion(task.id) : findVersionForOwner(task.id);
+}
+
+/**
+ * US-31 sc.1, sc.2, sc.3 (INV-14, INV-18, INV-19, INV-20, INV-21, INV-23, ADR-0007). The owner accepts the result: one transaction
+ * that commits or rolls back as a whole, so any failure leaves the task `in_review`, the escrow `held` and nothing credited:
+ *   1. the task: conditional update `in_review` -> `done` with the time (409 TASK_ALREADY_DONE / TASK_NOT_IN_REVIEW). It is the first
+ *      write, so it is also the task lock and the guard against a second accept at the same time;
+ *   2. the price split taken at publication must exist and add up; if not (OQ-22) the accept is refused, never recomputed from
+ *      today's rate: 500 INTERNAL_ERROR, logged, and step 1 is rolled back;
+ *   3. the version under review: conditional update `submitted` -> `accepted`;
+ *   4. the escrow is released through the PaymentProvider: `held` -> `released`, the student is credited the net amount, the platform
+ *      the commission, each with its ledger entry (a second payout for the task is impossible, INV-19);
+ *   5. the experience record of the student (US-37, one per task, INV-21);
+ *   6. the notification to the student (US-30), the last step, so «Оплату нараховано» is only said when the payout is in.
+ * No file I/O and no call outside the database. A repeat finds the task `done` and is 409 without any change.
+ */
+export async function acceptResult(user: User, taskId: string) {
+  const task = await getTaskForDelivery(taskId);
+  assertIsTaskOwner(task, user); // 404 for an unknown task, 403 NOT_TASK_OWNER for anyone but the owner, before anything is written
+
+  return prisma.$transaction(async (tx) => {
+    const now = new Date();
+    const facts = await moveTaskToDone(tx, task.id, user.id, now);
+    const split = payoutSplitOf(facts);
+    if (!split || facts.executorId === null || facts.completedAt === null) {
+      console.error(`Task ${task.id} cannot be accepted: it has no usable price split (commission snapshot) or no executor (OQ-22)`);
+      throw new ApiError('INTERNAL_ERROR');
+    }
+    const version = await findSubmittedVersion(tx, task.id);
+    if (!version || (await acceptVersion(tx, version.id, now)).count === 0) {
+      console.error(`Task ${task.id} was in review without a submitted version: the accept was rolled back`);
+      throw new ApiError('INTERNAL_ERROR');
+    }
+    await releaseEscrow(tx, { taskId: task.id, studentId: facts.executorId, ...split });
+    const experienceRecordId = await createExperienceRecord(tx, {
+      studentId: facts.executorId,
+      taskId: task.id,
+      title: facts.title,
+      description: facts.description,
+      completedAt: facts.completedAt,
+    });
+    await notifyResultAccepted(tx, facts.executorId, { id: task.id, title: facts.title });
+    return { task: { id: task.id, status: 'done' as const, completedAt: facts.completedAt }, payout: split, experienceRecordId };
+  });
 }
 
 /** `GET /api/files/:fileId`. An unknown or deleted file is 404, someone else's file is 403 FILE_FORBIDDEN. */
 export async function downloadFile(user: User, fileId: string) {
   const file = await findFileForDownload(fileId);
   if (!file) throw new ApiError('NOT_FOUND');
-  assertCanDownload(file, user);
+  assertCanDownload(file, user, file.ownerId === user.id ? false : await isFileOfOwnedTaskUnderReview(fileId, user.id));
   const bytes = await getFileStorage()
     .get(file.storageKey)
     .catch(() => {

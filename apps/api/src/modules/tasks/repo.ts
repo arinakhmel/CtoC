@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../platform/db';
 import { RESULT_EDITABLE_STATUSES } from '@ctoc/shared';
-import { ASSIGNABLE_STATUS, CANCELLABLE_BY_OWNER, CANCELLED, CHAT_OPEN_STATUSES, IN_PROGRESS, IN_REVIEW } from './domain';
+import { ACCEPTABLE_STATUS, ASSIGNABLE_STATUS, CANCELLABLE_BY_OWNER, CANCELLED, CHAT_OPEN_STATUSES, DONE, IN_PROGRESS, IN_REVIEW } from './domain';
 
 /**
  * INV-06: the feed holds only published tasks that have no executor and a future deadline.
@@ -149,3 +149,20 @@ export const submitTaskTx = (tx: Prisma.TransactionClient, id: string, executorI
     data: { status: IN_REVIEW },
   });
 
+
+/**
+ * US-31 sc.1, sc.3 (INV-18, ADR-0007). The one conditional update that accepts a result: only the owner's task, still `in_review`.
+ * `count` 0 means the deal is already closed, or the task is not under review: the caller reads the status to say which.
+ */
+export const completeTaskTx = (tx: Prisma.TransactionClient, id: string, ownerId: string, now: Date) =>
+  tx.task.updateMany({
+    where: { id, customerId: ownerId, status: ACCEPTABLE_STATUS },
+    data: { status: DONE, completedAt: now },
+  });
+
+/** US-31. What the accept needs from the task it just closed: the executor, the texts for the record, and the price split taken at publication. */
+export const findAcceptedTaskFacts = (tx: Prisma.TransactionClient, id: string) =>
+  tx.task.findUniqueOrThrow({
+    where: { id },
+    select: { id: true, title: true, description: true, executorId: true, priceKopecks: true, commissionKopecks: true, netKopecks: true, completedAt: true },
+  });

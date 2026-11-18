@@ -57,3 +57,14 @@ export const IN_REVIEW = 'in_review' as const;
  */
 export const submitRefusal = (status: string): 'ALREADY_IN_REVIEW' | 'INVALID_TRANSITION' =>
   status === 'in_review' ? 'ALREADY_IN_REVIEW' : 'INVALID_TRANSITION';
+
+/** US-31 (domain-model.md §3.1, INV-18): the owner's accept moves a task from `in_review` to `done`. Final. Only way in. */
+export const ACCEPTABLE_STATUS = 'in_review' as const;
+export const DONE = 'done' as const;
+
+/**
+ * US-31 sc.3 (INV-18). Why an accept changed nothing: the deal is already closed (409 TASK_ALREADY_DONE), or the task has no result
+ * under review (409 TASK_NOT_IN_REVIEW: in progress, in revision, not assigned, cancelled).
+ */
+export const acceptRefusal = (status: string): 'TASK_ALREADY_DONE' | 'TASK_NOT_IN_REVIEW' =>
+  status === DONE ? 'TASK_ALREADY_DONE' : 'TASK_NOT_IN_REVIEW';

@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../platform/db';
-import { DRAFT, OPEN_VERSION_STATUSES, SUBMITTED } from './domain';
+import { ACCEPTED, DRAFT, OPEN_VERSION_STATUSES, SUBMITTED } from './domain';
 
 type Tx = Prisma.TransactionClient;
 
@@ -82,3 +82,21 @@ export const removeFileFromDraft = (tx: Tx, taskId: string, fileId: string) =>
 /** US-29. Marks the executor's own result file as deleted (the column `files.deleted_at`). `count` 0: not theirs, or already marked. */
 export const markFileDeleted = (tx: Tx, fileId: string, ownerId: string, now: Date) =>
   tx.file.updateMany({ where: { id: fileId, ownerId, kind: 'result', deletedAt: null }, data: { deletedAt: now } });
+
+/** US-31. The version the customer sees: the latest one that was sent for review, accepted or returned. A draft is never shown. `null` if there is none. */
+export const findVersionForOwner = (taskId: string) =>
+  prisma.resultVersion.findFirst({ where: { taskId, status: { not: DRAFT } }, orderBy: { version: 'desc' }, select: versionSelect });
+
+/** US-31. Whether this file is in a version, not a draft, of a task that this user owns: then the customer may download it. */
+export const isFileOfOwnedTaskUnderReview = async (fileId: string, ownerId: string): Promise<boolean> =>
+  (await prisma.resultFile.count({ where: { fileId, file: { deletedAt: null }, resultVersion: { status: { not: DRAFT }, task: { customerId: ownerId } } } })) > 0;
+
+/** US-31. The version under review, which an accept decides. */
+export const findSubmittedVersion = (tx: Tx, taskId: string) => tx.resultVersion.findFirst({ where: { taskId, status: SUBMITTED }, select: { id: true } });
+
+/**
+ * US-31 sc.1 (INV-18, ADR-0007). The conditional update `submitted` -> `accepted`, with the time of the decision. `count` 0 means
+ * the version is not under review, which the task lock above it should already have made impossible.
+ */
+export const acceptVersion = (tx: Tx, id: string, now: Date) =>
+  tx.resultVersion.updateMany({ where: { id, status: SUBMITTED }, data: { status: ACCEPTED, decidedAt: now } });

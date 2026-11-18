@@ -45,8 +45,8 @@ export async function notifyResultSubmitted(
  * back with the accept that calls it. If that transaction fails, no notification exists and the status is as it was (sc.2). The
  * text says «Оплату нараховано», so it must be called only inside the transaction that also credits the payout.
  *
- * NOT CALLED YET: the accept (`POST /api/tasks/:id/accept`, US-31) does not exist. US-31 calls this from its transaction, and
- * only then US-30 sc.1 and sc.2 are covered through the real action (OQ-38).
+ * Called by `acceptResult` (`POST /api/tasks/:id/accept`, US-31) as the LAST step of its transaction, after the payout, so the text is
+ * true when the student reads it. US-30 sc.1 and sc.2 are covered through that real action in `accept-result.test.ts` (OQ-38).
  */
 export async function notifyResultAccepted(
   tx: Prisma.TransactionClient,
