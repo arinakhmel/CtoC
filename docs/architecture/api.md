@@ -84,7 +84,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | POST | `/api/tasks/:id/result/files` | US-27 | Ex | 201 (body: §4.14) | 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_TOO_LARGE`, `TOO_MANY_FILES`, `VALIDATION_FAILED` (no file) · 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` · 409 `RESULT_LOCKED`, `INVALID_TRANSITION` |
 | GET | `/api/tasks/:id/result` | US-27, US-29 | Ex | 200 (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` |
 | DELETE | `/api/tasks/:id/result/files/:fileId` | US-29/S3 | Ex | 204 | 403 · 409 `RESULT_LOCKED` |
-| POST | `/api/tasks/:id/result/submit` | US-28, US-29, US-32/S1 | Ex | 200 | 403 `NOT_EXECUTOR` · 409 `NO_RESULT_FILES`, `ALREADY_IN_REVIEW`, `INVALID_TRANSITION` |
+| POST | `/api/tasks/:id/result/submit` | US-28, US-48, US-29, US-32/S1 | Ex | 200 (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` · 409 `NO_RESULT_FILES`, `ALREADY_IN_REVIEW`, `INVALID_TRANSITION` |
 | POST | `/api/tasks/:id/accept` | US-31, US-30, US-34, US-37 | Own | 200 | 403 `NOT_TASK_OWNER` · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` |
 | POST | `/api/tasks/:id/return` | US-32, US-33 | Own | 200 | 400 `COMMENT_REQUIRED`, `COMMENT_TOO_LONG` · 403 · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` |
 | GET | `/api/files/:fileId` | US-27, US-31, US-39 | File owner · Own · Ex · M (US-27 builds the file owner; the customer comes with US-31, a moderator with US-39) | 200, `attachment` (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `FILE_FORBIDDEN` · 404 `NOT_FOUND` |
@@ -628,3 +628,27 @@ The first upload opens a version in `draft` (`version` = last + 1) and the next 
 `GET /api/files/:fileId` is always a download: `Content-Disposition: attachment` with the original name, `Content-Type: application/octet-stream` whatever the uploader claimed, `X-Content-Type-Options: nosniff`, `Cache-Control: private, no-store`. In US-27 the owner of the file may download it. An unknown or deleted file is 404, someone else's file 403 `FILE_FORBIDDEN`. The task's customer is added with US-31 and a moderator with US-39.
 
 The upload form shows the two result texts of §3 («Цей тип файлу заборонено з міркувань безпеки», «… Максимальний розмір — 50 МБ»), not the document texts that the dictionary holds for the same codes.
+
+#### Submit for review: `POST /api/tasks/:id/result/submit` (US-28, US-48)
+
+The executor sends the saved files to the customer. No body is read: nothing in a request can set a status or a version. It is **one transaction** (INV-15, INV-16, INV-23):
+
+1. the task moves from `in_progress`, or `revision`, to `in_review` by a conditional update, which is also the first write and so the task lock that US-28 and US-29 must take (OQ-35 i). A task that is already `in_review` is 409 `ALREADY_IN_REVIEW` (US-28/S3, a double click or a second tab); any other state of the executor's own task (`done`, `cancelled`) is 409 `INVALID_TRANSITION`. A task nobody was chosen for has no executor, so it is 403 `NOT_EXECUTOR` before this step (INV-14);
+2. the `draft` version must exist and hold at least one file, otherwise 409 `NO_RESULT_FILES` and step 1 is rolled back (US-28/S2). The page also keeps the button off while there is no file;
+3. the version moves from `draft` to `submitted` and gets `submittedAt`;
+4. the customer who owns the task gets a `result_submitted` notification (US-48): «Студент надіслав результат за завданням «Парсер сайту» на перевірку», payload `{ taskId, taskTitle }`. A refused submit creates none (US-48/S2). Each submitted version creates its own, also after a revision (US-48/S3). It is an in-app notification only, no email (A-15).
+
+The unknown task is 404, anyone but the executor 403 `NOT_EXECUTOR` (OQ-35 b). The deadline does not block a submit (OQ-35 e). The chat stays open in `in_review` (INV-22) and the files are locked: an upload is 409 `RESULT_LOCKED`.
+
+```json
+200 OK
+{ "task": { "id": "7d0c…", "status": "in_review" },
+  "result": { "version": 1, "status": "submitted", "revisionComment": null, "submittedAt": "2026-11-19T09:30:00Z",
+              "files": [ { "id": "f3a1…", "name": "Звіт.pdf", "mime": "application/pdf",
+                           "sizeBytes": 482113, "createdAt": "2026-11-18T10:02:11Z" } ] } }
+```
+
+```json
+409 Conflict
+{ "error": { "code": "NO_RESULT_FILES", "message": "Додайте файл результату" } }
+```

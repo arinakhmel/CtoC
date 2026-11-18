@@ -1,4 +1,4 @@
-import { MESSAGES_UK, executorSelectedPayloadSchema } from '@ctoc/shared';
+import { MESSAGES_UK, executorSelectedPayloadSchema, resultSubmittedPayloadSchema } from '@ctoc/shared';
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
@@ -9,11 +9,20 @@ import { useMarkRead, useNotifications, type AppNotification } from '../queries/
 const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
 
-/** «Вас обрано виконавцем» leads to the executor's card of the task. The payload is checked, it is data from the server. */
-const taskIdOf = (notification: AppNotification): string | null => {
-  if (notification.type !== 'executor_selected') return null;
-  const parsed = executorSelectedPayloadSchema.safeParse(notification.payload);
-  return parsed.success ? parsed.data.taskId : null;
+/**
+ * Where a notification leads. «Вас обрано виконавцем» goes to the executor's card of the task (`/work/:id`); «Студент надіслав
+ * результат…» goes to the customer's card (`/c/tasks/:id`, US-48). The payload is checked, it is data from the server.
+ */
+const linkOf = (notification: AppNotification): string | null => {
+  if (notification.type === 'executor_selected') {
+    const parsed = executorSelectedPayloadSchema.safeParse(notification.payload);
+    return parsed.success ? `/work/${parsed.data.taskId}` : null;
+  }
+  if (notification.type === 'result_submitted') {
+    const parsed = resultSubmittedPayloadSchema.safeParse(notification.payload);
+    return parsed.success ? `/c/tasks/${parsed.data.taskId}` : null;
+  }
+  return null;
 };
 
 /** /notifications: US-21. The notification centre. Unread ones are marked and can be marked as read; old ones stay listed (sc.3). */
@@ -53,7 +62,7 @@ export function NotificationsPage({ page }: { page: PageConfig }) {
                 <p>
                   <time dateTime={notification.createdAt}>{formatDeadline(notification.createdAt)}</time>
                 </p>
-                {taskIdOf(notification) && <Link to={`/work/${taskIdOf(notification)}`}>Відкрити завдання</Link>}
+                {linkOf(notification) && <Link to={linkOf(notification)!}>Відкрити завдання</Link>}
                 {!notification.read && (
                   <button type="button" disabled={markRead.isPending} onClick={() => markRead.mutate(notification.id)}>
                     Позначити прочитаним

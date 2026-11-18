@@ -1,7 +1,7 @@
 import { checkResultUpload, isResultEditable, MESSAGES_UK, RESULT_FILE_MESSAGES_UK } from '@ctoc/shared';
 import { useRef, useState, type FormEvent } from 'react';
 import { API_BASE_URL, ApiClientError } from '../../../lib/api';
-import { useResult, useUploadResultFile, type ResultFile } from '../queries/result';
+import { useResult, useSubmitResult, useUploadResultFile, type ResultFile } from '../queries/result';
 
 const MB = 1024 * 1024;
 const sizeLabel = (bytes: number): string => (bytes >= MB ? `${(bytes / MB).toFixed(1)} МБ` : `${Math.max(1, Math.round(bytes / 1024))} КБ`);
@@ -26,13 +26,28 @@ const FileRow = ({ file }: { file: ResultFile }) => (
  * US-27. The upload zone of the executor's card `/work/:taskId`: choose a file, «Зберегти результат», and the list of what is
  * already attached. The browser applies the same rules as the server (shared `checkResultUpload`) so a `.bat` or a file over
  * 50 MB is refused before it is sent; the server checks again, and also the content of the file.
+ *
+ * US-28. «Надіслати на перевірку» sends the saved files to the customer. It is disabled while there is no file (sc.2) and while
+ * a request runs (a double click, sc.3); if the server still refuses, its code is shown. After success the task is `in_review`,
+ * so the form and the button go away and the page shows the new status.
  */
 export function ResultUpload({ taskId, status }: { taskId: string; status: string | undefined }) {
   const result = useResult(taskId);
   const upload = useUploadResultFile(taskId);
+  const submit = useSubmitResult(taskId);
   const [file, setFile] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
+
+  const onSendForReview = async () => {
+    setSubmitError(null);
+    try {
+      await submit.mutateAsync();
+    } catch (error) {
+      setSubmitError(messageFor(error instanceof ApiClientError ? error.code : 'UNKNOWN_ERROR'));
+    }
+  };
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -94,6 +109,27 @@ export function ResultUpload({ taskId, status }: { taskId: string; status: strin
           </button>
         </form>
       )}
+
+      {isResultEditable(status) && (
+        <div>
+          <p>
+            <button
+              type="button"
+              disabled={files.length === 0 || upload.isPending || submit.isPending}
+              aria-describedby={files.length === 0 ? 'submit-hint' : undefined}
+              onClick={onSendForReview}
+            >
+              Надіслати на перевірку
+            </button>
+          </p>
+          {files.length === 0 && <p id="submit-hint">Щоб надіслати результат, спочатку збережіть хоча б один файл.</p>}
+        </div>
+      )}
+
+      {/* Outside the block above: after a 409 the page fetches the task again and the block goes away, the message must stay. */}
+      {submitError && <p role="alert">{submitError}</p>}
+
+      {submit.isSuccess && <p role="status">Результат надіслано на перевірку. Замовник отримав сповіщення.</p>}
     </section>
   );
 }

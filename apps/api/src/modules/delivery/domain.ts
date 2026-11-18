@@ -1,4 +1,15 @@
-import { isExecutableContent, LIMITS } from '@ctoc/shared';
+import { isExecutableContent, LIMITS, type ResultVersionStatus } from '@ctoc/shared';
+
+/**
+ * domain-model.md §3.1 (result version): `draft` -> `submitted` (US-28) -> `accepted` or `returned` (US-31, US-32). A new
+ * version starts as `draft`. Only a draft takes files (INV-16). The repo writes these values and nowhere else names them.
+ */
+export const DRAFT = 'draft' as const satisfies ResultVersionStatus;
+export const SUBMITTED = 'submitted' as const satisfies ResultVersionStatus;
+/** The version a task may have open at a time: the one being filled, or the one under review (a partial unique index). */
+export const OPEN_VERSION_STATUSES = [DRAFT, SUBMITTED] as const;
+/** INV-16: files go only into a draft. A submitted or decided version is never given one. */
+export const takesFiles = (versionStatus: string): boolean => versionStatus === DRAFT;
 
 /** The content type kept for a result file. It is the browser's claim, so it is only ever shown, never served (see the download route). */
 export const claimedMime = (mime: string | undefined): string =>

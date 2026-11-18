@@ -2,7 +2,7 @@ import { isResultEditable, LIMITS, type CreateTaskInput, type FeedQuery } from '
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
-import { assignRefusal, chatStateOf, deleteRefusal, newTaskData, resultRefusal } from './domain';
+import { assignRefusal, chatStateOf, deleteRefusal, newTaskData, resultRefusal, submitRefusal } from './domain';
 import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed, assertTaskOwner } from './policy';
 import {
   assignTaskTx,
@@ -20,6 +20,7 @@ import {
   listTasksOfExecutor,
   lockChatTask,
   lockDeliveryTask,
+  submitTaskTx,
   lockOpenTask,
 } from './repo';
 
@@ -170,6 +171,7 @@ export async function getTaskForDelivery(id: string) {
     id: task.id,
     customerId: task.customerId,
     executorId: task.executorId,
+    title: task.title,
     // Why files cannot be added now, or null when they can. The delivery module throws it as it is (ADR-0002: no import of this domain).
     refusal: isResultEditable(task.status) ? null : resultRefusal(task.status),
   };
@@ -180,4 +182,16 @@ export async function lockTaskForDelivery(tx: Prisma.TransactionClient, taskId: 
   if ((await lockDeliveryTask(tx, taskId, executorId)) > 0) return;
   const now = await tx.task.findUnique({ where: { id: taskId }, select: { status: true } });
   throw new ApiError(resultRefusal(now?.status ?? 'cancelled'));
+}
+
+/**
+ * US-28 sc.1, sc.3 (INV-15). First statement of the submit transaction: the conditional update that moves the executor's task to
+ * `in_review`. It is the write lock and the transition in one (OQ-35 i). Zero rows means the task is already under review
+ * (409 ALREADY_IN_REVIEW) or in a state that has no result to submit (409 INVALID_TRANSITION). The delivery module calls this,
+ * not the tasks table (ADR-0002).
+ */
+export async function moveTaskToReview(tx: Prisma.TransactionClient, taskId: string, executorId: string): Promise<void> {
+  if ((await submitTaskTx(tx, taskId, executorId)).count > 0) return;
+  const now = await tx.task.findUnique({ where: { id: taskId }, select: { status: true } });
+  throw new ApiError(submitRefusal(now?.status ?? 'cancelled'));
 }

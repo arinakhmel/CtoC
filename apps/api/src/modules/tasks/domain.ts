@@ -47,3 +47,13 @@ export const assignRefusal = (task: { executorId: string | null }): 'TASK_ALREAD
  */
 export const resultRefusal = (status: string): 'RESULT_LOCKED' | 'INVALID_TRANSITION' =>
   status === 'in_review' ? 'RESULT_LOCKED' : 'INVALID_TRANSITION';
+
+/** US-28 (domain-model.md §3.1): submitting the result moves a task from `in_progress`, or `revision`, to `in_review`. Only way in. */
+export const IN_REVIEW = 'in_review' as const;
+
+/**
+ * US-28 sc.3 (INV-15). Why a submit changed nothing: the task is already under review, or it is in a state that has no result
+ * to submit (`done`, `cancelled`, not assigned yet).
+ */
+export const submitRefusal = (status: string): 'ALREADY_IN_REVIEW' | 'INVALID_TRANSITION' =>
+  status === 'in_review' ? 'ALREADY_IN_REVIEW' : 'INVALID_TRANSITION';

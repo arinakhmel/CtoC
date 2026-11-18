@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../platform/db';
+import { DRAFT, OPEN_VERSION_STATUSES, SUBMITTED } from './domain';
 
 type Tx = Prisma.TransactionClient;
 
@@ -20,7 +21,7 @@ const versionSelect = {
  * `submitted` one under review. The caller must check the status: files go only into a draft (INV-16).
  */
 export const findOpenVersion = (tx: Tx, taskId: string) =>
-  tx.resultVersion.findFirst({ where: { taskId, status: { in: ['draft', 'submitted'] } }, select: { id: true, status: true } });
+  tx.resultVersion.findFirst({ where: { taskId, status: { in: [...OPEN_VERSION_STATUSES] } }, select: { id: true, status: true } });
 
 export const nextVersionNumber = async (tx: Tx, taskId: string): Promise<number> => {
   const last = await tx.resultVersion.aggregate({ where: { taskId }, _max: { version: true } });
@@ -28,7 +29,7 @@ export const nextVersionNumber = async (tx: Tx, taskId: string): Promise<number>
 };
 
 export const insertDraftVersion = (tx: Tx, taskId: string, version: number) =>
-  tx.resultVersion.create({ data: { taskId, version, status: 'draft' }, select: { id: true } });
+  tx.resultVersion.create({ data: { taskId, version, status: DRAFT }, select: { id: true } });
 
 export const countFilesOfVersion = (tx: Tx, resultVersionId: string) => tx.resultFile.count({ where: { resultVersionId } });
 
@@ -48,3 +49,14 @@ export const findCurrentVersion = (taskId: string) =>
 
 export const findFileForDownload = (id: string) =>
   prisma.file.findFirst({ where: { id, deletedAt: null }, select: { id: true, ownerId: true, kind: true, storageKey: true, originalName: true } });
+
+/** US-28. The draft the executor is filling, which is the version a submit sends. */
+export const findDraftVersion = (tx: Tx, taskId: string) =>
+  tx.resultVersion.findFirst({ where: { taskId, status: DRAFT }, select: { id: true } });
+
+/**
+ * US-28 sc.1 (INV-15, ADR-0007). The conditional update `draft` -> `submitted`. `count` 0 means the version is no longer a
+ * draft, which the task lock above it should already have made impossible.
+ */
+export const submitVersion = (tx: Tx, id: string, now: Date) =>
+  tx.resultVersion.updateMany({ where: { id, status: DRAFT }, data: { status: SUBMITTED, submittedAt: now } });

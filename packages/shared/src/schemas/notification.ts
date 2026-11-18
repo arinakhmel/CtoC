@@ -19,3 +19,10 @@ export const executorSelectedPayloadSchema = z.object({
   taskTitle: z.string().min(1),
 });
 export type ExecutorSelectedPayload = z.infer<typeof executorSelectedPayloadSchema>;
+
+/** US-28, US-48: the payload stored with a `result_submitted` notification, which the customer gets. */
+export const resultSubmittedPayloadSchema = z.object({
+  taskId: z.string().min(1),
+  taskTitle: z.string().min(1),
+});
+export type ResultSubmittedPayload = z.infer<typeof resultSubmittedPayloadSchema>;
