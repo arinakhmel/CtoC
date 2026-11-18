@@ -351,6 +351,16 @@ US-21. The caller's own notifications (ids are UUIDv7, so they sort by time). Wi
 
 A notification is created inside the business transaction it reports (INV-23), through `notifyExecutorSelected(tx, …)` of the notifications service. If that transaction fails, no notification exists (US-21/S2).
 
+The types that exist, with the text of each (the text is built by the server from the type and the payload, the UI shows it as it is):
+
+| `type` | Who gets it | `text` | `payload` | Link on `/notifications` |
+|---|---|---|---|---|
+| `executor_selected` | the selected student (US-21) | «Вас обрано виконавцем завдання [Назва]» | `{ taskId, taskTitle }` | `/work/:taskId` |
+| `result_submitted` | the customer who owns the task (US-28, US-48) | «Студент надіслав результат за завданням «[Назва]» на перевірку» | `{ taskId, taskTitle }` | `/c/tasks/:taskId` |
+| `result_accepted` | the executor, the student (US-30) | «Ваш результат прийнято замовником! Оплату нараховано» (fixed, the title is only in the payload) | `{ taskId, taskTitle }` | `/work/:taskId` |
+
+`result_accepted` is written by `notifyResultAccepted(tx, executorId, task)` on the transaction of the accept. It writes only the row: it opens no transaction and changes no task, escrow, balance or ledger. **Nothing calls it yet:** `POST /api/tasks/:id/accept` is US-31, which calls it from the transaction that also credits the payout, because the text says «Оплату нараховано» (INV-18, OQ-38). A payload that does not have the expected shape gets the neutral text «Нове сповіщення» and no link.
+
 ### 4.3c Chat of a task (US-23)
 
 `GET /api/tasks/:id/messages?after=<id>` and `POST /api/tasks/:id/messages`. Access "Own · Ex": the customer who owns the task and its executor (INV-22). Access is checked before the query or the body: an outsider with a bad body gets 403, not 400. An unknown task is 404.

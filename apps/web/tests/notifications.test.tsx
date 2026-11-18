@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -37,6 +37,39 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 const open = () => render(<RouterProvider router={createTestRouter(['/notifications'])} future={providerFuture} />);
+
+describe('/notifications of the student: «Ваш результат прийнято…» (US-30)', () => {
+  const TEXT_ACCEPTED = 'Ваш результат прийнято замовником! Оплату нараховано';
+
+  it('US-30 sc.3 the notification is listed as new, with the exact text, and links to the executor card of the task; a payload of another shape gives no link', async () => {
+    listResponse = () =>
+      json({
+        notifications: [
+          { id: 'n7', type: 'result_accepted', text: TEXT_ACCEPTED, payload: { taskId: 't7', taskTitle: 'Парсер сайту' }, read: false, createdAt: '2026-11-13T10:00:00.000Z' },
+          { ...note(true), id: 'n6', type: 'result_accepted', text: 'Нове сповіщення', payload: { unexpected: true } },
+        ],
+      });
+    open();
+
+    const article = await screen.findByRole('article', { name: TEXT_ACCEPTED });
+    expect(within(article).getByText('Нове:')).toBeInTheDocument();
+    expect(within(article).getByRole('link', { name: 'Відкрити завдання' })).toHaveAttribute('href', '/work/t7');
+    expect(screen.getAllByRole('link', { name: 'Відкрити завдання' })).toHaveLength(1); // the bad payload has no link
+  });
+
+  it('US-30 sc.3 once marked as read it stays in the list without «Нове:»', async () => {
+    const accepted = (read: boolean) => ({ id: 'n1', type: 'result_accepted', text: TEXT_ACCEPTED, payload: { taskId: 't1', taskTitle: 'Парсер сайту' }, read, createdAt: '2026-11-13T10:00:00.000Z' });
+    listResponse = () => json({ notifications: [accepted(state.read)] });
+    open();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Позначити прочитаним' }));
+
+    const article = await screen.findByRole('article', { name: TEXT_ACCEPTED });
+    await waitFor(() => expect(within(article).queryByText('Нове:')).not.toBeInTheDocument());
+    expect(within(article).queryByRole('button', { name: 'Позначити прочитаним' })).not.toBeInTheDocument();
+  });
+});
 
 describe('/notifications of the customer (US-48)', () => {
   it('US-48 sc.1 «Студент надіслав результат…» is listed as new and links to the customer card of the task', async () => {

@@ -1,7 +1,7 @@
 import type { NotificationsQuery } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
-import { executorSelectedPayload, resultSubmittedPayload } from './domain';
+import { executorSelectedPayload, resultAcceptedPayload, resultSubmittedPayload } from './domain';
 import { assertCanUseNotifications } from './policy';
 import { insertNotification, listNotificationsOfUser, markNotificationRead, notificationExistsForUser } from './repo';
 
@@ -36,6 +36,27 @@ export async function notifyResultSubmitted(
     userId: ownerId,
     type: 'result_submitted',
     payloadJson: JSON.stringify(resultSubmittedPayload(task)),
+  });
+}
+
+/**
+ * US-30 sc.1, sc.2 (INV-18, INV-23). The student is told that the customer accepted the result. It is only a row on the CALLER's
+ * transaction (`tx`): it opens no transaction of its own and changes no task, escrow, balance or ledger, so it commits or rolls
+ * back with the accept that calls it. If that transaction fails, no notification exists and the status is as it was (sc.2). The
+ * text says «Оплату нараховано», so it must be called only inside the transaction that also credits the payout.
+ *
+ * NOT CALLED YET: the accept (`POST /api/tasks/:id/accept`, US-31) does not exist. US-31 calls this from its transaction, and
+ * only then US-30 sc.1 and sc.2 are covered through the real action (OQ-38).
+ */
+export async function notifyResultAccepted(
+  tx: Prisma.TransactionClient,
+  executorId: string,
+  task: { id: string; title: string },
+): Promise<void> {
+  await insertNotification(tx, {
+    userId: executorId,
+    type: 'result_accepted',
+    payloadJson: JSON.stringify(resultAcceptedPayload(task)),
   });
 }
 

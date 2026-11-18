@@ -26,3 +26,10 @@ export const resultSubmittedPayloadSchema = z.object({
   taskTitle: z.string().min(1),
 });
 export type ResultSubmittedPayload = z.infer<typeof resultSubmittedPayloadSchema>;
+
+/** US-30: the payload stored with a `result_accepted` notification, which the executor (the student) gets. */
+export const resultAcceptedPayloadSchema = z.object({
+  taskId: z.string().min(1),
+  taskTitle: z.string().min(1),
+});
+export type ResultAcceptedPayload = z.infer<typeof resultAcceptedPayloadSchema>;

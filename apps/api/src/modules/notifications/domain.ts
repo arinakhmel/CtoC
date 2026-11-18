@@ -1,9 +1,23 @@
 import {
   executorSelectedPayloadSchema,
+  resultAcceptedPayloadSchema,
   resultSubmittedPayloadSchema,
   type ExecutorSelectedPayload,
+  type ResultAcceptedPayload,
   type ResultSubmittedPayload,
 } from '@ctoc/shared';
+
+/**
+ * US-30 sc.1 [AC]: «Ваш результат прийнято замовником! Оплату нараховано». A fixed text: the title of the task is kept in the
+ * payload only. «Оплату нараховано» is true only if the transaction that creates this notification also credited the payout
+ * (INV-18), which is the accept of US-31.
+ */
+export const RESULT_ACCEPTED_TEXT = 'Ваш результат прийнято замовником! Оплату нараховано';
+
+export const resultAcceptedPayload = (task: { id: string; title: string }): ResultAcceptedPayload => ({
+  taskId: task.id,
+  taskTitle: task.title,
+});
 
 /** US-48 sc.1 [AC]: «Студент надіслав результат за завданням «[Назва]» на перевірку». The title replaces the placeholder. */
 export const resultSubmittedText = (taskTitle: string): string => `Студент надіслав результат за завданням «${taskTitle}» на перевірку`;
@@ -39,6 +53,9 @@ export function notificationText(type: string, payload: unknown): string {
   if (type === 'result_submitted') {
     const parsed = resultSubmittedPayloadSchema.safeParse(payload);
     if (parsed.success) return resultSubmittedText(parsed.data.taskTitle);
+  }
+  if (type === 'result_accepted') {
+    return resultAcceptedPayloadSchema.safeParse(payload).success ? RESULT_ACCEPTED_TEXT : 'Нове сповіщення';
   }
   return 'Нове сповіщення';
 }
