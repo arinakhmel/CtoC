@@ -82,12 +82,12 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 |---|---|---|---|---|---|
 | GET | `/api/me/work` | US-22, US-29 | S+ (executor) | 200 (body: §4.13a): the student's tasks as executor, with status | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` |
 | POST | `/api/tasks/:id/result/files` | US-27 | Ex | 201 (body: §4.14) | 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_TOO_LARGE`, `TOO_MANY_FILES`, `VALIDATION_FAILED` (no file) · 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` · 409 `RESULT_LOCKED`, `INVALID_TRANSITION` |
-| GET | `/api/tasks/:id/result` | US-27, US-29 | Ex | 200 (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` |
+| GET | `/api/tasks/:id/result` | US-27, US-29, US-31 | Ex · Own (the owner sees only versions that are not drafts) | 200 (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` |
 | DELETE | `/api/tasks/:id/result/files/:fileId` | US-29/S3 | Ex | 204 (no body, §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR`, `ORIGIN_MISMATCH` · 404 `NOT_FOUND` · 409 `RESULT_LOCKED`, `INVALID_TRANSITION` |
 | POST | `/api/tasks/:id/result/submit` | US-28, US-48, US-29, US-32/S1 | Ex | 200 (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` · 409 `NO_RESULT_FILES`, `ALREADY_IN_REVIEW`, `INVALID_TRANSITION` |
-| POST | `/api/tasks/:id/accept` | US-31, US-30, US-34, US-37 | Own | 200 | 403 `NOT_TASK_OWNER` · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` |
+| POST | `/api/tasks/:id/accept` | US-31, US-30, US-34, US-37 | Own | 200 (body: §4.2) | 401 `AUTH_REQUIRED` · 403 `NOT_TASK_OWNER`, `ORIGIN_MISMATCH` · 404 `NOT_FOUND` · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` · 500 `INTERNAL_ERROR` (a broken invariant, nothing changes) |
 | POST | `/api/tasks/:id/return` | US-32, US-33 | Own | 200 | 400 `COMMENT_REQUIRED`, `COMMENT_TOO_LONG` · 403 · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` |
-| GET | `/api/files/:fileId` | US-27, US-31, US-39 | File owner · Own · Ex · M (US-27 builds the file owner; the customer comes with US-31, a moderator with US-39) | 200, `attachment` (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `FILE_FORBIDDEN` · 404 `NOT_FOUND` |
+| GET | `/api/files/:fileId` | US-27, US-31, US-39 | File owner · Own (US-31: files of a version that is not a draft) · M (a moderator comes with US-39) | 200, `attachment` (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `FILE_FORBIDDEN` · 404 `NOT_FOUND` |
 
 ### Chat and notifications
 
@@ -272,7 +272,16 @@ Another tab already assigned an executor (US-25/S2):
 
 ### 4.2 `POST /api/tasks/:id/accept` (accept result)
 
-This is one transaction (INV-18). Calling it again returns 409 and does **not** credit twice (US-31/S3, US-34/S3).
+The owner of the task accepts the result that the student sent for review (US-31). The body is empty and is not read: nothing in a request can set an amount, a status or an executor. It is **one transaction** (INV-18, INV-23): any failure leaves the task `in_review`, the escrow `held` and nothing credited, and the error is logged (US-34/S2, W-06). The steps, in this order:
+
+1. the task goes `in_review` → `done` with `completedAt`, by a conditional update that is the first write and so also the lock. The deal already closed is 409 `TASK_ALREADY_DONE`; any other state (in progress, in revision, not assigned, cancelled) is 409 `TASK_NOT_IN_REVIEW`;
+2. the price split stored on the task at publication must exist and add up to the price. A task without it (published before US-40 writes it, OQ-22) is **not** accepted and the amount is never computed from today's rate: 500 `INTERNAL_ERROR`, logged, nothing changes (OQ-39);
+3. the version under review goes `submitted` → `accepted` with `decidedAt`;
+4. the escrow is released through the `PaymentProvider` port (the sandbox moves no money outside the ledger): `held` → `released`; the student's balance goes up by `net` with a `payout` ledger entry; the platform's balance (`platform`) by `commission` with a `commission` entry, which is not written when the commission is 0. Both credits are conditional writes under the same limit as a top-up (`LIMITS.balanceMaxKopecks`): a credit that would pass it is refused like a broken invariant, 500 `INTERNAL_ERROR`, logged, and the whole accept is rolled back (OQ-39). The customer was already debited by the hold, so `-price + net + commission = 0` and every balance equals the sum of its ledger entries (INV-20);
+5. the experience record of the student is created: the title and the description of the task and the completion time (US-37, one per task, INV-21). Nothing publishes it yet: the profile, its order and the mark are US-37 and US-38;
+6. the notification «Ваш результат прийнято замовником! Оплату нараховано» is written for the student, as the last step, so it is only said when the payout is in (US-30, §4.3b).
+
+Errors: 401 no session · 403 `NOT_TASK_OWNER` for anyone but the owner, also the executor and any student (US-31/S2) · 404 unknown task · 409 as above · 500 `INTERNAL_ERROR` when a step fails or an invariant is broken (no split, no held escrow, no submitted version). Calling it again returns 409 `TASK_ALREADY_DONE` without any change, so a double click, two tabs or two requests at once give one 200 and the rest 409, exactly one payout, one commission, one record and one notification (US-31/S3, US-34/S3, INV-19). Only the database may refuse a second payout, commission or record too: the unique indexes `(task_id, kind)` of the ledger and `task_id` of the experience record.
 
 ```http
 POST /api/tasks/7d0c…/accept
@@ -359,7 +368,7 @@ The types that exist, with the text of each (the text is built by the server fro
 | `result_submitted` | the customer who owns the task (US-28, US-48) | «Студент надіслав результат за завданням «[Назва]» на перевірку» | `{ taskId, taskTitle }` | `/c/tasks/:taskId` |
 | `result_accepted` | the executor, the student (US-30) | «Ваш результат прийнято замовником! Оплату нараховано» (fixed, the title is only in the payload) | `{ taskId, taskTitle }` | `/work/:taskId` |
 
-`result_accepted` is written by `notifyResultAccepted(tx, executorId, task)` on the transaction of the accept. It writes only the row: it opens no transaction and changes no task, escrow, balance or ledger. **Nothing calls it yet:** `POST /api/tasks/:id/accept` is US-31, which calls it from the transaction that also credits the payout, because the text says «Оплату нараховано» (INV-18, OQ-38). A payload that does not have the expected shape gets the neutral text «Нове сповіщення» and no link.
+`result_accepted` is written by `notifyResultAccepted(tx, executorId, task)` on the transaction of the accept. It writes only the row: it opens no transaction and changes no task, escrow, balance or ledger. It is called by `POST /api/tasks/:id/accept` (§4.2, US-31) as the last step of the transaction that also credits the payout, because the text says «Оплату нараховано» (INV-18, OQ-38). A payload that does not have the expected shape gets the neutral text «Нове сповіщення» and no link.
 
 ### 4.3c Chat of a task (US-23)
 
@@ -635,7 +644,9 @@ The first upload opens a version in `draft` (`version` = last + 1) and the next 
                            "sizeBytes": 482113, "createdAt": "2026-11-18T10:02:11Z" } ] } }
 ```
 
-`GET /api/files/:fileId` is always a download: `Content-Disposition: attachment` with the original name, `Content-Type: application/octet-stream` whatever the uploader claimed, `X-Content-Type-Options: nosniff`, `Cache-Control: private, no-store`. In US-27 the owner of the file may download it. An unknown or deleted file is 404, someone else's file 403 `FILE_FORBIDDEN`. The task's customer is added with US-31 and a moderator with US-39.
+`GET /api/files/:fileId` is always a download: `Content-Disposition: attachment` with the original name, `Content-Type: application/octet-stream` whatever the uploader claimed, `X-Content-Type-Options: nosniff`, `Cache-Control: private, no-store`. The owner of the file (the executor who uploaded it) may download it. Since US-31 the customer who owns the task may too, but only a file of a version that is **not a draft** (sent for review, accepted or returned): a draft is still the executor's alone, so its file is 403 `FILE_FORBIDDEN` for the customer. An unknown or deleted file is 404, anyone else's file 403 `FILE_FORBIDDEN`. A moderator comes with US-39.
+
+`GET /api/tasks/:id/result` is read by the executor, who sees the current version, a draft included, and by the customer who owns the task, who sees the latest version that is not a draft and gets `{ "result": null }` while there is none (US-31). Anyone else is 403 `NOT_EXECUTOR` (OQ-35 b).
 
 The upload form shows the two result texts of §3 («Цей тип файлу заборонено з міркувань безпеки», «… Максимальний розмір — 50 МБ»), not the document texts that the dictionary holds for the same codes.
 

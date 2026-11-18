@@ -101,7 +101,7 @@ A resend creates a new token and invalidates older unused ones (US-07/S3; invali
 | `files` | 1–10 files per version, each ≤ 50 MB. | US-28/S2, US-27/S3 [ex]; count [prop] |
 | | Blocked: `.exe .bat .cmd .com .scr .msi .ps1 .vbs` and executables detected by content. | US-27/S2 [AC] + [prop] (overview OQ-18) |
 | `version` | 1, 2, 3, … per task. | US-32/S1 |
-| `status` | `draft` \| `submitted` \| `accepted` \| `returned`. | US-28, US-29/S3, US-31, US-32 |
+| `status` | `draft` \| `submitted` \| `accepted` \| `returned`. The customer sees only the versions that are not a `draft`, and their files (US-31). | US-28, US-29/S3, US-31, US-32 |
 | `revisionComment` | Required when returned, 1–2000 characters. Error «Коментар до доопрацювання є обов'язковим». | US-33/CL, US-33/S2, S3 [AC]; max [prop] |
 
 ### Chat message
@@ -135,7 +135,7 @@ A resend creates a new token and invalidates older unused ones (US-07/S3; invali
 
 | Attribute | Constraint | Source |
 |---|---|---|
-| `title`, `description` | Copied from the task when it completes. | US-37/CL, US-37/S1 (overview OQ-14) |
+| `title`, `description` | Copied from the task when it completes. Created in the transaction of the accept (INV-18), one per task (INV-21); showing it in the profile is US-37/US-38. | US-37/CL, US-37/S1 (overview OQ-14) |
 | `completedAt` | The task's completion time. | US-37/S1 |
 | marker | Always «Підтверджено платформою CtoC». Nobody can edit it. | US-38/CL |
 

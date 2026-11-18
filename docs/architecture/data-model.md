@@ -275,6 +275,8 @@ Indexes:
 - `UNIQUE (withdrawal_id, kind) WHERE withdrawal_id IS NOT NULL`;
 - `(owner_id, created_at)`.
 
+The release of an escrow (US-31, US-34) writes no entry of its own: the escrow goes `held` → `released`, and the student gets a `payout` entry and the platform a `commission` entry (owner `platform`, which is not a user id; none when the commission is 0, since an entry cannot be 0). With the `hold` that already took the price from the customer the three entries of a task add up to 0.
+
 **`withdrawals`**
 
 | Column | Type | Constraints |
