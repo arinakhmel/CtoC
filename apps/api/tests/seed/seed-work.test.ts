@@ -370,3 +370,47 @@ describe('db:seed:work --new-task leaves existing tasks as they are', () => {
     expect(await prisma.application.count()).toBe(0);
   });
 });
+
+describe('db:seed:work --new-task checks the limit before it creates an account', () => {
+  /** The limit counts the tasks of the test customer, so it can be reached only when that customer exists: here without the student. */
+  async function customerAtTheLimitWithoutStudent() {
+    const customer = await prisma.user.create({
+      data: { email: SEED_CUSTOMER_EMAIL, passwordHash: 'x', displayName: 'Тестовий Замовник', role: 'customer', emailConfirmedAt: new Date() },
+    });
+    await createTask(customer.id, { title: SEED_TASK_TITLE });
+    for (let i = 2; i <= 20; i += 1) await createTask(customer.id, { title: `[Тест] Завдання для ручної перевірки №${i}` });
+    return customer;
+  }
+
+  it('at the limit, with the student missing, it refuses and creates nothing: no student, no task, no money, no audit event', async () => {
+    await customerAtTheLimitWithoutStudent();
+    const before = await counts();
+
+    await expect(seedWorkData(prisma, passwords, { newTask: true })).rejects.toThrow(/more than 20 test tasks/);
+
+    expect(await counts()).toEqual(before);
+    expect(await prisma.user.findUnique({ where: { email: SEED_STUDENT_EMAIL } })).toBeNull();
+    expect(await prisma.balance.count()).toBe(0);
+  });
+
+  it('the same without any password: the refusal is the limit, not a missing password, and still nothing is written', async () => {
+    await customerAtTheLimitWithoutStudent();
+    const before = await counts();
+
+    await expect(seedWorkData(prisma, {}, { newTask: true })).rejects.toThrow(/more than 20 test tasks/);
+
+    expect(await counts()).toEqual(before);
+  });
+
+  it('below the limit the missing student is created and the new task is added, as before', async () => {
+    const customer = await prisma.user.create({
+      data: { email: SEED_CUSTOMER_EMAIL, passwordHash: 'x', displayName: 'Тестовий Замовник', role: 'customer', emailConfirmedAt: new Date() },
+    });
+    await createTask(customer.id, { title: SEED_TASK_TITLE });
+
+    const report = await seedWorkData(prisma, passwords, { newTask: true });
+
+    expect(await prisma.user.findUnique({ where: { email: SEED_STUDENT_EMAIL } })).not.toBeNull();
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: report.taskId! } })).title).toBe('[Тест] Завдання для ручної перевірки №2');
+  });
+});

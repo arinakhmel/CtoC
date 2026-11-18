@@ -170,6 +170,12 @@ async function nextNumberedTitle(prisma: PrismaClient, customerId: string, baseT
   return `${NUMBERED_TITLE_PREFIX}${number}`;
 }
 
+/** The title the next `--new-task` would use for this customer, or the refusal at the limit. Reads only. */
+async function newTaskTitleFor(prisma: PrismaClient, customerId: string): Promise<string> {
+  const base = await prisma.task.findFirst({ where: { customerId, title: SEED_TASK_TITLE }, select: { id: true } });
+  return nextNumberedTitle(prisma, customerId, base === null);
+}
+
 /**
  * Brings the test task with this title to `in_progress` with the student as executor, through the real services, and does
  * only the steps that are missing. A task that is already past that point (for example in review) is left as it is.
@@ -225,6 +231,12 @@ async function ensureAssignedTask(
  */
 export async function seedWorkData(prisma: PrismaClient, passwords: SeedPasswords, options: SeedOptions = {}): Promise<SeedReport> {
   const lines: string[] = [];
+  // The limit of 20 counts the tasks of the test customer, so it can only be reached when that customer exists. It is checked here,
+  // before any account is created: a refusal must not leave a new student behind. (A customer that does not exist has no tasks.)
+  if (options.newTask) {
+    const existingCustomer = await prisma.user.findUnique({ where: { email: SEED_CUSTOMER_EMAIL } });
+    if (existingCustomer) await newTaskTitleFor(prisma, existingCustomer.id);
+  }
   const student = await ensureUser(prisma, {
     email: SEED_STUDENT_EMAIL,
     role: 'student',
@@ -251,7 +263,7 @@ export async function seedWorkData(prisma: PrismaClient, passwords: SeedPassword
   }
 
   // With `--new-task` an existing first task is left exactly as it is, in whatever state it is. It is created only when it is missing.
-  // The title of the new task, and so the limit of 20, is settled before anything is written: a refusal leaves nothing half done.
+  // The title is settled again here, now that the accounts exist, and before any task is written. The limit was already checked above.
   const baseTask = await prisma.task.findFirst({ where: { customerId: customer.user.id, title: SEED_TASK_TITLE } });
   const newTitle = await nextNumberedTitle(prisma, customer.user.id, baseTask === null);
   if (baseTask) lines.push(`task "${baseTask.title}" (${baseTask.id}): status ${baseTask.status}, left as it is`);
