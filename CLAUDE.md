@@ -18,7 +18,7 @@ pnpm workspaces monorepo, Node 22, TypeScript only. `apps/api` (Express 5, Zod, 
 | `pnpm db:migrate` / `pnpm --filter @ctoc/api db:migrate:dev --name <x>` | Apply / create a migration |
 | `pnpm db:reset` | Recreate the local database |
 | `pnpm db:seed` | Create the moderator account (SEED_MODERATOR_EMAIL, SEED_MODERATOR_PASSWORD in `.env`; dev default `moderator@ctoc.local`) |
-| `pnpm db:seed:work` | Development only: add a verified test student (seed.student@ctoc.local), a customer (seed.customer@ctoc.local) and a task assigned to the student, to try Epic 5 in the browser. Dry-run by default; `pnpm db:seed:work --apply` writes. Passwords from SEED_STUDENT_PASSWORD and SEED_CUSTOMER_PASSWORD in your local `.env` (needed only to create a missing account, never printed). Adds rows only, never changes an existing account, refuses production and Railway |
+| `pnpm db:seed:work` | Development only: add a verified test student (seed.student@ctoc.local), a customer (seed.customer@ctoc.local) and a task assigned to the student, to try Epic 5 in the browser. Dry-run by default; `pnpm db:seed:work --apply` writes; `--new-task` also adds one more numbered assigned task, to repeat a manual check after the earlier one moved on (max 20). Passwords from SEED_STUDENT_PASSWORD and SEED_CUSTOMER_PASSWORD in your local `.env` (needed only to create a missing account, never printed). Never changes or deletes an existing account or task (the only change to existing data is a sandbox top-up of the test customer's balance; without `--new-task` it finishes an interrupted first test task), refuses production and Railway |
 
 ## Documentation map: read this before that
 
