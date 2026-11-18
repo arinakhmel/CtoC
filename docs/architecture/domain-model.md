@@ -170,7 +170,7 @@ Each invariant has an id, so tests can name it. **DB** means the database schema
 | INV-13 | A task with an executor cannot be deleted. | TX | US-22/S2 |
 | INV-14 | Only the executor can upload or submit results. Only the owner can accept or return. Others get 403. | TX (policy) | US-31/S2, US-27 |
 | INV-15 | A submission needs at least one file. A task in `in_review` cannot be submitted again. | TX | US-28/S2, S3 |
-| INV-16 | The files of a `submitted` or `accepted` version cannot be changed or deleted. | TX | US-29/S3 |
+| INV-16 | Only the files of a `draft` version can be added or deleted, and only while the task is `in_progress` or `revision`. The files of a `submitted`, `accepted` or `returned` version cannot be changed or deleted. | TX | US-29/S3 |
 | INV-17 | Return for revision is only possible from `in_review` and needs a comment. `done` is final. | TX | US-32/CL, US-32/S2, US-33/S2 |
 | INV-18 | On acceptance, these happen together or not at all: task `done`, escrow `released`, student credited with `net`, platform credited with `commission`, experience record created, notification sent. | TX | US-31/S1, US-34/S1, US-37/S1, US-30/S2 |
 | INV-19 | At most one payout per task, even if the acceptance is repeated. | DB | US-34/S3 |

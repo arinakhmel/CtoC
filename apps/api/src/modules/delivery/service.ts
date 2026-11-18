@@ -14,9 +14,12 @@ import {
   findDraftVersion,
   findFileForDownload,
   findOpenVersion,
+  findResultFileLink,
   insertDraftVersion,
   insertResultFile,
+  markFileDeleted,
   nextVersionNumber,
+  removeFileFromDraft,
   submitVersion,
 } from './repo';
 
@@ -102,6 +105,39 @@ export async function submitResult(user: User, taskId: string) {
     await notifyResultSubmitted(tx, task.customerId, { id: task.id, title: task.title });
   });
   return { task: { id: task.id, status: 'in_review' as const }, version: await findCurrentVersion(task.id) };
+}
+
+/**
+ * US-29 sc.3 (INV-14, INV-16, ADR-0007). The executor deletes a file of the result, only from a DRAFT version and only while the
+ * task is `in_progress` or `revision`. A submitted or returned version is never changed. ONE transaction:
+ *   1. the task lock first (OQ-35 i): a task already `in_review` gives 0 rows, so 409 RESULT_LOCKED; `done` and `cancelled` give
+ *      409 INVALID_TRANSITION. This is also what makes a delete and a submit at the same time safe: the one that gets the lock
+ *      first decides, and a submit that finds the last file gone is 409 NO_RESULT_FILES (INV-15);
+ *   2. the file must belong to this task (404 otherwise, so another task's file is not revealed), and to a draft (409 RESULT_LOCKED);
+ *   3. the conditional delete of the link, and the mark `files.deleted_at`, each with its count checked.
+ * The bytes are removed AFTER the commit (no file I/O in a transaction). If that fails it is logged and the request still succeeds:
+ * the file is already out of the list and `GET /api/files/:fileId` answers 404 for it. A second delete of the same file is 404.
+ */
+export async function deleteResultFile(user: User, taskId: string, fileId: string): Promise<void> {
+  const task = await getTaskForDelivery(taskId);
+  assertIsExecutor(task, user); // 404 for an unknown task, 403 for anyone but the executor, before anything is written
+  if (task.refusal) throw new ApiError(task.refusal); // a fast path only: the lock below decides
+
+  const storageKey = await prisma.$transaction(async (tx) => {
+    await lockTaskForDelivery(tx, task.id, user.id);
+    const link = await findResultFileLink(tx, task.id, fileId);
+    if (!link) throw new ApiError('NOT_FOUND');
+    if (!takesFiles(link.resultVersion.status)) throw new ApiError('RESULT_LOCKED'); // INV-16: submitted and returned versions are fixed
+    if ((await removeFileFromDraft(tx, task.id, fileId)).count === 0) throw new ApiError('NOT_FOUND');
+    if ((await markFileDeleted(tx, fileId, user.id, new Date())).count === 0) throw new ApiError('NOT_FOUND');
+    return link.file.storageKey;
+  });
+
+  await getFileStorage()
+    .delete(storageKey)
+    .catch((error: unknown) => {
+      console.error(`Result file ${fileId} was deleted but its bytes were not removed`, error instanceof Error ? error.message : error);
+    });
 }
 
 /** US-27 sc.1. The current result of a task, for its executor. */

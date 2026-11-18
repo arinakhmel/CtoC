@@ -10,8 +10,11 @@ import { createTask } from '../modules/tasks/service';
  * `pnpm db:seed:work`: DEVELOPMENT ONLY. A verified test student and a customer with a task assigned to that student
  * (`in_progress`), so the executor's side of Epic 5 (US-27 and later) can be tried in the browser.
  *
- * It only ever ADDS rows for the two accounts below and never changes an existing account, so a real local account and its
- * pending verification request are untouched. It goes through the real services wherever one exists: the balance top-up
+ * It never changes or deletes an existing account, so a real local account and its pending verification request are untouched.
+ * It creates what is missing. Without `--new-task` it also finishes an interrupted first test task (publishes it, adds the
+ * application, assigns the student); with `--new-task` an existing task is left exactly as it is and one more is added. The only
+ * change to existing data is a sandbox top-up of the test customer's balance when it is below the task price. It goes through
+ * the real services wherever one exists: the balance top-up
  * (US-26), the task (US-16), the application (US-18) and the assignment with the escrow (US-25). Two steps are written
  * directly because the code for them is not built yet: the accounts themselves (a student can be approved only through
  * Telegram, there is no moderator screen), and the publication of the task (US-40).
@@ -54,8 +57,8 @@ export interface SeedReport {
 
 const taskOf = (prisma: PrismaClient, customerId: string) => prisma.task.findFirst({ where: { customerId, title: SEED_TASK_TITLE } });
 
-/** What `--apply` would do, read from the database. Writes nothing. */
-export async function planWorkData(prisma: PrismaClient): Promise<string[]> {
+/** What `--apply` would do (with `--new-task`, also the numbered task), read from the database. Writes nothing. */
+export async function planWorkData(prisma: PrismaClient, options: { newTask?: boolean } = {}): Promise<string[]> {
   const [student, customer] = await Promise.all([
     prisma.user.findUnique({ where: { email: SEED_STUDENT_EMAIL } }),
     prisma.user.findUnique({ where: { email: SEED_CUSTOMER_EMAIL } }),
@@ -68,10 +71,20 @@ export async function planWorkData(prisma: PrismaClient): Promise<string[]> {
   if (!task) {
     lines.push('balance: sandbox top-up if below the task price; task: will be created and published (commission 10 %, development value)');
     lines.push('application of the student: will be created; assignment: will run (escrow held, notification «Вас обрано»)');
+  } else if (options.newTask) {
+    lines.push(`task "${task.title}" (${task.id}): exists in status ${task.status}, left as it is`);
   } else if (task.status === 'in_progress' && task.executorId === student?.id) {
     lines.push(`task "${task.title}" (${task.id}): already assigned to the student, nothing to do`);
   } else {
     lines.push(`task "${task.title}" (${task.id}): exists in status ${task.status}, the missing steps would run`);
+  }
+  if (options.newTask) {
+    try {
+      const title = customer ? await nextNumberedTitle(prisma, customer.id, task === null) : `${NUMBERED_TITLE_PREFIX}2`;
+      lines.push(`new task: "${title}" will be created, published and assigned to the student (balance topped up in the sandbox if needed)`);
+    } catch (error) {
+      lines.push(`new task: ${error instanceof Error ? error.message : error}`);
+    }
   }
   return lines;
 }
@@ -133,9 +146,97 @@ async function publishForDevelopment(prisma: PrismaClient, task: Task): Promise<
   });
 }
 
-/** Creates what is missing, step by step; a second run finds everything in place and changes nothing. Never prints a password. */
-export async function seedWorkData(prisma: PrismaClient, passwords: SeedPasswords): Promise<SeedReport> {
+export interface SeedOptions {
+  /**
+   * Also create one more assigned task (a numbered one), for repeating a manual check. An existing task is left exactly as it is;
+   * the new title and the limit of 20 are settled before anything is written.
+   */
+  newTask?: boolean;
+}
+
+/** The most numbered test tasks one seed customer may have: a guard against filling the development database by accident. */
+const SEED_TASKS_MAX = 20;
+const NUMBERED_TITLE_PREFIX = '[Тест] Завдання для ручної перевірки №';
+
+/** The title of the next numbered test task: №2 when the first one (SEED_TASK_TITLE) exists, and so on. */
+async function nextNumberedTitle(prisma: PrismaClient, customerId: string, baseTaskWillBeCreated = false): Promise<string> {
+  const existing = await prisma.task.findMany({ where: { customerId, title: { startsWith: '[Тест] ' } }, select: { title: true } });
+  // The first task (SEED_TASK_TITLE) is №1: when it is still to be created it counts, so the plan and the run name the same task.
+  const count = existing.length + (baseTaskWillBeCreated ? 1 : 0);
+  if (count >= SEED_TASKS_MAX) throw new Error(`Refusing to create more than ${SEED_TASKS_MAX} test tasks for ${SEED_CUSTOMER_EMAIL}`);
+  const titles = new Set(existing.map((row) => row.title));
+  let number = count + 1;
+  while (titles.has(`${NUMBERED_TITLE_PREFIX}${number}`)) number += 1;
+  return `${NUMBERED_TITLE_PREFIX}${number}`;
+}
+
+/** The title the next `--new-task` would use for this customer, or the refusal at the limit. Reads only. */
+async function newTaskTitleFor(prisma: PrismaClient, customerId: string): Promise<string> {
+  const base = await prisma.task.findFirst({ where: { customerId, title: SEED_TASK_TITLE }, select: { id: true } });
+  return nextNumberedTitle(prisma, customerId, base === null);
+}
+
+/**
+ * Brings the test task with this title to `in_progress` with the student as executor, through the real services, and does
+ * only the steps that are missing. A task that is already past that point (for example in review) is left as it is.
+ * Returns the task and whether it is a task the student can work on now.
+ */
+async function ensureAssignedTask(
+  prisma: PrismaClient,
+  customer: User,
+  student: User,
+  title: string,
+  lines: string[],
+): Promise<{ task: Task; ready: boolean }> {
+  let task = await prisma.task.findFirst({ where: { customerId: customer.id, title } });
+  if (task && task.status !== 'pending_moderation' && task.status !== 'published') {
+    lines.push(`task "${task.title}" (${task.id}): status ${task.status}, nothing to do`);
+    return { task, ready: false };
+  }
+
+  if (!task) {
+    const deadlineAt = new Date(Date.now() + SEED_DEADLINE_DAYS * 24 * 3600 * 1000).toISOString();
+    task = await createTask(customer, { title, description: SEED_TASK_DESCRIPTION, priceKopecks: SEED_PRICE_KOPECKS, deadlineAt });
+    lines.push(`task created: "${title}" (${task.id})`);
+  }
+  if (task.status === 'pending_moderation') {
+    await publishForDevelopment(prisma, task);
+    lines.push('task published (development shortcut for US-40, commission 10 %)');
+  }
+
+  const executorChosen = (await prisma.task.findUniqueOrThrow({ where: { id: task.id } })).executorId !== null;
+  if (!executorChosen) {
+    // The money is needed only to reserve the price when the student is selected, so the balance is checked here: it also lets an
+    // interrupted run of an older task be finished. A sandbox top-up of the test customer is the one change to existing data.
+    if ((await getMyBalance(customer)) < SEED_PRICE_KOPECKS) {
+      await topUpBalance(customer, { amountKopecks: SEED_TOPUP_KOPECKS });
+      lines.push(`balance: topped up by ${SEED_TOPUP_KOPECKS / 100} UAH (sandbox)`);
+    }
+    let application = await prisma.application.findFirst({ where: { taskId: task.id, studentId: student.id } });
+    if (!application) {
+      application = await createApplication(student, task.id, {});
+      lines.push('application of the student created');
+    }
+    const owned = await resolveOwnedTask(customer, task.id);
+    // A fixed key per task: a repeat of an interrupted run returns the same escrow instead of charging twice (US-26 sc.3).
+    await assignExecutor(customer, owned, { applicationId: application.id }, `seed-work-${task.id}`);
+    lines.push('student selected as the executor: task in progress, escrow held, notification sent');
+  }
+  return { task, ready: true };
+}
+
+/**
+ * Creates what is missing, step by step; a second run finds everything in place and changes nothing. Never prints a password.
+ * With `newTask` it then adds one more numbered task, so a manual check can be repeated after an earlier task has moved on.
+ */
+export async function seedWorkData(prisma: PrismaClient, passwords: SeedPasswords, options: SeedOptions = {}): Promise<SeedReport> {
   const lines: string[] = [];
+  // The limit of 20 counts the tasks of the test customer, so it can only be reached when that customer exists. It is checked here,
+  // before any account is created: a refusal must not leave a new student behind. (A customer that does not exist has no tasks.)
+  if (options.newTask) {
+    const existingCustomer = await prisma.user.findUnique({ where: { email: SEED_CUSTOMER_EMAIL } });
+    if (existingCustomer) await newTaskTitleFor(prisma, existingCustomer.id);
+  }
   const student = await ensureUser(prisma, {
     email: SEED_STUDENT_EMAIL,
     role: 'student',
@@ -155,43 +256,20 @@ export async function seedWorkData(prisma: PrismaClient, passwords: SeedPassword
   lines.push(`student ${SEED_STUDENT_EMAIL}: ${student.created ? 'created, verified' : 'already exists, not changed'}`);
   lines.push(`customer ${SEED_CUSTOMER_EMAIL}: ${customer.created ? 'created' : 'already exists, not changed'}`);
 
-  let task = await taskOf(prisma, customer.user.id);
-  if (task && task.status !== 'pending_moderation' && task.status !== 'published') {
-    lines.push(`task "${task.title}" (${task.id}): status ${task.status}, nothing to do`);
-    return { lines, taskId: task.id };
+  if (!options.newTask) {
+    const base = await ensureAssignedTask(prisma, customer.user, student.user, SEED_TASK_TITLE, lines);
+    if (base.ready) lines.push(`ready: log in as ${SEED_STUDENT_EMAIL} and open /me/work (task ${base.task.id})`);
+    return { lines, taskId: base.task.id };
   }
 
-  if (!task) {
-    if ((await getMyBalance(customer.user)) < SEED_PRICE_KOPECKS) {
-      await topUpBalance(customer.user, { amountKopecks: SEED_TOPUP_KOPECKS });
-      lines.push(`balance: topped up by ${SEED_TOPUP_KOPECKS / 100} UAH (sandbox)`);
-    }
-    const deadlineAt = new Date(Date.now() + SEED_DEADLINE_DAYS * 24 * 3600 * 1000).toISOString();
-    task = await createTask(customer.user, {
-      title: SEED_TASK_TITLE,
-      description: SEED_TASK_DESCRIPTION,
-      priceKopecks: SEED_PRICE_KOPECKS,
-      deadlineAt,
-    });
-    lines.push(`task created: ${task.id}`);
-  }
-  if (task.status === 'pending_moderation') {
-    await publishForDevelopment(prisma, task);
-    lines.push('task published (development shortcut for US-40, commission 10 %)');
-  }
+  // With `--new-task` an existing first task is left exactly as it is, in whatever state it is. It is created only when it is missing.
+  // The title is settled again here, now that the accounts exist, and before any task is written. The limit was already checked above.
+  const baseTask = await prisma.task.findFirst({ where: { customerId: customer.user.id, title: SEED_TASK_TITLE } });
+  const newTitle = await nextNumberedTitle(prisma, customer.user.id, baseTask === null);
+  if (baseTask) lines.push(`task "${baseTask.title}" (${baseTask.id}): status ${baseTask.status}, left as it is`);
+  else await ensureAssignedTask(prisma, customer.user, student.user, SEED_TASK_TITLE, lines);
 
-  const executorChosen = (await prisma.task.findUniqueOrThrow({ where: { id: task.id } })).executorId !== null;
-  if (!executorChosen) {
-    let application = await prisma.application.findFirst({ where: { taskId: task.id, studentId: student.user.id } });
-    if (!application) {
-      application = await createApplication(student.user, task.id, {});
-      lines.push('application of the student created');
-    }
-    const owned = await resolveOwnedTask(customer.user, task.id);
-    // A fixed key per task: a repeat of an interrupted run returns the same escrow instead of charging twice (US-26 sc.3).
-    await assignExecutor(customer.user, owned, { applicationId: application.id }, `seed-work-${task.id}`);
-    lines.push('student selected as the executor: task in progress, escrow held, notification sent');
-  }
-  lines.push(`ready: log in as ${SEED_STUDENT_EMAIL} and open /me/work (task ${task.id})`);
-  return { lines, taskId: task.id };
+  const extra = await ensureAssignedTask(prisma, customer.user, student.user, newTitle, lines);
+  lines.push(`ready: log in as ${SEED_STUDENT_EMAIL} and open /me/work (new task ${extra.task.id}, title "${extra.task.title}")`);
+  return { lines, taskId: extra.task.id };
 }

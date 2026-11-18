@@ -1,7 +1,7 @@
 import { checkResultUpload, isResultEditable, MESSAGES_UK, RESULT_FILE_MESSAGES_UK } from '@ctoc/shared';
 import { useRef, useState, type FormEvent } from 'react';
 import { API_BASE_URL, ApiClientError } from '../../../lib/api';
-import { useResult, useSubmitResult, useUploadResultFile, type ResultFile } from '../queries/result';
+import { useDeleteResultFile, useResult, useSubmitResult, useUploadResultFile, type ResultFile } from '../queries/result';
 
 const MB = 1024 * 1024;
 const sizeLabel = (bytes: number): string => (bytes >= MB ? `${(bytes / MB).toFixed(1)} МБ` : `${Math.max(1, Math.round(bytes / 1024))} КБ`);
@@ -13,12 +13,20 @@ const messageFor = (code: string): string => {
   return (MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR;
 };
 
-const FileRow = ({ file }: { file: ResultFile }) => (
+const FileRow = ({ file, onDelete, deleteDisabled }: { file: ResultFile; onDelete?: () => void; deleteDisabled?: boolean }) => (
   <li>
     <a href={`${API_BASE_URL}/files/${encodeURIComponent(file.id)}`} download={file.name}>
       {file.name}
     </a>{' '}
     <span>({sizeLabel(file.sizeBytes)})</span>
+    {onDelete && (
+      <>
+        {' '}
+        <button type="button" disabled={deleteDisabled} aria-label={`Видалити файл ${file.name}`} onClick={onDelete}>
+          Видалити
+        </button>
+      </>
+    )}
   </li>
 );
 
@@ -30,15 +38,31 @@ const FileRow = ({ file }: { file: ResultFile }) => (
  * US-28. «Надіслати на перевірку» sends the saved files to the customer. It is disabled while there is no file (sc.2) and while
  * a request runs (a double click, sc.3); if the server still refuses, its code is shown. After success the task is `in_review`,
  * so the form and the button go away and the page shows the new status.
+ *
+ * US-29. A file of the draft can be deleted while the task is editable. In review nothing can be changed (sc.3): there is no
+ * form, no «Видалити» and no send button, and a note says why. The server decides: a 409 is shown and the page fetches the task
+ * again. A returned or submitted version has no «Видалити» either (its files are fixed, INV-16).
  */
 export function ResultUpload({ taskId, status }: { taskId: string; status: string | undefined }) {
   const result = useResult(taskId);
   const upload = useUploadResultFile(taskId);
   const submit = useSubmitResult(taskId);
+  const remove = useDeleteResultFile(taskId);
   const [file, setFile] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
+
+  const onDelete = async (fileId: string) => {
+    setRemoveError(null);
+    try {
+      await remove.mutateAsync(fileId);
+    } catch (error) {
+      const code = error instanceof ApiClientError ? error.code : 'UNKNOWN_ERROR';
+      if (code !== 'NOT_FOUND') setRemoveError(messageFor(code)); // a file that is already gone needs no message: the list is fetched again
+    }
+  };
 
   const onSendForReview = async () => {
     setSubmitError(null);
@@ -71,6 +95,7 @@ export function ResultUpload({ taskId, status }: { taskId: string; status: strin
   };
 
   const files = result.data?.files ?? [];
+  const canDelete = isResultEditable(status) && result.data?.status === 'draft';
   return (
     <section aria-labelledby="result-title">
       <h2 id="result-title">Результат</h2>
@@ -80,7 +105,7 @@ export function ResultUpload({ taskId, status }: { taskId: string; status: strin
       {files.length > 0 ? (
         <ul aria-label="Завантажені файли">
           {files.map((item) => (
-            <FileRow key={item.id} file={item} />
+            <FileRow key={item.id} file={item} deleteDisabled={remove.isPending || submit.isPending} {...(canDelete ? { onDelete: () => void onDelete(item.id) } : {})} />
           ))}
         </ul>
       ) : (
@@ -126,8 +151,11 @@ export function ResultUpload({ taskId, status }: { taskId: string; status: strin
         </div>
       )}
 
-      {/* Outside the block above: after a 409 the page fetches the task again and the block goes away, the message must stay. */}
+      {status === 'in_review' && <p role="status">Результат на перевірці, редагування заблоковано до рішення замовника.</p>}
+
+      {/* Outside the blocks above: after a 409 the page fetches the task again and they go away, the message must stay. */}
       {submitError && <p role="alert">{submitError}</p>}
+      {removeError && <p role="alert">{removeError}</p>}
 
       {submit.isSuccess && <p role="status">Результат надіслано на перевірку. Замовник отримав сповіщення.</p>}
     </section>

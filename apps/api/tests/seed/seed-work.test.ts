@@ -11,7 +11,7 @@ import {
 } from '../../src/seed/dev-work';
 import { api } from '../helpers/app';
 import { prisma, resetDb } from '../helpers/db';
-import { createFile, createUser } from '../helpers/factories';
+import { createFile, createTask, createUser } from '../helpers/factories';
 
 const ORIGIN = 'http://localhost:5173';
 // Generated for each run: no password is written in the repository.
@@ -196,5 +196,221 @@ describe('db:seed:work refuses production and servers', () => {
     ['the absolute server volume path', { DATABASE_URL: 'file:/data/ctoc.db?connection_limit=1' }, /absolute server path/],
   ])('refuses %s', (_name, env, message) => {
     expect(() => assertSafeTarget(env as NodeJS.ProcessEnv)).toThrow(message);
+  });
+});
+
+describe('db:seed:work --new-task (a fresh assigned task for repeating a manual check)', () => {
+  const customerLedgerSum = async () => {
+    const customer = await prisma.user.findUniqueOrThrow({ where: { email: SEED_CUSTOMER_EMAIL } });
+    const entries = await prisma.ledgerEntry.findMany({ where: { ownerId: customer.id } });
+    const balance = await prisma.balance.findUniqueOrThrow({ where: { ownerId: customer.id } });
+    return { balance: balance.availableKopecks, sum: entries.reduce((total, entry) => total + entry.amountKopecks, 0) };
+  };
+
+  it('adds a numbered task assigned to the student when the first task has already moved on (in review), and leaves the first untouched', async () => {
+    await seedWorkData(prisma, passwords);
+    const first = await prisma.task.findFirstOrThrow({ where: { title: SEED_TASK_TITLE } });
+    await prisma.task.update({ where: { id: first.id }, data: { status: 'in_review' } }); // as after a manual test of US-28
+    const firstBefore = await prisma.task.findUniqueOrThrow({ where: { id: first.id } });
+
+    const report = await seedWorkData(prisma, passwords, { newTask: true });
+
+    const added = await prisma.task.findUniqueOrThrow({ where: { id: report.taskId! } });
+    const student = await prisma.user.findUniqueOrThrow({ where: { email: SEED_STUDENT_EMAIL } });
+    expect(added.id).not.toBe(first.id);
+    expect(added).toMatchObject({ title: '[Тест] Завдання для ручної перевірки №2', status: 'in_progress', executorId: student.id, priceKopecks: 50_000 });
+    expect(added).toMatchObject({ commissionBp: SEED_COMMISSION_BP, commissionKopecks: 5_000, netKopecks: 45_000 });
+    expect(await prisma.escrow.findFirstOrThrow({ where: { taskId: added.id } })).toMatchObject({ status: 'held', amountKopecks: 50_000 });
+    expect(await prisma.notification.count({ where: { userId: student.id, type: 'executor_selected' } })).toBe(2);
+    expect(await prisma.task.findUniqueOrThrow({ where: { id: first.id } })).toEqual(firstBefore); // the first task did not change
+    const money = await customerLedgerSum();
+    expect(money.balance).toBe(money.sum); // INV-20 holds after the second hold
+  });
+
+  it('a student can log in and see the new task in «Мої активні завдання», next to the first, ready to work on', async () => {
+    await seedWorkData(prisma, passwords);
+    await seedWorkData(prisma, passwords, { newTask: true });
+    const login = await api().post('/api/auth/login').set('Origin', ORIGIN).send({ email: SEED_STUDENT_EMAIL, password: passwords.student });
+    const cookie = String(login.headers['set-cookie']?.[0]).split(';')[0]!;
+
+    const work = await api().get('/api/me/work').set('Cookie', cookie);
+
+    expect(work.body.tasks.map((task: { title: string }) => task.title).sort()).toEqual([SEED_TASK_TITLE, '[Тест] Завдання для ручної перевірки №2'].sort());
+    expect(work.body.tasks.every((task: { status: string }) => task.status === 'in_progress')).toBe(true);
+  });
+
+  it('each run with the flag adds one more task: №2, then №3, each with its own escrow and balance consistent', async () => {
+    await seedWorkData(prisma, passwords, { newTask: true }); // on an empty database: the first task and №2
+    await seedWorkData(prisma, passwords, { newTask: true });
+
+    const titles = (await prisma.task.findMany({ select: { title: true }, orderBy: { createdAt: 'asc' } })).map((task) => task.title);
+    expect(titles).toEqual([SEED_TASK_TITLE, '[Тест] Завдання для ручної перевірки №2', '[Тест] Завдання для ручної перевірки №3']);
+    expect(await prisma.escrow.count({ where: { status: 'held' } })).toBe(3);
+    const money = await customerLedgerSum();
+    expect(money.balance).toBe(money.sum);
+  });
+
+  it('without the flag nothing is added, however often it runs', async () => {
+    await seedWorkData(prisma, passwords, { newTask: true });
+    const before = await counts();
+
+    await seedWorkData(prisma, passwords);
+    await seedWorkData(prisma, passwords, {});
+
+    expect(await counts()).toEqual(before);
+  });
+
+  it('does not touch a real local account, its pending verification request or its data', async () => {
+    const mine = await createUser({ email: 'my.real.account@university.edu.ua' });
+    const file = await createFile(mine.id);
+    const pending = await prisma.verificationRequest.create({ data: { userId: mine.id, fileId: file.id, status: 'pending' } });
+    const before = { user: await prisma.user.findUniqueOrThrow({ where: { id: mine.id } }), request: pending };
+
+    await seedWorkData(prisma, passwords, { newTask: true });
+    await seedWorkData(prisma, passwords, { newTask: true });
+
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: mine.id } })).toEqual(before.user);
+    expect(await prisma.verificationRequest.findUniqueOrThrow({ where: { id: pending.id } })).toEqual(before.request);
+    expect(await prisma.task.count({ where: { OR: [{ customerId: mine.id }, { executorId: mine.id }] } })).toBe(0);
+  });
+
+  it('dry-run with the flag reads only: it names the new task and writes nothing', async () => {
+    await seedWorkData(prisma, passwords);
+    const before = await counts();
+
+    const plan = (await planWorkData(prisma, { newTask: true })).join('\n');
+
+    expect(await counts()).toEqual(before);
+    expect(plan).toContain('new task: "[Тест] Завдання для ручної перевірки №2" will be created');
+    expect(plan).not.toContain(passwords.student);
+  });
+
+  it('refuses to create more than 20 test tasks and then creates nothing', async () => {
+    await seedWorkData(prisma, passwords);
+    const customer = await prisma.user.findUniqueOrThrow({ where: { email: SEED_CUSTOMER_EMAIL } });
+    for (let i = 2; i <= 20; i += 1) await createTask(customer.id, { title: `[Тест] Завдання для ручної перевірки №${i}` });
+    const before = await counts();
+
+    await expect(seedWorkData(prisma, passwords, { newTask: true })).rejects.toThrow(/more than 20 test tasks/);
+
+    expect(await counts()).toEqual(before);
+    expect((await planWorkData(prisma, { newTask: true })).join('\n')).toContain('more than 20 test tasks');
+  });
+
+  it('still refuses production, Railway, a non-file database and an absolute server path (the guard is not bypassed by the flag)', () => {
+    expect(() => assertSafeTarget({ DATABASE_URL: 'file:../data/ctoc.db', NODE_ENV: 'production' } as NodeJS.ProcessEnv)).toThrow(/production/);
+    expect(() => assertSafeTarget({ DATABASE_URL: 'file:../data/ctoc.db', RAILWAY_ENVIRONMENT: 'x' } as NodeJS.ProcessEnv)).toThrow(/Railway/);
+    expect(() => assertSafeTarget({ DATABASE_URL: 'postgres://u@h/d' } as NodeJS.ProcessEnv)).toThrow(/not a local SQLite file/);
+    expect(() => assertSafeTarget({ DATABASE_URL: 'file:/data/ctoc.db' } as NodeJS.ProcessEnv)).toThrow(/absolute server path/);
+  });
+});
+
+describe('db:seed:work --new-task leaves existing tasks as they are', () => {
+  /** The two seed accounts exist (so no password is needed), and the first test task is still `published`: an interrupted run. */
+  async function interruptedRun() {
+    const student = await prisma.user.create({
+      data: { email: SEED_STUDENT_EMAIL, passwordHash: 'x', displayName: 'Тестовий Студент', role: 'student', emailConfirmedAt: new Date(), studentVerifiedAt: new Date() },
+    });
+    const customer = await prisma.user.create({
+      data: { email: SEED_CUSTOMER_EMAIL, passwordHash: 'x', displayName: 'Тестовий Замовник', role: 'customer', emailConfirmedAt: new Date() },
+    });
+    const base = await createTask(customer.id, { title: SEED_TASK_TITLE, status: 'published', publishedAt: new Date() });
+    return { student, customer, base };
+  }
+
+  it('with the flag an interrupted first task is not advanced: it stays published, with no application, and the new task is added', async () => {
+    const { base } = await interruptedRun();
+    const before = await prisma.task.findUniqueOrThrow({ where: { id: base.id } });
+
+    const report = await seedWorkData(prisma, {}, { newTask: true });
+
+    expect(await prisma.task.findUniqueOrThrow({ where: { id: base.id } })).toEqual(before);
+    expect(await prisma.application.count({ where: { taskId: base.id } })).toBe(0);
+    expect(await prisma.escrow.count({ where: { taskId: base.id } })).toBe(0);
+    const added = await prisma.task.findUniqueOrThrow({ where: { id: report.taskId! } });
+    expect(added).toMatchObject({ title: '[Тест] Завдання для ручної перевірки №2', status: 'in_progress' });
+    expect(report.lines.join('\n')).toContain('status published, left as it is');
+  });
+
+  it('without the flag the same interrupted first task is finished, as documented', async () => {
+    const { base, student } = await interruptedRun();
+
+    await seedWorkData(prisma, {});
+
+    expect(await prisma.task.findUniqueOrThrow({ where: { id: base.id } })).toMatchObject({ status: 'in_progress', executorId: student.id });
+  });
+
+  it('the dry-run names the same task as the run when the first task is still to be created', async () => {
+    const student = await prisma.user.create({
+      data: { email: SEED_STUDENT_EMAIL, passwordHash: 'x', displayName: 'Тестовий Студент', role: 'student', emailConfirmedAt: new Date(), studentVerifiedAt: new Date() },
+    });
+    await prisma.user.create({
+      data: { email: SEED_CUSTOMER_EMAIL, passwordHash: 'x', displayName: 'Тестовий Замовник', role: 'customer', emailConfirmedAt: new Date() },
+    });
+
+    const plan = (await planWorkData(prisma, { newTask: true })).join('\n');
+    const report = await seedWorkData(prisma, {}, { newTask: true });
+
+    expect(plan).toContain('new task: "[Тест] Завдання для ручної перевірки №2" will be created');
+    const titles = (await prisma.task.findMany({ select: { title: true }, orderBy: { createdAt: 'asc' } })).map((task) => task.title);
+    expect(titles).toEqual([SEED_TASK_TITLE, '[Тест] Завдання для ручної перевірки №2']); // the plan named №2, the run created №2
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: report.taskId! } })).executorId).toBe(student.id);
+  });
+
+  it('at the limit of 20 the run refuses before anything is written: the interrupted first task is not advanced either', async () => {
+    const { base, customer } = await interruptedRun();
+    for (let i = 2; i <= 20; i += 1) await createTask(customer.id, { title: `[Тест] Завдання для ручної перевірки №${i}` });
+    const before = await counts();
+    const baseBefore = await prisma.task.findUniqueOrThrow({ where: { id: base.id } });
+
+    await expect(seedWorkData(prisma, {}, { newTask: true })).rejects.toThrow(/more than 20 test tasks/);
+
+    expect(await counts()).toEqual(before);
+    expect(await prisma.task.findUniqueOrThrow({ where: { id: base.id } })).toEqual(baseBefore);
+    expect(await prisma.application.count()).toBe(0);
+  });
+});
+
+describe('db:seed:work --new-task checks the limit before it creates an account', () => {
+  /** The limit counts the tasks of the test customer, so it can be reached only when that customer exists: here without the student. */
+  async function customerAtTheLimitWithoutStudent() {
+    const customer = await prisma.user.create({
+      data: { email: SEED_CUSTOMER_EMAIL, passwordHash: 'x', displayName: 'Тестовий Замовник', role: 'customer', emailConfirmedAt: new Date() },
+    });
+    await createTask(customer.id, { title: SEED_TASK_TITLE });
+    for (let i = 2; i <= 20; i += 1) await createTask(customer.id, { title: `[Тест] Завдання для ручної перевірки №${i}` });
+    return customer;
+  }
+
+  it('at the limit, with the student missing, it refuses and creates nothing: no student, no task, no money, no audit event', async () => {
+    await customerAtTheLimitWithoutStudent();
+    const before = await counts();
+
+    await expect(seedWorkData(prisma, passwords, { newTask: true })).rejects.toThrow(/more than 20 test tasks/);
+
+    expect(await counts()).toEqual(before);
+    expect(await prisma.user.findUnique({ where: { email: SEED_STUDENT_EMAIL } })).toBeNull();
+    expect(await prisma.balance.count()).toBe(0);
+  });
+
+  it('the same without any password: the refusal is the limit, not a missing password, and still nothing is written', async () => {
+    await customerAtTheLimitWithoutStudent();
+    const before = await counts();
+
+    await expect(seedWorkData(prisma, {}, { newTask: true })).rejects.toThrow(/more than 20 test tasks/);
+
+    expect(await counts()).toEqual(before);
+  });
+
+  it('below the limit the missing student is created and the new task is added, as before', async () => {
+    const customer = await prisma.user.create({
+      data: { email: SEED_CUSTOMER_EMAIL, passwordHash: 'x', displayName: 'Тестовий Замовник', role: 'customer', emailConfirmedAt: new Date() },
+    });
+    await createTask(customer.id, { title: SEED_TASK_TITLE });
+
+    const report = await seedWorkData(prisma, passwords, { newTask: true });
+
+    expect(await prisma.user.findUnique({ where: { email: SEED_STUDENT_EMAIL } })).not.toBeNull();
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: report.taskId! } })).title).toBe('[Тест] Завдання для ручної перевірки №2');
   });
 });
