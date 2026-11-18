@@ -23,10 +23,38 @@ export interface Hold {
  * ledger (`modules/payments/sandbox-provider.ts`, A-06). It runs on the caller's transaction, so a hold commits or rolls back
  * with the business action (INV-11). A real provider would replace the sandbox without changing its callers.
  *
- * Only `hold` exists now. `release`, `refund` and `payout` are added by the stories that need them (US-31, US-34, A-09),
- * so no method is written before it has a caller.
+ * `hold` (US-25, US-26) and `release` (US-31, US-34) exist. `refund` is added by the story that needs it (A-09), so no method
+ * is written before it has a caller.
  */
 export interface PaymentProvider {
   /** Reserves the full amount from the customer's balance. Throws ApiError INSUFFICIENT_FUNDS if the balance is short. */
   hold(tx: Prisma.TransactionClient, request: HoldRequest): Promise<Hold>;
+
+  /**
+   * US-31, US-34 (INV-18, INV-19). Releases the escrow of an accepted task on the caller's transaction: the escrow goes
+   * `held` -> `released`, the student is credited `net`, the platform `commission`, each with its ledger entry. It moves no money outside
+   * the internal ledger. A failure throws and the caller rolls back, so the escrow stays `held` and nothing is credited.
+   */
+  release(tx: Prisma.TransactionClient, request: ReleaseRequest): Promise<Release>;
+}
+
+/** What a provider needs to release the escrow of one accepted task (US-31, US-34). The three amounts are the split taken at publication. */
+export interface ReleaseRequest {
+  taskId: string;
+  /** The student who is paid. */
+  studentId: string;
+  /** The whole escrow: the price (INV-12). Equals `commissionKopecks + netKopecks` (INV-08). */
+  grossKopecks: number;
+  /** Kept by the platform. May be 0 when the rate was 0. */
+  commissionKopecks: number;
+  /** Paid to the student. */
+  netKopecks: number;
+}
+
+/** What the release did. */
+export interface Release {
+  escrowId: string;
+  grossKopecks: number;
+  commissionKopecks: number;
+  netKopecks: number;
 }

@@ -39,3 +39,20 @@ export const incrementBalanceWithin = (tx: Tx, ownerId: string, amountKopecks: n
 export const findBalanceTx = (tx: Tx, ownerId: string) => tx.balance.findUniqueOrThrow({ where: { ownerId } });
 
 export const findBalance = (ownerId: string) => prisma.balance.findUnique({ where: { ownerId } });
+
+/**
+ * US-31, US-34 (INV-18, ADR-0007). The conditional update `held` -> `released`, for the full price. `count` 0 means there is no
+ * held escrow of that amount for the task, which an accepted task never lacks: the caller treats it as a broken invariant.
+ */
+export const settleEscrow = (tx: Tx, taskId: string, amountKopecks: number, now: Date) =>
+  tx.escrow.updateMany({ where: { taskId, status: 'held', amountKopecks }, data: { status: 'released', settledAt: now } });
+
+/**
+ * US-34 (ADR-0007). Adds to a balance, making the row first if the owner has none yet. It is the same conditional write as the
+ * top-up: it adds only if the result stays within `maxKopecks`, so the column can never pass the 32-bit integer of the database,
+ * and `count` 0 says the cap would be exceeded. The increment is done by the database, so two credits at once both apply.
+ */
+export const creditBalance = async (tx: Tx, ownerId: string, amountKopecks: number, maxKopecks: number) => {
+  await ensureBalance(tx, ownerId);
+  return incrementBalanceWithin(tx, ownerId, amountKopecks, maxKopecks);
+};

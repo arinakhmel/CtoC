@@ -1,7 +1,7 @@
 import type { SandboxTopUpInput } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { prisma } from '../../platform/db';
-import type { HoldRequest, PaymentProvider } from '../../platform/ports/payment-provider';
+import type { HoldRequest, PaymentProvider, ReleaseRequest } from '../../platform/ports/payment-provider';
 import { assertCanReadBalance, assertCanTopUp } from './policy';
 import { findBalance, findEscrowByKey } from './repo';
 import { sandboxPaymentProvider, sandboxTopUp } from './sandbox-provider';
@@ -10,6 +10,7 @@ import { sandboxPaymentProvider, sandboxTopUp } from './sandbox-provider';
 export const paymentProvider: PaymentProvider = sandboxPaymentProvider;
 
 export type HoldInput = HoldRequest;
+export type ReleaseInput = ReleaseRequest;
 
 /**
  * US-26 sc.1, sc.2 (INV-11, INV-12, ADR-0007). Reserves the full price of a task through the `PaymentProvider` port, on the
@@ -35,3 +36,11 @@ export async function getMyBalance(user: User): Promise<number> {
   assertCanReadBalance(user);
   return (await findBalance(user.id))?.availableKopecks ?? 0;
 }
+
+/**
+ * US-31, US-34 sc.1, sc.2, sc.3 (INV-18, INV-19, INV-20, ADR-0007). Releases the escrow of an accepted task through the
+ * `PaymentProvider` port, on the caller's `tx`, so it commits or rolls back with the accept. The student gets `net` on the
+ * balance, the platform `commission`. A provider failure throws and rolls the whole accept back: the escrow stays `held` and
+ * nothing is credited (US-34 sc.2, W-06).
+ */
+export const releaseEscrow = (tx: Prisma.TransactionClient, input: ReleaseInput) => paymentProvider.release(tx, input);
