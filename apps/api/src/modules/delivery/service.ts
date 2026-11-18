@@ -4,17 +4,20 @@ import type { User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { getFileStorage } from '../../platform/ports/file-storage';
-import { getTaskForDelivery, lockTaskForDelivery } from '../tasks/service';
-import { claimedMime, hasRoomForAnotherFile, looksExecutable } from './domain';
+import { notifyResultSubmitted } from '../notifications/service';
+import { getTaskForDelivery, lockTaskForDelivery, moveTaskToReview } from '../tasks/service';
+import { claimedMime, hasRoomForAnotherFile, looksExecutable, takesFiles } from './domain';
 import { assertCanDownload, assertIsExecutor } from './policy';
 import {
   countFilesOfVersion,
   findCurrentVersion,
+  findDraftVersion,
   findFileForDownload,
   findOpenVersion,
   insertDraftVersion,
   insertResultFile,
   nextVersionNumber,
+  submitVersion,
 } from './repo';
 
 export interface UploadedResult {
@@ -57,7 +60,7 @@ export async function uploadResultFile(user: User, taskId: string, upload: Uploa
     await prisma.$transaction(async (tx) => {
       await lockTaskForDelivery(tx, task.id, user.id);
       const open = await findOpenVersion(tx, task.id);
-      if (open && open.status !== 'draft') throw new ApiError('RESULT_LOCKED'); // INV-16: never a file into a submitted version
+      if (open && !takesFiles(open.status)) throw new ApiError('RESULT_LOCKED'); // INV-16: never a file into a submitted version
       const version = open ?? (await insertDraftVersion(tx, task.id, await nextVersionNumber(tx, task.id)));
       if (!hasRoomForAnotherFile(await countFilesOfVersion(tx, version.id))) throw new ApiError('TOO_MANY_FILES');
       await insertResultFile(tx, {
@@ -75,6 +78,30 @@ export async function uploadResultFile(user: User, taskId: string, upload: Uploa
     throw error;
   }
   return findCurrentVersion(task.id);
+}
+
+/**
+ * US-28 sc.1, sc.2, sc.3 (INV-14, INV-15, INV-16, INV-23, ADR-0007). The executor sends the result to the customer, in ONE
+ * transaction that commits or rolls back as a whole:
+ *   1. the task: conditional update `in_progress` or `revision` -> `in_review` (409 ALREADY_IN_REVIEW / INVALID_TRANSITION).
+ *      It is the first write, so it is also the task lock that OQ-35 (i) asks every change of the version to take;
+ *   2. the draft version must exist and hold at least one file (409 NO_RESULT_FILES), otherwise step 1 is rolled back;
+ *   3. the version: conditional update `draft` -> `submitted`, with the time;
+ *   4. the notification to the customer (US-48): created here, so a failed submit tells no one.
+ * No file I/O in the transaction. A second request at the same time finds the task already `in_review`: 409.
+ */
+export async function submitResult(user: User, taskId: string) {
+  const task = await getTaskForDelivery(taskId);
+  assertIsExecutor(task, user); // 404 for an unknown task, 403 for anyone but the executor, before anything is written
+
+  await prisma.$transaction(async (tx) => {
+    await moveTaskToReview(tx, task.id, user.id);
+    const draft = await findDraftVersion(tx, task.id);
+    if (!draft || (await countFilesOfVersion(tx, draft.id)) === 0) throw new ApiError('NO_RESULT_FILES');
+    if ((await submitVersion(tx, draft.id, new Date())).count === 0) throw new ApiError('INVALID_TRANSITION');
+    await notifyResultSubmitted(tx, task.customerId, { id: task.id, title: task.title });
+  });
+  return { task: { id: task.id, status: 'in_review' as const }, version: await findCurrentVersion(task.id) };
 }
 
 /** US-27 sc.1. The current result of a task, for its executor. */

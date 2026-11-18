@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../platform/db';
 import { RESULT_EDITABLE_STATUSES } from '@ctoc/shared';
-import { ASSIGNABLE_STATUS, CANCELLABLE_BY_OWNER, CANCELLED, CHAT_OPEN_STATUSES, IN_PROGRESS } from './domain';
+import { ASSIGNABLE_STATUS, CANCELLABLE_BY_OWNER, CANCELLED, CHAT_OPEN_STATUSES, IN_PROGRESS, IN_REVIEW } from './domain';
 
 /**
  * INV-06: the feed holds only published tasks that have no executor and a future deadline.
@@ -128,7 +128,7 @@ export const assignTaskTx = (tx: Prisma.TransactionClient, id: string, customerI
 
 /** US-27. Who owns and who executes a task, and its state, for the delivery module. */
 export const findDeliveryTask = (id: string) =>
-  prisma.task.findUnique({ where: { id }, select: { id: true, customerId: true, executorId: true, status: true } });
+  prisma.task.findUnique({ where: { id }, select: { id: true, customerId: true, executorId: true, title: true, status: true } });
 
 /**
  * US-27 (INV-14, INV-16, ADR-0007). A conditional write that takes the write lock first: the number of rows it changed says
@@ -138,3 +138,14 @@ export const findDeliveryTask = (id: string) =>
 export const lockDeliveryTask = (tx: Prisma.TransactionClient, id: string, executorId: string): Promise<number> =>
   tx.$executeRaw`UPDATE "tasks" SET "status" = "status"
     WHERE "id" = ${id} AND "executor_id" = ${executorId} AND "status" IN (${Prisma.join([...RESULT_EDITABLE_STATUSES])})`;
+
+/**
+ * US-28 sc.1, sc.3 (INV-15, ADR-0007). The one conditional update that submits a result: only the executor's task, still in
+ * `in_progress` or `revision`. `count` 0 means the task is already under review, or in a state that has no result to submit.
+ */
+export const submitTaskTx = (tx: Prisma.TransactionClient, id: string, executorId: string) =>
+  tx.task.updateMany({
+    where: { id, executorId, status: { in: [...RESULT_EDITABLE_STATUSES] } },
+    data: { status: IN_REVIEW },
+  });
+

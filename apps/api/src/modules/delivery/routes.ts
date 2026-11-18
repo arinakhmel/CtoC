@@ -4,7 +4,7 @@ import { requireUser } from '../../http/auth';
 import { receiveFile } from '../../http/upload';
 import { DOWNLOAD_CONTENT_TYPE } from './domain';
 import { serializeResult } from './serializer';
-import { downloadFile, getResult, requireExecutorOf, uploadResultFile } from './service';
+import { downloadFile, getResult, requireExecutorOf, submitResult, uploadResultFile } from './service';
 
 const receiveResultFile = receiveFile(LIMITS.resultMaxBytes);
 
@@ -24,6 +24,11 @@ export function deliveryRouter(): Router {
       mimetype: req.file!.mimetype,
     });
     res.status(201).json(serializeResult(version));
+  });
+
+  router.post('/tasks/:id/result/submit', requireUser, async (req, res) => {
+    const { task, version } = await submitResult(req.user!, String(req.params.id));
+    res.json({ task, ...serializeResult(version) });
   });
 
   router.get('/tasks/:id/result', requireUser, async (req, res) => {
