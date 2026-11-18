@@ -86,7 +86,8 @@ describe('/work/:taskId «Надіслати на перевірку» (US-28)',
 
     const button = await sendButton();
     expect(button).toBeDisabled();
-    expect(screen.getByText('Щоб надіслати результат, спочатку збережіть хоча б один файл.')).toBeInTheDocument();
+    // The hint comes once the result is loaded, so it does not flash while it is still being fetched.
+    expect(await screen.findByText('Щоб надіслати результат, спочатку збережіть хоча б один файл.')).toBeInTheDocument();
     expect(button).toHaveAccessibleDescription('Щоб надіслати результат, спочатку збережіть хоча б один файл.');
     await userEvent.click(button);
     expect(submits).toBe(0);

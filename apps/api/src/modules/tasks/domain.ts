@@ -68,3 +68,14 @@ export const DONE = 'done' as const;
  */
 export const acceptRefusal = (status: string): 'TASK_ALREADY_DONE' | 'TASK_NOT_IN_REVIEW' =>
   status === DONE ? 'TASK_ALREADY_DONE' : 'TASK_NOT_IN_REVIEW';
+
+/** US-32 (domain-model.md §3.1, INV-17): the owner's return moves a task from `in_review` to `revision`. Only way in. */
+export const REVISION = 'revision' as const;
+
+/**
+ * US-32 sc.2 (INV-17). Why a return changed nothing: the deal is already closed (409 TASK_ALREADY_DONE, `done` is final), or the
+ * task has no result under review (409 TASK_NOT_IN_REVIEW: in progress, already in revision, not assigned, cancelled). The same
+ * two answers as an accept that finds nothing to accept.
+ */
+export const returnRefusal = (status: string): 'TASK_ALREADY_DONE' | 'TASK_NOT_IN_REVIEW' =>
+  status === DONE ? 'TASK_ALREADY_DONE' : 'TASK_NOT_IN_REVIEW';

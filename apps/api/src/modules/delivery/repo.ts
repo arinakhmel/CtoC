@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../platform/db';
-import { ACCEPTED, DRAFT, OPEN_VERSION_STATUSES, SUBMITTED } from './domain';
+import { ACCEPTED, DRAFT, OPEN_VERSION_STATUSES, RETURNED, SUBMITTED } from './domain';
 
 type Tx = Prisma.TransactionClient;
 
@@ -100,3 +100,18 @@ export const findSubmittedVersion = (tx: Tx, taskId: string) => tx.resultVersion
  */
 export const acceptVersion = (tx: Tx, id: string, now: Date) =>
   tx.resultVersion.updateMany({ where: { id, status: SUBMITTED }, data: { status: ACCEPTED, decidedAt: now } });
+
+/**
+ * US-32 sc.1 (INV-17, ADR-0007). The conditional update `submitted` -> `returned`, with the customer's comment and the time of the
+ * decision. `count` 0 means the version is not under review, which the task lock above it should already have made impossible.
+ */
+export const returnVersion = (tx: Tx, id: string, comment: string, now: Date) =>
+  tx.resultVersion.updateMany({ where: { id, status: SUBMITTED }, data: { status: RETURNED, revisionComment: comment, decidedAt: now } });
+
+/** US-33. The latest version that was sent back, with the comment: what the student reads while the task is in revision, also after a new draft was started. */
+export const findLastReturn = (taskId: string) =>
+  prisma.resultVersion.findFirst({
+    where: { taskId, status: RETURNED },
+    orderBy: { version: 'desc' },
+    select: { version: true, revisionComment: true, decidedAt: true },
+  });

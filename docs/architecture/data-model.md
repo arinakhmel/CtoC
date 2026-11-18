@@ -191,7 +191,7 @@ Indexes:
 | task_id | TEXT | FK tasks |
 | version | INTEGER | NOT NULL, CHECK ≥ 1 |
 | status | TEXT | CHECK IN (`draft`,`submitted`,`accepted`,`returned`) |
-| revision_comment | TEXT | NULL. CHECK (`status<>'returned' OR length(revision_comment) BETWEEN 1 AND 2000`). |
+| revision_comment | TEXT | NULL. CHECK (`status<>'returned' OR length(revision_comment) BETWEEN 1 AND 2000`) refuses an empty or too long comment, but **not a NULL one** (`length(NULL)` is NULL and a CHECK passes on NULL): only the application guarantees a comment for `returned` (OQ-40(e)). |
 | submitted_at, decided_at | INTEGER | NULL |
 | created_at | INTEGER | NOT NULL |
 

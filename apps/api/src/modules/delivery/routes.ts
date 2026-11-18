@@ -1,10 +1,21 @@
-import { LIMITS } from '@ctoc/shared';
+import { LIMITS, returnForRevisionSchema, type ReturnForRevisionInput } from '@ctoc/shared';
 import { Router, type RequestHandler } from 'express';
 import { requireUser } from '../../http/auth';
 import { receiveFile } from '../../http/upload';
+import { validateBody } from '../../http/validate';
 import { DOWNLOAD_CONTENT_TYPE } from './domain';
 import { serializeResult } from './serializer';
-import { acceptResult, deleteResultFile, downloadFile, getResult, requireExecutorOf, submitResult, uploadResultFile } from './service';
+import {
+  acceptResult,
+  deleteResultFile,
+  downloadFile,
+  getResult,
+  requireExecutorOf,
+  requireOwnerOf,
+  returnResult,
+  submitResult,
+  uploadResultFile,
+} from './service';
 
 const receiveResultFile = receiveFile(LIMITS.resultMaxBytes);
 
@@ -14,16 +25,22 @@ const requireExecutor: RequestHandler = async (req, _res, next) => {
   next();
 };
 
+/** The owner check as a step of its own, before the comment is validated (403 and 404 before 400, ADR-0006). */
+const requireOwner: RequestHandler = async (req, _res, next) => {
+  await requireOwnerOf(req.user!, String(req.params.id));
+  next();
+};
+
 export function deliveryRouter(): Router {
   const router = Router();
 
   router.post('/tasks/:id/result/files', requireUser, requireExecutor, receiveResultFile, async (req, res) => {
-    const version = await uploadResultFile(req.user!, String(req.params.id), {
+    const { version, lastReturn } = await uploadResultFile(req.user!, String(req.params.id), {
       bytes: req.file!.buffer,
       originalName: req.file!.originalname,
       mimetype: req.file!.mimetype,
     });
-    res.status(201).json(serializeResult(version));
+    res.status(201).json(serializeResult(version, lastReturn));
   });
 
   router.delete('/tasks/:id/result/files/:fileId', requireUser, async (req, res) => {
@@ -42,7 +59,14 @@ export function deliveryRouter(): Router {
   });
 
   router.get('/tasks/:id/result', requireUser, async (req, res) => {
-    res.json(serializeResult(await getResult(req.user!, String(req.params.id))));
+    const { version, lastReturn } = await getResult(req.user!, String(req.params.id));
+    res.json(serializeResult(version, lastReturn));
+  });
+
+  // The order of the checks (decided): access (401, 404, 403) -> the comment (400) -> the state of the task (409).
+  router.post('/tasks/:id/return', requireUser, requireOwner, validateBody(returnForRevisionSchema), async (req, res) => {
+    const { task, version, lastReturn } = await returnResult(req.user!, String(req.params.id), req.body as ReturnForRevisionInput);
+    res.json({ task, ...serializeResult(version, lastReturn) });
   });
 
   router.get('/files/:fileId', requireUser, async (req, res) => {

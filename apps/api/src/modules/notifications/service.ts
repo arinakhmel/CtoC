@@ -1,7 +1,7 @@
 import type { NotificationsQuery } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
-import { executorSelectedPayload, resultAcceptedPayload, resultSubmittedPayload } from './domain';
+import { executorSelectedPayload, resultAcceptedPayload, resultReturnedPayload, resultSubmittedPayload } from './domain';
 import { assertCanUseNotifications } from './policy';
 import { insertNotification, listNotificationsOfUser, markNotificationRead, notificationExistsForUser } from './repo';
 
@@ -57,6 +57,23 @@ export async function notifyResultAccepted(
     userId: executorId,
     type: 'result_accepted',
     payloadJson: JSON.stringify(resultAcceptedPayload(task)),
+  });
+}
+
+/**
+ * US-33 (INV-23). The student is told that the customer sent the result back for revision. Only a row on the CALLER's transaction
+ * (`tx`): it opens no transaction of its own and changes nothing else, so it commits or rolls back with the return that calls it
+ * (`returnResult`, US-32). The comment is not in it, the task card shows the comment.
+ */
+export async function notifyResultReturned(
+  tx: Prisma.TransactionClient,
+  executorId: string,
+  task: { id: string; title: string },
+): Promise<void> {
+  await insertNotification(tx, {
+    userId: executorId,
+    type: 'result_returned',
+    payloadJson: JSON.stringify(resultReturnedPayload(task)),
   });
 }
 

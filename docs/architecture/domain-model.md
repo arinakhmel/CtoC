@@ -117,7 +117,8 @@ A resend creates a new token and invalidates older unused ones (US-07/S3; invali
 |---|---|---|
 | `type` | Stated in requirements: `executor_selected`, `result_accepted`, `verification_rejected`. | US-21, US-30, US-39/S2 |
 | | To the customer: `application_received`, `result_submitted`, `task_published`, `task_rejected` (with the moderator's reason). | US-47, US-48, US-49 |
-| | Proposed, no story yet: `verification_approved`, `result_returned`, `withdrawal_processed`. | A-15 |
+| | To the student when the customer sends a result back: `result_returned` («Замовник повернув результат на доопрацювання за завданням «[Назва]»», no comment in it). | US-33 |
+| | Proposed, no story yet: `verification_approved`, `withdrawal_processed`. | A-15 |
 | `readAt` | Null means unread. | US-21/S3, US-30/S3 |
 | text | Stated in requirements: «Вас обрано виконавцем завдання [Назва]» and «Ваш результат прийнято замовником! Оплату нараховано». | US-21/S1, US-30/S1 |
 
@@ -171,7 +172,7 @@ Each invariant has an id, so tests can name it. **DB** means the database schema
 | INV-14 | Only the executor can upload or submit results. Only the owner can accept or return. Others get 403. | TX (policy) | US-31/S2, US-27 |
 | INV-15 | A submission needs at least one file. A task in `in_review` cannot be submitted again. | TX | US-28/S2, S3 |
 | INV-16 | Only the files of a `draft` version can be added or deleted, and only while the task is `in_progress` or `revision`. The files of a `submitted`, `accepted` or `returned` version cannot be changed or deleted. | TX | US-29/S3 |
-| INV-17 | Return for revision is only possible from `in_review` and needs a comment. `done` is final. | TX | US-32/CL, US-32/S2, US-33/S2 |
+| INV-17 | Return for revision is only possible from `in_review` and needs a comment of 1 to 2000 characters. `done` is final. The task, the version, the comment and the notification change together, and no money or record changes. | TX | US-32/CL, US-32/S2, US-33/S2 |
 | INV-18 | On acceptance, these happen together or not at all: task `done`, escrow `released`, student credited with `net`, platform credited with `commission`, experience record created, notification sent. | TX | US-31/S1, US-34/S1, US-37/S1, US-30/S2 |
 | INV-19 | At most one payout per task, even if the acceptance is repeated. | DB | US-34/S3 |
 | INV-20 | Each balance equals the sum of its ledger entries, and is never negative. | DB (≥ 0) + TX + check script | US-36/S3, US-35/S2 |

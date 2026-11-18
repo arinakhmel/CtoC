@@ -33,3 +33,10 @@ export const resultAcceptedPayloadSchema = z.object({
   taskTitle: z.string().min(1),
 });
 export type ResultAcceptedPayload = z.infer<typeof resultAcceptedPayloadSchema>;
+
+/** US-33: the payload stored with a `result_returned` notification, which the executor gets. The comment is not in it: it is shown on the task card. */
+export const resultReturnedPayloadSchema = z.object({
+  taskId: z.string().min(1),
+  taskTitle: z.string().min(1),
+});
+export type ResultReturnedPayload = z.infer<typeof resultReturnedPayloadSchema>;

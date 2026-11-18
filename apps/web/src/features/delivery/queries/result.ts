@@ -18,6 +18,8 @@ export interface Result {
   status: 'draft' | 'submitted' | 'accepted' | 'returned';
   revisionComment: string | null;
   submittedAt: string | null;
+  /** The latest comment of the customer, given only while the task is in revision (US-33): it stays after a new draft was started. */
+  lastReturn?: { version: number; comment: string; returnedAt: string | null } | null;
   files: ResultFile[];
 }
 
@@ -115,6 +117,27 @@ export const useAcceptResult = (taskId: string) => {
   const client = useQueryClient();
   return useMutation({
     mutationFn: () => apiPost<AcceptResponse>(`/tasks/${encodeURIComponent(taskId)}/accept`, {}),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: candidatesKey(taskId) });
+      void client.invalidateQueries({ queryKey: resultKey(taskId) });
+    },
+  });
+};
+
+export interface ReturnResponse {
+  task: { id: string; status: 'revision' };
+  result: Result;
+}
+
+/**
+ * POST /api/tasks/:id/return (api.md §4.2a, US-32, US-33). The customer sends the result back with a comment. Whatever the answer,
+ * the customer's task (the candidate list answer carries its status) and the result are fetched again, so the page shows the real
+ * state: after a 409 TASK_ALREADY_DONE or TASK_NOT_IN_REVIEW it shows what another tab or a double click already did.
+ */
+export const useReturnResult = (taskId: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (comment: string) => apiPost<ReturnResponse>(`/tasks/${encodeURIComponent(taskId)}/return`, { comment }),
     onSettled: () => {
       void client.invalidateQueries({ queryKey: candidatesKey(taskId) });
       void client.invalidateQueries({ queryKey: resultKey(taskId) });
