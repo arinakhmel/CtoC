@@ -1,14 +1,14 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { checkResultUpload } from '@ctoc/shared';
+import { checkResultUpload, type ReturnForRevisionInput } from '@ctoc/shared';
 import type { User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { getFileStorage } from '../../platform/ports/file-storage';
 import { createExperienceRecord } from '../experience/service';
-import { notifyResultAccepted, notifyResultSubmitted } from '../notifications/service';
+import { notifyResultAccepted, notifyResultReturned, notifyResultSubmitted } from '../notifications/service';
 import { payoutSplitOf } from '../payments/domain';
 import { releaseEscrow } from '../payments/service';
-import { getTaskForDelivery, lockTaskForDelivery, moveTaskToDone, moveTaskToReview } from '../tasks/service';
+import { getTaskForDelivery, lockTaskForDelivery, moveTaskToDone, moveTaskToReview, moveTaskToRevision } from '../tasks/service';
 import { claimedMime, hasRoomForAnotherFile, looksExecutable, takesFiles } from './domain';
 import { assertCanDownload, assertCanReadResult, assertIsExecutor, assertIsTaskOwner } from './policy';
 import {
@@ -17,6 +17,7 @@ import {
   findCurrentVersion,
   findDraftVersion,
   findFileForDownload,
+  findLastReturn,
   findOpenVersion,
   findResultFileLink,
   findSubmittedVersion,
@@ -27,6 +28,7 @@ import {
   markFileDeleted,
   nextVersionNumber,
   removeFileFromDraft,
+  returnVersion,
   submitVersion,
 } from './repo';
 
@@ -87,8 +89,11 @@ export async function uploadResultFile(user: User, taskId: string, upload: Uploa
     await storage.delete(storageKey).catch(() => undefined); // no orphan file when nothing was saved
     throw error;
   }
-  return findCurrentVersion(task.id);
+  return { version: await findCurrentVersion(task.id), lastReturn: await lastReturnWhileInRevision(task) };
 }
+
+/** US-33. The comment of the last return, only while the task is in revision: what the student keeps reading after a new draft was started. */
+const lastReturnWhileInRevision = (task: { id: string; inRevision: boolean }) => (task.inRevision ? findLastReturn(task.id) : Promise.resolve(null));
 
 /**
  * US-28 sc.1, sc.2, sc.3 (INV-14, INV-15, INV-16, INV-23, ADR-0007). The executor sends the result to the customer, in ONE
@@ -153,7 +158,46 @@ export async function deleteResultFile(user: User, taskId: string, fileId: strin
  */
 export async function getResult(user: User, taskId: string) {
   const task = await getTaskForDelivery(taskId);
-  return assertCanReadResult(task, user) === 'executor' ? findCurrentVersion(task.id) : findVersionForOwner(task.id);
+  const version = assertCanReadResult(task, user) === 'executor' ? await findCurrentVersion(task.id) : await findVersionForOwner(task.id);
+  return { version, lastReturn: await lastReturnWhileInRevision(task) };
+}
+
+/**
+ * Access check that runs before the body of a return is read (ADR-0006): an unknown task is 404, anyone but the owner is 403
+ * NOT_TASK_OWNER, whatever the comment is. Then the comment is validated (400), and only then the state of the task is judged (409).
+ */
+export async function requireOwnerOf(user: User, taskId: string): Promise<void> {
+  assertIsTaskOwner(await getTaskForDelivery(taskId), user);
+}
+
+/**
+ * US-32 sc.1, sc.2, US-33 sc.1 (INV-14, INV-17, INV-23, ADR-0007). The owner sends the result back for revision with a comment, in
+ * ONE transaction that commits or rolls back as a whole. `input` is already validated (a comment of 1 to 2000 characters).
+ *   1. the task: conditional update `in_review` -> `revision` (409 TASK_ALREADY_DONE / TASK_NOT_IN_REVIEW). It is the first write, so it is
+ *      also the lock: a return and an accept at the same time, or two returns, cannot both win;
+ *   2. the version under review: conditional update `submitted` -> `returned`, with the comment and the time;
+ *   3. the notification to the student (US-33).
+ * It changes no escrow, balance, ledger or experience record: the money stays held until the result is accepted. The files of the
+ * returned version stay as they are (INV-16); the student's next upload opens a new draft. No file I/O inside.
+ */
+export async function returnResult(user: User, taskId: string, input: ReturnForRevisionInput) {
+  const task = await getTaskForDelivery(taskId);
+  assertIsTaskOwner(task, user); // checked again here: the route's check is only an early gate
+
+  const { status, returnedAt } = await prisma.$transaction(async (tx) => {
+    const now = new Date();
+    const status = await moveTaskToRevision(tx, task.id, user.id);
+    const version = await findSubmittedVersion(tx, task.id);
+    if (!version || task.executorId === null || (await returnVersion(tx, version.id, input.comment, now)).count === 0) {
+      console.error(`Task ${task.id} was in review without a submitted version or an executor: the return was rolled back`);
+      throw new ApiError('INTERNAL_ERROR');
+    }
+    await notifyResultReturned(tx, task.executorId, { id: task.id, title: task.title });
+    return { status, returnedAt: now };
+  });
+  const version = await findVersionForOwner(task.id); // the version that was just sent back is the latest one that is not a draft
+  const lastReturn = version ? { version: version.version, revisionComment: input.comment, decidedAt: returnedAt } : null;
+  return { task: { id: task.id, status }, version, lastReturn };
 }
 
 /**

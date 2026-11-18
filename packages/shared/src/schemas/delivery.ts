@@ -18,3 +18,4 @@ export const sendMessageSchema = z.object({
     .min(1, 'MESSAGE_EMPTY')
     .max(LIMITS.messageMax, 'MESSAGE_TOO_LONG'),
 });
+export type ReturnForRevisionInput = z.infer<typeof returnForRevisionSchema>;

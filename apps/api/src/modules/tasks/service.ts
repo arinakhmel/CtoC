@@ -2,7 +2,7 @@ import { isResultEditable, LIMITS, type CreateTaskInput, type FeedQuery } from '
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
-import { acceptRefusal, assignRefusal, chatStateOf, deleteRefusal, newTaskData, resultRefusal, submitRefusal } from './domain';
+import { acceptRefusal, assignRefusal, chatStateOf, deleteRefusal, newTaskData, resultRefusal, returnRefusal, REVISION, submitRefusal } from './domain';
 import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed, assertTaskOwner } from './policy';
 import {
   assignTaskTx,
@@ -22,6 +22,7 @@ import {
   listTasksOfExecutor,
   lockChatTask,
   lockDeliveryTask,
+  returnTaskTx,
   submitTaskTx,
   lockOpenTask,
 } from './repo';
@@ -174,6 +175,8 @@ export async function getTaskForDelivery(id: string) {
     customerId: task.customerId,
     executorId: task.executorId,
     title: task.title,
+    // True while the task is in revision: then the delivery module also gives the comment of the last return (US-33).
+    inRevision: task.status === REVISION,
     // Why files cannot be added now, or null when they can. The delivery module throws it as it is (ADR-0002: no import of this domain).
     refusal: isResultEditable(task.status) ? null : resultRefusal(task.status),
   };
@@ -210,4 +213,16 @@ export async function moveTaskToDone(tx: Prisma.TransactionClient, taskId: strin
     throw new ApiError(acceptRefusal(current?.status ?? 'cancelled'));
   }
   return findAcceptedTaskFacts(tx, taskId);
+}
+
+/**
+ * US-32 sc.1, sc.2 (INV-17). First statement of the return transaction: the conditional update that sends the owner's task back,
+ * `in_review` -> `revision`. Zero rows means the deal is already closed (409 TASK_ALREADY_DONE) or the task has no result under
+ * review (409 TASK_NOT_IN_REVIEW). It is the write lock and the transition in one, so a return and an accept at the same time
+ * cannot both win. The delivery module calls this, not the tasks table (ADR-0002).
+ */
+export async function moveTaskToRevision(tx: Prisma.TransactionClient, taskId: string, ownerId: string): Promise<typeof REVISION> {
+  if ((await returnTaskTx(tx, taskId, ownerId)).count > 0) return REVISION;
+  const current = await tx.task.findUnique({ where: { id: taskId }, select: { status: true } });
+  throw new ApiError(returnRefusal(current?.status ?? 'cancelled'));
 }

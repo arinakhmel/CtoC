@@ -96,11 +96,24 @@ export function ResultUpload({ taskId, status }: { taskId: string; status: strin
 
   const files = result.data?.files ?? [];
   const canDelete = isResultEditable(status) && result.data?.status === 'draft';
+  // Only a NEW draft with a file can be sent (US-32, US-33). After a return the current version is the returned one, whose files are
+  // fixed: the send button stays off until the student has uploaded the new version, and a hint says so.
+  const hasDraft = result.data?.status === 'draft';
+  const canSend = hasDraft && files.length > 0;
+  const needsNewVersion = status === 'revision' && !hasDraft;
+  const lastReturn = status === 'revision' ? result.data?.lastReturn : null;
   return (
     <section aria-labelledby="result-title">
       <h2 id="result-title">Результат</h2>
 
       {result.isError && <p role="alert">{messageFor(result.error instanceof ApiClientError ? result.error.code : 'UNKNOWN_ERROR')}</p>}
+
+      {lastReturn && (
+        <section aria-labelledby="sent-back-title">
+          <h3 id="sent-back-title">Замовник повернув результат на доопрацювання</h3>
+          <p style={{ whiteSpace: 'pre-wrap' }}>{lastReturn.comment}</p>
+        </section>
+      )}
 
       {files.length > 0 ? (
         <ul aria-label="Завантажені файли">
@@ -140,14 +153,20 @@ export function ResultUpload({ taskId, status }: { taskId: string; status: strin
           <p>
             <button
               type="button"
-              disabled={files.length === 0 || upload.isPending || submit.isPending}
-              aria-describedby={files.length === 0 ? 'submit-hint' : undefined}
+              disabled={!canSend || upload.isPending || submit.isPending}
+              aria-describedby={canSend ? undefined : 'submit-hint'}
               onClick={onSendForReview}
             >
               Надіслати на перевірку
             </button>
           </p>
-          {files.length === 0 && <p id="submit-hint">Щоб надіслати результат, спочатку збережіть хоча б один файл.</p>}
+          {!canSend && result.isSuccess && (
+            <p id="submit-hint">
+              {needsNewVersion
+                ? 'Завантажте нову версію результату, щоб надіслати її знову. Файли повернутої версії змінити не можна.'
+                : 'Щоб надіслати результат, спочатку збережіть хоча б один файл.'}
+            </p>
+          )}
         </div>
       )}
 

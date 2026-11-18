@@ -38,6 +38,26 @@ afterEach(() => vi.unstubAllGlobals());
 
 const open = () => render(<RouterProvider router={createTestRouter(['/notifications'])} future={providerFuture} />);
 
+describe('/notifications of the student: «Замовник повернув результат…» (US-33)', () => {
+  const TEXT_RETURNED = 'Замовник повернув результат на доопрацювання за завданням «Парсер сайту»';
+
+  it('US-33 the notification is listed as new with its text and links to the executor card, where the comment is; a payload of another shape gives no link', async () => {
+    listResponse = () =>
+      json({
+        notifications: [
+          { id: 'n5', type: 'result_returned', text: TEXT_RETURNED, payload: { taskId: 't5', taskTitle: 'Парсер сайту' }, read: false, createdAt: '2026-11-13T10:00:00.000Z' },
+          { ...note(true), id: 'n4', type: 'result_returned', text: 'Нове сповіщення', payload: { unexpected: true } },
+        ],
+      });
+    open();
+
+    const article = await screen.findByRole('article', { name: TEXT_RETURNED });
+    expect(within(article).getByText('Нове:')).toBeInTheDocument();
+    expect(within(article).getByRole('link', { name: 'Відкрити завдання' })).toHaveAttribute('href', '/work/t5');
+    expect(screen.getAllByRole('link', { name: 'Відкрити завдання' })).toHaveLength(1); // the bad payload has no link
+  });
+});
+
 describe('/notifications of the student: «Ваш результат прийнято…» (US-30)', () => {
   const TEXT_ACCEPTED = 'Ваш результат прийнято замовником! Оплату нараховано';
 

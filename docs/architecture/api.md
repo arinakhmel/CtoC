@@ -86,7 +86,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | DELETE | `/api/tasks/:id/result/files/:fileId` | US-29/S3 | Ex | 204 (no body, §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR`, `ORIGIN_MISMATCH` · 404 `NOT_FOUND` · 409 `RESULT_LOCKED`, `INVALID_TRANSITION` |
 | POST | `/api/tasks/:id/result/submit` | US-28, US-48, US-29, US-32/S1 | Ex | 200 (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` · 409 `NO_RESULT_FILES`, `ALREADY_IN_REVIEW`, `INVALID_TRANSITION` |
 | POST | `/api/tasks/:id/accept` | US-31, US-30, US-34, US-37 | Own | 200 (body: §4.2) | 401 `AUTH_REQUIRED` · 403 `NOT_TASK_OWNER`, `ORIGIN_MISMATCH` · 404 `NOT_FOUND` · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` · 500 `INTERNAL_ERROR` (a broken invariant, nothing changes) |
-| POST | `/api/tasks/:id/return` | US-32, US-33 | Own | 200 | 400 `COMMENT_REQUIRED`, `COMMENT_TOO_LONG` · 403 · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` |
+| POST | `/api/tasks/:id/return` | US-32, US-33, US-48/S3 | Own | 200 (body: §4.2a) | 400 `COMMENT_REQUIRED`, `COMMENT_TOO_LONG`, `VALIDATION_FAILED` (a comment that is not a string) · 401 `AUTH_REQUIRED` · 403 `NOT_TASK_OWNER`, `ORIGIN_MISMATCH` · 404 `NOT_FOUND` · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` · 500 `INTERNAL_ERROR` (a broken invariant, nothing changes) |
 | GET | `/api/files/:fileId` | US-27, US-31, US-39 | File owner · Own (US-31: files of a version that is not a draft) · M (a moderator comes with US-39) | 200, `attachment` (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `FILE_FORBIDDEN` · 404 `NOT_FOUND` |
 
 ### Chat and notifications
@@ -306,6 +306,40 @@ A user who is not the owner calls it (US-31/S2):
 { "error": { "code": "NOT_TASK_OWNER", "message": "Доступ заборонено" } }
 ```
 
+### 4.2a `POST /api/tasks/:id/return` (return for revision)
+
+The owner of the task sends the result that is under review back to the student, with a required comment (US-32, US-33). Body: `{ "comment": "…" }`.
+
+```http
+POST /api/tasks/7d0c…/return
+Content-Type: application/json
+
+{ "comment": "Додайте висновки та виправте шапку документа" }
+```
+
+```json
+200 OK
+{ "task": { "id": "7d0c…", "status": "revision" },
+  "result": { "version": 1, "status": "returned", "revisionComment": "Додайте висновки та виправте шапку документа",
+              "submittedAt": "2026-11-13T10:00:00Z",
+              "lastReturn": { "version": 1, "comment": "Додайте висновки та виправте шапку документа", "returnedAt": "2026-11-14T10:00:00Z" },
+              "files": [ … ] } }
+```
+
+**The order of the checks** (decided by the product owner): access first, then the comment, then the state of the task.
+1. 401 without a session; 404 for an unknown task; 403 `NOT_TASK_OWNER` for anyone but the owner, also the executor and any student. This runs before the body is read, so a stranger learns nothing about the comment rules;
+2. the comment, with `returnForRevisionSchema` of `@ctoc/shared`, which the page uses too: it is trimmed, then it must be 1 to 2000 characters. A missing field, an empty string, or only spaces is 400 `COMMENT_REQUIRED` («Коментар до доопрацювання є обов'язковим»); more than 2000 characters (after trimming) is 400 `COMMENT_TOO_LONG` («Коментар перевищує допустиму довжину»); a comment that is not a string (a number, `null`, an array, an object) is 400 `VALIDATION_FAILED`. The text is never cut;
+3. the state of the task, inside the transaction. So a task that is `done` with a valid comment is 409 `TASK_ALREADY_DONE` (US-32/S2), while a task that is `done` with an empty comment is 400 `COMMENT_REQUIRED`.
+
+**One transaction** (INV-17, INV-23); a failure at any step leaves the task in review:
+1. the task goes `in_review` → `revision` by a conditional update that is the first write and so also the lock. The deal already closed is 409 `TASK_ALREADY_DONE`; any other state (in progress, already in revision, not assigned, cancelled) is 409 `TASK_NOT_IN_REVIEW`;
+2. the version under review goes `submitted` → `returned`, with the comment and `decidedAt`. If there is none, or the task has no executor, it is a broken invariant: logged, 500 `INTERNAL_ERROR`, rolled back;
+3. the notification `result_returned` is written for the student (§4.3b), as the last step.
+
+It changes **no escrow, balance, ledger entry or experience record**: the money stays held until the result is accepted. The files of the returned version are fixed (INV-16); the student's next upload opens a new draft, version N+1, which starts empty (OQ-36). A second return, or a return and an accept at the same time, give one 200 and the rest 409: both are conditional updates of the same row, so only one wins, and a lost accept pays nothing, a lost return changes nothing (INV-18).
+
+`lastReturn` is the latest comment of the customer. `GET /api/tasks/:id/result` (§4.14) and the answer of an upload give it **while the task is in revision**, for the executor and for the owner, so the student keeps reading it after a new draft was started, when the current version has no comment of its own. At any other time it is `null`.
+
 ### 4.3 `POST /api/tasks/:id/applications` with a forged price
 
 The schema has no `price` field, so it is stripped. The application uses the customer's price (US-42/S2, US-13/S2).
@@ -366,6 +400,7 @@ The types that exist, with the text of each (the text is built by the server fro
 |---|---|---|---|---|
 | `executor_selected` | the selected student (US-21) | «Вас обрано виконавцем завдання [Назва]» | `{ taskId, taskTitle }` | `/work/:taskId` |
 | `result_submitted` | the customer who owns the task (US-28, US-48) | «Студент надіслав результат за завданням «[Назва]» на перевірку» | `{ taskId, taskTitle }` | `/c/tasks/:taskId` |
+| `result_returned` | the executor, the student (US-33) | «Замовник повернув результат на доопрацювання за завданням «[Назва]»» (the comment is not in it: the task card shows it) | `{ taskId, taskTitle }` | `/work/:taskId` |
 | `result_accepted` | the executor, the student (US-30) | «Ваш результат прийнято замовником! Оплату нараховано» (fixed, the title is only in the payload) | `{ taskId, taskTitle }` | `/work/:taskId` |
 
 `result_accepted` is written by `notifyResultAccepted(tx, executorId, task)` on the transaction of the accept. It writes only the row: it opens no transaction and changes no task, escrow, balance or ledger. It is called by `POST /api/tasks/:id/accept` (§4.2, US-31) as the last step of the transaction that also credits the payout, because the text says «Оплату нараховано» (INV-18, OQ-38). A payload that does not have the expected shape gets the neutral text «Нове сповіщення» and no link.
@@ -646,7 +681,7 @@ The first upload opens a version in `draft` (`version` = last + 1) and the next 
 
 `GET /api/files/:fileId` is always a download: `Content-Disposition: attachment` with the original name, `Content-Type: application/octet-stream` whatever the uploader claimed, `X-Content-Type-Options: nosniff`, `Cache-Control: private, no-store`. The owner of the file (the executor who uploaded it) may download it. Since US-31 the customer who owns the task may too, but only a file of a version that is **not a draft** (sent for review, accepted or returned): a draft is still the executor's alone, so its file is 403 `FILE_FORBIDDEN` for the customer. An unknown or deleted file is 404, anyone else's file 403 `FILE_FORBIDDEN`. A moderator comes with US-39.
 
-`GET /api/tasks/:id/result` is read by the executor, who sees the current version, a draft included, and by the customer who owns the task, who sees the latest version that is not a draft and gets `{ "result": null }` while there is none (US-31). Anyone else is 403 `NOT_EXECUTOR` (OQ-35 b).
+`GET /api/tasks/:id/result` is read by the executor, who sees the current version, a draft included, and by the customer who owns the task, who sees the latest version that is not a draft and gets `{ "result": null }` while there is none (US-31). Anyone else is 403 `NOT_EXECUTOR` (OQ-35 b). While the task is in revision both also get `lastReturn`, the latest comment of the customer, which stays after the student started a new draft (§4.2a, US-33); at any other time it is `null`.
 
 The upload form shows the two result texts of §3 («Цей тип файлу заборонено з міркувань безпеки», «… Максимальний розмір — 50 МБ»), not the document texts that the dictionary holds for the same codes.
 

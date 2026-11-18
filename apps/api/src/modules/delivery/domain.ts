@@ -31,3 +31,5 @@ export const ACCEPTED = 'accepted' as const satisfies ResultVersionStatus;
  * is the executor's work in progress and stays hidden from the customer, also its files.
  */
 export const visibleToOwner = (versionStatus: string): boolean => versionStatus !== DRAFT;
+
+export const RETURNED = 'returned' as const satisfies ResultVersionStatus;

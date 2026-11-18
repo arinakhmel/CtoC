@@ -1,11 +1,24 @@
 import {
   executorSelectedPayloadSchema,
   resultAcceptedPayloadSchema,
+  resultReturnedPayloadSchema,
   resultSubmittedPayloadSchema,
   type ExecutorSelectedPayload,
   type ResultAcceptedPayload,
+  type ResultReturnedPayload,
   type ResultSubmittedPayload,
 } from '@ctoc/shared';
+
+/**
+ * US-33: «Замовник повернув результат на доопрацювання за завданням «[Назва]»». The title replaces the placeholder. The comment of
+ * the customer is NOT in the notification or its payload: it is shown on the task card, where it stays while the task is in revision.
+ */
+export const resultReturnedText = (taskTitle: string): string => `Замовник повернув результат на доопрацювання за завданням «${taskTitle}»`;
+
+export const resultReturnedPayload = (task: { id: string; title: string }): ResultReturnedPayload => ({
+  taskId: task.id,
+  taskTitle: task.title,
+});
 
 /**
  * US-30 sc.1 [AC]: «Ваш результат прийнято замовником! Оплату нараховано». A fixed text: the title of the task is kept in the
@@ -56,6 +69,10 @@ export function notificationText(type: string, payload: unknown): string {
   }
   if (type === 'result_accepted') {
     return resultAcceptedPayloadSchema.safeParse(payload).success ? RESULT_ACCEPTED_TEXT : 'Нове сповіщення';
+  }
+  if (type === 'result_returned') {
+    const parsed = resultReturnedPayloadSchema.safeParse(payload);
+    if (parsed.success) return resultReturnedText(parsed.data.taskTitle);
   }
   return 'Нове сповіщення';
 }

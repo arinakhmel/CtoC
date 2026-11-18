@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { executorSelectedPayloadSchema, LIMITS, notificationsQuerySchema, resultAcceptedPayloadSchema, resultSubmittedPayloadSchema } from '../src';
+import {
+  executorSelectedPayloadSchema,
+  LIMITS,
+  notificationsQuerySchema,
+  resultAcceptedPayloadSchema,
+  resultReturnedPayloadSchema,
+  resultSubmittedPayloadSchema,
+} from '../src';
 
 describe('US-21 notification schemas', () => {
   it('US-21 the list query defaults to the page size and accepts after', () => {
@@ -31,5 +38,15 @@ describe('US-30 notification schema', () => {
     expect(resultAcceptedPayloadSchema.safeParse({ taskId: 't1', taskTitle: 'Парсер сайту' }).success).toBe(true);
     expect(resultAcceptedPayloadSchema.safeParse({ taskId: 't1' }).success).toBe(false);
     expect(resultAcceptedPayloadSchema.safeParse({ taskTitle: 'Парсер сайту' }).success).toBe(false);
+  });
+});
+
+describe('US-33 notification schema', () => {
+  it('US-33 the result_returned payload needs a task id and a title, and has no comment in it', () => {
+    expect(resultReturnedPayloadSchema.safeParse({ taskId: 't1', taskTitle: 'Парсер сайту' }).success).toBe(true);
+    expect(resultReturnedPayloadSchema.safeParse({ taskId: 't1' }).success).toBe(false);
+    expect(resultReturnedPayloadSchema.safeParse({ taskTitle: 'Парсер сайту' }).success).toBe(false);
+    // The comment is shown on the task card, not copied into the notification: an extra key is stripped, not kept.
+    expect(resultReturnedPayloadSchema.parse({ taskId: 't1', taskTitle: 'Парсер сайту', comment: 'Додайте висновки' })).toEqual({ taskId: 't1', taskTitle: 'Парсер сайту' });
   });
 });

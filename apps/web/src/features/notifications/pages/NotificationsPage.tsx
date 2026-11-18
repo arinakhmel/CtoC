@@ -1,4 +1,10 @@
-import { MESSAGES_UK, executorSelectedPayloadSchema, resultAcceptedPayloadSchema, resultSubmittedPayloadSchema } from '@ctoc/shared';
+import {
+  MESSAGES_UK,
+  executorSelectedPayloadSchema,
+  resultAcceptedPayloadSchema,
+  resultReturnedPayloadSchema,
+  resultSubmittedPayloadSchema,
+} from '@ctoc/shared';
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
@@ -21,6 +27,11 @@ const linkOf = (notification: AppNotification): string | null => {
   if (notification.type === 'result_submitted') {
     const parsed = resultSubmittedPayloadSchema.safeParse(notification.payload);
     return parsed.success ? `/c/tasks/${parsed.data.taskId}` : null;
+  }
+  if (notification.type === 'result_returned') {
+    // US-33: «Замовник повернув результат…» goes to the executor's card, where the comment of the customer is shown.
+    const parsed = resultReturnedPayloadSchema.safeParse(notification.payload);
+    return parsed.success ? `/work/${parsed.data.taskId}` : null;
   }
   if (notification.type === 'result_accepted') {
     // US-30: «Ваш результат прийнято…» goes to the executor's card, which still reads a task that is `done`.
