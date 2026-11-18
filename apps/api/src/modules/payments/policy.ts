@@ -18,3 +18,12 @@ export function assertCanReadBalance(user: User): void {
   assertStudentWithConfirmedEmail(user);
   if (!isVerifiedStudent(user)) throw new ApiError('STUDENT_NOT_VERIFIED');
 }
+
+/**
+ * Access "S+" of api.md §4.1b (US-35, US-34): a verified student with a confirmed email, nobody else. A customer is 403
+ * ROLE_FORBIDDEN here, although `GET /api/me/balance` lets a customer read their own balance.
+ */
+export function assertCanReadFinance(user: User): void {
+  assertStudentWithConfirmedEmail(user);
+  if (!isVerifiedStudent(user)) throw new ApiError('STUDENT_NOT_VERIFIED');
+}

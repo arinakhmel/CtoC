@@ -653,6 +653,25 @@ article form + form {
   }
 }
 
+/* ---------- Finance page (US-34, US-35) ----------
+ * The balance is a block of its own. Each paid task is a card; its three amounts reuse the price-block rows, which stack on a
+ * narrow screen, and a long task title wraps, so nothing makes the page scroll sideways at 390 px. */
+.finance-balance strong {
+  font-size: 1.6rem;
+  overflow-wrap: anywhere;
+}
+.finance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.finance-list h3 {
+  overflow-wrap: anywhere;
+}
+
 /* ---------- Motion and forced colours ---------- */
 @media (prefers-reduced-motion: no-preference) {
   button,

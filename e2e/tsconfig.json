@@ -1,5 +1,9 @@
 {
   "extends": "../tsconfig.base.json",
-  "compilerOptions": { "types": ["node"], "lib": ["ES2023", "DOM"] },
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ES2023", "DOM"],
+    "paths": { "@prisma/client": ["../apps/api/node_modules/@prisma/client"] }
+  },
   "include": ["./**/*.ts", "../playwright.config.ts"]
 }

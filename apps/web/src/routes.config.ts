@@ -104,7 +104,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/me/finance",
-    title: "Balance, per-task breakdown, withdrawal",
+    title: "Фінанси",
     access: "S+",
     stories: ["US-34", "US-35", "US-36"],
   },

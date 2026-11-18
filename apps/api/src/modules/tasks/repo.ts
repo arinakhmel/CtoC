@@ -79,6 +79,18 @@ export const findTaskOfExecutor = (id: string, executorId: string) => prisma.tas
 export const listTasksOfExecutor = (executorId: string, limit: number) =>
   prisma.task.findMany({ where: { executorId }, orderBy: [{ assignedAt: 'desc' }, { id: 'desc' }], take: limit, select: workSelect });
 
+/**
+ * US-35 (A-07). The tasks this executor was paid for: only `done` ones, with the price split snapshot taken at publication and
+ * the time of completion. Newest payment first, capped like «Мої активні завдання». Nothing here is recalculated.
+ */
+export const listDoneTasksOfExecutor = (executorId: string, limit: number) =>
+  prisma.task.findMany({
+    where: { executorId, status: 'done' },
+    orderBy: [{ completedAt: 'desc' }, { id: 'desc' }],
+    take: limit,
+    select: { id: true, title: true, priceKopecks: true, commissionKopecks: true, netKopecks: true, completedAt: true },
+  });
+
 /** US-22 sc.2. The owner's row, to tell "not found" from "not yours" and to explain a refusal. */
 export const findTaskForDelete = (id: string) =>
   prisma.task.findUnique({ where: { id }, select: { id: true, customerId: true, status: true, executorId: true } });

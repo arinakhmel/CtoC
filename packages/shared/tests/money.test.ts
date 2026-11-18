@@ -10,6 +10,18 @@ const taskWithPrice = (priceKopecks: number) => ({
   deadlineAt: inOneWeek(),
 });
 
+// US-35 sc.2. Already covered elsewhere: 10.05 UAH (US-15 test below), 50.05 UAH and the loop over every price and rate (`delivery-payments.test.ts`).
+// Only the two cases that were missing are here.
+describe('US-35 sc.2 odd kopecks in the breakdown', () => {
+  it('US-35 sc.2 999.99 UAH at 10 % is 9999.9 kopecks of commission, rounded half-up to 10000, and gross = commission + net', () => {
+    expect(splitPrice(99_999, 1000)).toEqual({ grossKopecks: 99_999, commissionKopecks: 10_000, netKopecks: 89_999 });
+  });
+
+  it('US-35 sc.2 0.05 UAH at 10 % is exactly half a kopeck of commission, which rounds up to 1, and gross = commission + net', () => {
+    expect(splitPrice(5, 1000)).toEqual({ grossKopecks: 5, commissionKopecks: 1, netKopecks: 4 });
+  });
+});
+
 describe('US-15 net amount', () => {
   it('US-15 sc.1: 1000 UAH at 10% gives a net of 900 UAH', () => {
     expect(splitPrice(100_000, 1000)).toEqual({ grossKopecks: 100_000, commissionKopecks: 10_000, netKopecks: 90_000 });
