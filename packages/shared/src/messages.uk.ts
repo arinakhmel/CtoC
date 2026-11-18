@@ -58,3 +58,12 @@ export const MESSAGES_UK: Record<ErrorCode, string> = {
   RATE_LIMITED: "Забагато спроб. Спробуйте пізніше",
   INTERNAL_ERROR: "Щось пішло не так. Спробуйте пізніше",
 };
+
+/**
+ * api.md §3 gives FILE_TYPE_NOT_ALLOWED and FILE_TOO_LARGE one text for documents and another for results (US-27/S2, S3).
+ * A code has one text in the dictionary above, so the result upload form takes these two instead.
+ */
+export const RESULT_FILE_MESSAGES_UK = {
+  FILE_TYPE_NOT_ALLOWED: "Цей тип файлу заборонено з міркувань безпеки",
+  FILE_TOO_LARGE: "Файл занадто великий. Максимальний розмір — 50 МБ",
+} as const;

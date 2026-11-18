@@ -39,3 +39,11 @@ export const IN_PROGRESS = 'in_progress' as const;
 /** Why the select did not change the task: an executor is already chosen (US-25 sc.2), or the task is not open (not published, or past its deadline). */
 export const assignRefusal = (task: { executorId: string | null }): 'TASK_ALREADY_ASSIGNED' | 'TASK_NOT_OPEN' =>
   task.executorId !== null ? 'TASK_ALREADY_ASSIGNED' : 'TASK_NOT_OPEN';
+
+/**
+ * US-27 (INV-16). Which states accept result files is `RESULT_EDITABLE_STATUSES` in `@ctoc/shared`.
+ * Why a result change was refused for a task in another state: under review it is locked (US-29 sc.3), anywhere else the
+ * transition is not allowed.
+ */
+export const resultRefusal = (status: string): 'RESULT_LOCKED' | 'INVALID_TRANSITION' =>
+  status === 'in_review' ? 'RESULT_LOCKED' : 'INVALID_TRANSITION';

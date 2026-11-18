@@ -1,13 +1,14 @@
-import { LIMITS, type CreateTaskInput, type FeedQuery } from '@ctoc/shared';
+import { isResultEditable, LIMITS, type CreateTaskInput, type FeedQuery } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
-import { assignRefusal, chatStateOf, deleteRefusal, newTaskData } from './domain';
+import { assignRefusal, chatStateOf, deleteRefusal, newTaskData, resultRefusal } from './domain';
 import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed, assertTaskOwner } from './policy';
 import {
   assignTaskTx,
   cancelTaskWithoutExecutor,
   findChatTask,
+  findDeliveryTask,
   findFeedCursor,
   findTaskOwnerView,
   findOpenTask,
@@ -18,6 +19,7 @@ import {
   listFeed,
   listTasksOfExecutor,
   lockChatTask,
+  lockDeliveryTask,
   lockOpenTask,
 } from './repo';
 
@@ -154,4 +156,28 @@ export async function assignTask(
     const state = await findTaskState(tx, taskId);
     throw new ApiError(assignRefusal(state ?? { executorId: null }));
   }
+}
+
+/**
+ * US-27. What the delivery module needs to know about a task: the two people on it and why result files cannot be added now (null when they can).
+ * An unknown task is 404. Whether the caller is the executor is the caller's policy. The delivery module calls this, not the
+ * tasks table (ADR-0002).
+ */
+export async function getTaskForDelivery(id: string) {
+  const task = await findDeliveryTask(id);
+  if (!task) throw new ApiError('NOT_FOUND');
+  return {
+    id: task.id,
+    customerId: task.customerId,
+    executorId: task.executorId,
+    // Why files cannot be added now, or null when they can. The delivery module throws it as it is (ADR-0002: no import of this domain).
+    refusal: isResultEditable(task.status) ? null : resultRefusal(task.status),
+  };
+}
+
+/** US-27. First statement of the upload transaction: a conditional update that refuses if the task no longer accepts files. */
+export async function lockTaskForDelivery(tx: Prisma.TransactionClient, taskId: string, executorId: string): Promise<void> {
+  if ((await lockDeliveryTask(tx, taskId, executorId)) > 0) return;
+  const now = await tx.task.findUnique({ where: { id: taskId }, select: { status: true } });
+  throw new ApiError(resultRefusal(now?.status ?? 'cancelled'));
 }

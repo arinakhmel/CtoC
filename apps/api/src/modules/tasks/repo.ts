@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../platform/db';
+import { RESULT_EDITABLE_STATUSES } from '@ctoc/shared';
 import { ASSIGNABLE_STATUS, CANCELLABLE_BY_OWNER, CANCELLED, CHAT_OPEN_STATUSES, IN_PROGRESS } from './domain';
 
 /**
@@ -124,3 +125,16 @@ export const assignTaskTx = (tx: Prisma.TransactionClient, id: string, customerI
     where: { id, customerId, status: ASSIGNABLE_STATUS, executorId: null, priceKopecks, deadlineAt: { gt: now } },
     data: { status: IN_PROGRESS, executorId, assignedAt: now },
   });
+
+/** US-27. Who owns and who executes a task, and its state, for the delivery module. */
+export const findDeliveryTask = (id: string) =>
+  prisma.task.findUnique({ where: { id }, select: { id: true, customerId: true, executorId: true, status: true } });
+
+/**
+ * US-27 (INV-14, INV-16, ADR-0007). A conditional write that takes the write lock first: the number of rows it changed says
+ * that the caller is the executor and the task still accepts result files at this moment. Zero rows means it moved on
+ * (submitted, accepted) since the read. Same-value raw SQL, so `updatedAt` is not touched.
+ */
+export const lockDeliveryTask = (tx: Prisma.TransactionClient, id: string, executorId: string): Promise<number> =>
+  tx.$executeRaw`UPDATE "tasks" SET "status" = "status"
+    WHERE "id" = ${id} AND "executor_id" = ${executorId} AND "status" IN (${Prisma.join([...RESULT_EDITABLE_STATUSES])})`;

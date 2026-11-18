@@ -5,6 +5,7 @@ import {
   checkResultUpload,
   commissionOf,
   createWithdrawalSchema,
+  isExecutableContent,
   returnForRevisionSchema,
   sendMessageSchema,
   splitPrice,
@@ -108,5 +109,26 @@ describe('US-36 withdrawal', () => {
   it('US-36 sc.3: the amount must be a positive integer (the balance check is in the API)', () => {
     expect(createWithdrawalSchema.safeParse({ amountKopecks: 50_000, cardNumber: '4111111111111111' }).success).toBe(true);
     expect(codesOf(createWithdrawalSchema, { amountKopecks: 0, cardNumber: '4111111111111111' })).toEqual(['VALIDATION_FAILED']);
+  });
+});
+
+describe('US-27 sc.2 executables by content', () => {
+  const bytes = (...values: number[]) => Uint8Array.from([...values, 0x20, 0x20, 0x20, 0x20]);
+
+  it('US-27 sc.2: Windows (MZ), ELF, Mach-O and #! files are recognised whatever their name', () => {
+    expect(isExecutableContent(bytes(0x4d, 0x5a, 0x90, 0x00))).toBe(true);
+    expect(isExecutableContent(bytes(0x7f, 0x45, 0x4c, 0x46))).toBe(true);
+    expect(isExecutableContent(bytes(0xcf, 0xfa, 0xed, 0xfe))).toBe(true);
+    expect(isExecutableContent(bytes(0xca, 0xfe, 0xba, 0xbe))).toBe(true);
+    expect(isExecutableContent(Buffer.from('#!/bin/sh\n'))).toBe(true);
+  });
+
+  it('US-27 sc.1: documents, images, archives and plain text are not executables (OQ-18: zip is allowed)', () => {
+    expect(isExecutableContent(Buffer.from('%PDF-1.4'))).toBe(false);
+    expect(isExecutableContent(bytes(0x89, 0x50, 0x4e, 0x47))).toBe(false);
+    expect(isExecutableContent(bytes(0x50, 0x4b, 0x03, 0x04))).toBe(false);
+    expect(isExecutableContent(Buffer.from('Звіт'))).toBe(false);
+    expect(isExecutableContent(new Uint8Array(0))).toBe(false);
+    expect(isExecutableContent(Uint8Array.from([0x4d]))).toBe(false); // a single M is not MZ
   });
 });

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { applicationsRouter } from './applications/routes';
 import { chatRouter } from './chat/routes';
+import { deliveryRouter } from './delivery/routes';
 import { devRouter } from './dev/routes';
 import { identityRouter } from './identity/routes';
 import { notificationsRouter } from './notifications/routes';
@@ -22,6 +23,7 @@ export function createModulesRouter(): Router {
   router.use(notificationsRouter());
   router.use(chatRouter());
   router.use(paymentsRouter());
+  router.use(deliveryRouter());
   router.use(devRouter());
   return router;
 }

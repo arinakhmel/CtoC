@@ -49,6 +49,7 @@ beforeEach(() => {
       return json({ message: created }, 201);
     }
     if (url === '/api/tasks/t1/messages') return listResponse ? listResponse() : json({ messages });
+    if (url === '/api/tasks/t1/result') return json({ result: null }); // the result block of the card (US-27)
     return json({ status: 'ok' });
   });
   vi.stubGlobal('fetch', fetchMock);

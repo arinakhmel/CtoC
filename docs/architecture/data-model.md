@@ -108,7 +108,7 @@ Primary key: `(user_id, skill_id)`.
 | kind | TEXT | CHECK IN (`student_document`,`result`) |
 | storage_key | TEXT | NOT NULL, UNIQUE |
 | original_name | TEXT | NOT NULL |
-| mime | TEXT | NOT NULL (detected by content) |
+| mime | TEXT | NOT NULL. A student document: detected by content (JPEG, PNG, PDF). A result file (US-27): the type the browser claimed, kept only to show it, because results may be any type; its content is checked only to refuse executables (OQ-35). Never used as the type of a download. |
 | size_bytes | INTEGER | NOT NULL, CHECK > 0 |
 | sha256 | TEXT | NOT NULL |
 | created_at | INTEGER | NOT NULL |

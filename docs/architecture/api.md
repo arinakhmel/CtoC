@@ -81,12 +81,13 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
 | GET | `/api/me/work` | US-22, US-29 | S+ (executor) | 200 (body: §4.13a): the student's tasks as executor, with status | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` |
-| POST | `/api/tasks/:id/result/files` | US-27 | Ex | 201 | 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_TOO_LARGE`, `TOO_MANY_FILES` · 403 `NOT_EXECUTOR` · 409 `RESULT_LOCKED` |
+| POST | `/api/tasks/:id/result/files` | US-27 | Ex | 201 (body: §4.14) | 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_TOO_LARGE`, `TOO_MANY_FILES`, `VALIDATION_FAILED` (no file) · 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` · 409 `RESULT_LOCKED`, `INVALID_TRANSITION` |
+| GET | `/api/tasks/:id/result` | US-27, US-29 | Ex | 200 (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` |
 | DELETE | `/api/tasks/:id/result/files/:fileId` | US-29/S3 | Ex | 204 | 403 · 409 `RESULT_LOCKED` |
 | POST | `/api/tasks/:id/result/submit` | US-28, US-29, US-32/S1 | Ex | 200 | 403 `NOT_EXECUTOR` · 409 `NO_RESULT_FILES`, `ALREADY_IN_REVIEW`, `INVALID_TRANSITION` |
 | POST | `/api/tasks/:id/accept` | US-31, US-30, US-34, US-37 | Own | 200 | 403 `NOT_TASK_OWNER` · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` |
 | POST | `/api/tasks/:id/return` | US-32, US-33 | Own | 200 | 400 `COMMENT_REQUIRED`, `COMMENT_TOO_LONG` · 403 · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` |
-| GET | `/api/files/:fileId` | US-27, US-31, US-39 | File owner · Own · Ex · M | 200, `attachment` | 403 `FILE_FORBIDDEN` · 404 |
+| GET | `/api/files/:fileId` | US-27, US-31, US-39 | File owner · Own · Ex · M (US-27 builds the file owner; the customer comes with US-31, a moderator with US-39) | 200, `attachment` (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `FILE_FORBIDDEN` · 404 `NOT_FOUND` |
 
 ### Chat and notifications
 
@@ -605,3 +606,25 @@ GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
 `GET /api/me/work` returns `{ "tasks": [ … ] }`: the tasks where the caller is the executor, in every status, last assigned first, at most 100 (OQ-29).
 
 `DELETE /api/tasks/:id` (US-22/S2, INV-13): the owner cancels a task that has no executor. 204 and the task becomes `cancelled` from `pending_moderation` or `published`. With an executor: 409 `TASK_HAS_EXECUTOR`, nothing changes. In any other state (rejected, cancelled, done): 409 `INVALID_TRANSITION`. Someone else's task: 403 `NOT_TASK_OWNER`. It is one conditional update.
+
+### 4.14 Result files of a task (US-27)
+
+`POST /api/tasks/:id/result/files` is `multipart/form-data` with one field `file`. Only the executor of the task may call it, and only while the task is `in_progress` or `revision` (INV-14, INV-16): in `in_review` it is 409 `RESULT_LOCKED`, in `done` or `cancelled` 409 `INVALID_TRANSITION`. Another logged-in user gets 403 `NOT_EXECUTOR` for an existing task, and an unknown task is 404. Access is checked before the file is received, so the answer never depends on the file (a stranger who sends a forbidden or empty file still gets 403, and the server does not buffer the body). The rules, in this order (US-27/S2, S3):
+
+- blocked by **name**: `.exe .bat .cmd .com .scr .msi .ps1 .vbs`, and by **content**: Windows (`MZ`), ELF, Mach-O and `#!` files, so a renamed file is caught too. 400 `FILE_TYPE_NOT_ALLOWED`. This is a check of the first bytes, not a virus scan, and archives are not opened (OQ-18, OQ-35). `.zip` is allowed;
+- the limit is 50 MB: exactly 50 MB is accepted, one byte more is 400 `FILE_TOO_LARGE`. This limit is enforced while the file is received (the transport layer), so it applies before the name and content checks above;
+- at most 10 files in one version: the 11th is 400 `TOO_MANY_FILES`, also when two uploads arrive at once;
+- an empty file or a missing field is 400 `VALIDATION_FAILED`.
+
+The first upload opens a version in `draft` (`version` = last + 1) and the next ones go into it. The status of the task does not change: submitting is US-28. The answer is the whole current result, and `GET /api/tasks/:id/result` returns the same shape (`{ "result": null }` before the first upload). No storage key and no hash leave the server.
+
+```json
+201 Created
+{ "result": { "version": 1, "status": "draft", "revisionComment": null, "submittedAt": null,
+              "files": [ { "id": "f3a1…", "name": "Звіт.pdf", "mime": "application/pdf",
+                           "sizeBytes": 482113, "createdAt": "2026-11-18T10:02:11Z" } ] } }
+```
+
+`GET /api/files/:fileId` is always a download: `Content-Disposition: attachment` with the original name, `Content-Type: application/octet-stream` whatever the uploader claimed, `X-Content-Type-Options: nosniff`, `Cache-Control: private, no-store`. In US-27 the owner of the file may download it. An unknown or deleted file is 404, someone else's file 403 `FILE_FORBIDDEN`. The task's customer is added with US-31 and a moderator with US-39.
+
+The upload form shows the two result texts of §3 («Цей тип файлу заборонено з міркувань безпеки», «… Максимальний розмір — 50 МБ»), not the document texts that the dictionary holds for the same codes.
