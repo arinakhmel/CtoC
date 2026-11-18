@@ -134,7 +134,7 @@ export function ResultReview({ taskId, status }: { taskId: string; status: TaskS
               {shownCommentError}
             </p>
           )}
-          <button type="submit" disabled={busy || overLimit}>
+          <button type="submit" disabled={busy || commentError !== null}>
             Надіслати
           </button>{' '}
           <button type="button" disabled={busy} onClick={closeReturn}>
