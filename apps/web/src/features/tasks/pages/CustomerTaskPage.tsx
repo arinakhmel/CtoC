@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CandidateList } from '../../applications/components/CandidateList';
 import { candidatesKey, useCandidates } from '../../applications/queries/candidates';
+import { ResultReview } from '../../delivery/components/ResultReview';
 import { ChatPanel } from '../../chat/components/ChatPanel';
 import { ApiClientError } from '../../../lib/api';
 import { formatUah } from '../../../lib/money';
@@ -15,9 +16,17 @@ const messageFor = (code: string): string =>
 const CHAT_STATUSES = ['in_progress', 'in_review', 'revision', 'done', 'cancelled'];
 
 /**
+ * The result block shows once a result was sent for review, and stays after it was accepted or sent back (the customer then sees
+ * the version that was decided). Only `in_review` has the accept button. It also keeps a message on the page when a 409 moves the
+ * task on while the customer is looking at it.
+ */
+const RESULT_STATUSES = ['in_review', 'done', 'revision'];
+
+/**
  * /c/tasks/:id: US-24. The customer's page of one of their tasks: the applicants with the verified badge, skills and a
  * link to the profile, the select button with its confirmation (US-25), and from assignment on the chat with the executor
- * (US-23). The result and the review come with their own stories.
+ * (US-23). From review on, the files the student sent and «Прийняти результат» with its confirmation (US-31). The return for
+ * revision comes with its own story.
  */
 export function CustomerTaskPage() {
   const { id = '' } = useParams();
@@ -65,6 +74,7 @@ export function CustomerTaskPage() {
             {data.truncated && <p role="status">Показано перші {LIMITS.candidatesMax} відгуків, решту поки не видно.</p>}
             <CandidateList taskId={data.task.id} candidates={data.applications} canSelect={canSelect} priceKopecks={data.task.priceKopecks} />
           </section>
+          {RESULT_STATUSES.includes(data.task.status) && <ResultReview taskId={data.task.id} status={data.task.status} />}
           {showChat && (
             <ChatPanel
               taskId={data.task.id}

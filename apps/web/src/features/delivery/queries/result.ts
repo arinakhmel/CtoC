@@ -1,6 +1,7 @@
 import type { TaskStatus } from '@ctoc/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiClientError, apiFetch, apiPost } from '../../../lib/api';
+import { candidatesKey } from '../../applications/queries/candidates';
 import { taskKey, type TaskDetails } from '../../tasks/queries/task';
 import { myWorkKey } from '../../tasks/queries/work';
 
@@ -95,6 +96,28 @@ export const useDeleteResultFile = (taskId: string) => {
       if (error.code === 'RESULT_LOCKED' || error.code === 'INVALID_TRANSITION' || error.code === 'NOT_FOUND') {
         void client.invalidateQueries({ queryKey: resultKey(taskId) });
       }
+    },
+  });
+};
+
+export interface AcceptResponse {
+  task: { id: string; status: 'done'; completedAt: string };
+  payout: { grossKopecks: number; commissionKopecks: number; netKopecks: number };
+  experienceRecordId: string;
+}
+
+/**
+ * POST /api/tasks/:id/accept (api.md §4.2, US-31). The customer accepts the result. Whatever the answer, the customer's task (the
+ * candidate list answer carries its status) and the result are fetched again, so the page shows the real state: after a 409
+ * TASK_ALREADY_DONE or TASK_NOT_IN_REVIEW it shows what another tab or a double click already did.
+ */
+export const useAcceptResult = (taskId: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPost<AcceptResponse>(`/tasks/${encodeURIComponent(taskId)}/accept`, {}),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: candidatesKey(taskId) });
+      void client.invalidateQueries({ queryKey: resultKey(taskId) });
     },
   });
 };
