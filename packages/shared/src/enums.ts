@@ -19,6 +19,15 @@ export const TASK_STATUSES = [
 ] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const taskStatusSchema = z.enum(TASK_STATUSES);
+
+/**
+ * US-27 (INV-16, domain-model.md §3.1). The executor may add result files only while the task is `in_progress`, or `revision`
+ * after a return. In `in_review` the files are locked (RESULT_LOCKED, US-29 sc.3); `done` and `cancelled` are final.
+ * One list for the API (the write lock) and the web (the upload form).
+ */
+export const RESULT_EDITABLE_STATUSES = ['in_progress', 'revision'] as const satisfies readonly TaskStatus[];
+export const isResultEditable = (status: string | undefined): boolean =>
+  status !== undefined && (RESULT_EDITABLE_STATUSES as readonly string[]).includes(status);
 /** The words the user sees for a task status. The labels of domain-model.md §3.1 (one place, so lists and cards agree). */
 export const TASK_STATUS_UK: Record<TaskStatus, string> = {
   pending_moderation: 'На модерації',

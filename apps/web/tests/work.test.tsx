@@ -33,6 +33,7 @@ beforeEach(() => {
       if (url === '/api/me/work') return workList();
       if (url === '/api/tasks/t1') return taskDetails();
       if (url === '/api/tasks/t1/messages') return json({ messages: [] });
+      if (url === '/api/tasks/t1/result') return json({ result: null }); // the result block of the card (US-27)
       return json({ status: 'ok' });
     }),
   );

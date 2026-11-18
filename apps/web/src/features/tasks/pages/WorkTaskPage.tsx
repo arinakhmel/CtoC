@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
 import { formatDeadline } from '../../../lib/money';
 import { ChatPanel } from '../../chat/components/ChatPanel';
+import { ResultUpload } from '../../delivery/components/ResultUpload';
 import { PriceBlock } from '../components/PriceBlock';
 import { useTask } from '../queries/task';
 
@@ -12,8 +13,8 @@ const messageFor = (code: string): string =>
 
 /**
  * /work/:taskId: US-22. The executor's card of the active task: the full terms, the deadline in the browser's local time
- * zone (sc.3) and the agreed price, and the chat with the customer (US-23). The result upload and the revision comment come
- * with their own stories.
+ * zone (sc.3) and the agreed price, and the chat with the customer (US-23), and the result upload (US-27). The submit (US-28),
+ * the lock in review (US-29) and the revision comment (US-32, US-33) come with their own stories.
  */
 export function WorkTaskPage() {
   const { taskId = '' } = useParams();
@@ -58,6 +59,7 @@ export function WorkTaskPage() {
           <p>
             Виконати до: <time dateTime={shown.deadlineAt}>{formatDeadline(shown.deadlineAt)}</time>
           </p>
+          <ResultUpload taskId={shown.id} status={shown.status} />
           <ChatPanel taskId={shown.id} status={shown.status} />
         </>
       )}
