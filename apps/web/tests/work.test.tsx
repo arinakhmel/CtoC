@@ -124,3 +124,46 @@ describe('/work/:taskId card (US-22)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Не знайдено');
   });
 });
+
+describe('/work/:taskId card of a done task: the payout breakdown (US-35 sc.1)', () => {
+  /** The row of one amount: its label and its value, as the student reads them together. */
+  const amountRow = (label: string) => screen.getByText(label).closest('div')!;
+
+  it('US-35 sc.1 the done task card shows the breakdown', async () => {
+    taskDetails = () => json({ task: { ...work, status: 'done', priceKopecks: 100_000, commissionKopecks: 10_000, netKopecks: 90_000 } });
+    openCard();
+
+    const section = await screen.findByRole('region', { name: 'Виплата' });
+
+    expect(within(section).getByText('Загальна сума').closest('div')).toHaveTextContent(/1\s000 грн/);
+    expect(within(section).getByText('Комісія платформи').closest('div')).toHaveTextContent(/100 грн/);
+    expect(within(section).getByText('До отримання').closest('div')).toHaveTextContent(/900 грн/);
+  });
+
+  it('US-35 sc.1 the numbers are the snapshot of the task, not recalculated: a split of 7000 / 93000 is shown as it is', async () => {
+    taskDetails = () => json({ task: { ...work, status: 'done', priceKopecks: 100_000, commissionKopecks: 7_000, netKopecks: 93_000 } });
+    openCard();
+
+    await screen.findByRole('region', { name: 'Виплата' });
+
+    expect(amountRow('Комісія платформи')).toHaveTextContent(/70 грн/);
+    expect(amountRow('До отримання')).toHaveTextContent(/930 грн/);
+  });
+
+  it('US-35 sc.1 a task that is not done yet has no payout breakdown: only the agreed price', async () => {
+    openCard(); // in_progress
+
+    expect(await screen.findByText('Узгоджена ціна')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Виплата' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Комісія платформи')).not.toBeInTheDocument();
+  });
+
+  it('US-35 sc.1 a done task without a stored split shows no breakdown and does not calculate one', async () => {
+    taskDetails = () => json({ task: { ...work, status: 'done', commissionKopecks: null, netKopecks: null } });
+    openCard();
+
+    expect(await screen.findByText('Узгоджена ціна')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Виплата' })).not.toBeInTheDocument();
+    expect(screen.queryByText('До отримання')).not.toBeInTheDocument();
+  });
+});

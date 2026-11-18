@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
 import { formatDate, formatUah } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
+import { PayoutBreakdown } from '../components/PayoutBreakdown';
 import { useFinance } from '../queries/finance';
 
 const messageFor = (code: string): string =>
@@ -65,26 +66,7 @@ export function FinancePage({ page }: { page: PageConfig }) {
                       <p>
                         Виплачено: <time dateTime={task.paidAt}>{formatDate(task.paidAt)}</time>
                       </p>
-                      <dl className="price-block">
-                        <div className="price-block__row">
-                          <dt>Загальна сума</dt>
-                          <dd>
-                            <strong>{formatUah(task.grossKopecks)}</strong>
-                          </dd>
-                        </div>
-                        <div className="price-block__row">
-                          <dt>Комісія платформи</dt>
-                          <dd>
-                            <strong>{formatUah(task.commissionKopecks)}</strong>
-                          </dd>
-                        </div>
-                        <div className="price-block__row price-block__row--net">
-                          <dt>До отримання</dt>
-                          <dd>
-                            <strong>{formatUah(task.netKopecks)}</strong>
-                          </dd>
-                        </div>
-                      </dl>
+                      <PayoutBreakdown grossKopecks={task.grossKopecks} commissionKopecks={task.commissionKopecks} netKopecks={task.netKopecks} />
                     </article>
                   </li>
                 ))}
