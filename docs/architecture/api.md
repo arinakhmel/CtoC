@@ -105,8 +105,8 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | GET | `/api/me/balance` | US-26, US-34 | S+ · C | 200 (body: §4.1a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` |
 | GET | `/api/me/finance` | US-35, US-34 | S+ | 200 (body: §4.1b) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN` (a customer too), `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` · 500 `INTERNAL_ERROR` (a done task without a price split, OQ-39 a) |
 | POST | `/api/me/balance/sandbox-topup` | US-26 (OQ-09) | C | 200 (body: §4.1a) | 400 `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` · 429 `RATE_LIMITED` |
-| POST | `/api/me/withdrawals` | US-36 | S+ | 201 | 400 `CARD_INVALID` · 422 `INSUFFICIENT_BALANCE` |
-| GET | `/api/me/withdrawals` | US-36 | S+ | 200 | |
+| POST | `/api/me/withdrawals` | US-36 | S+ | 201 (body: §4.1c) | 400 `CARD_INVALID`, `VALIDATION_FAILED` (amount) · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` · 422 `INSUFFICIENT_BALANCE` · 429 `RATE_LIMITED` |
+| GET | `/api/me/withdrawals` | US-36 | S+ | 200 (body: §4.1c) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` |
 
 ### Moderation and admin
 
@@ -122,8 +122,8 @@ All return 401 without a session and **403 `ROLE_FORBIDDEN`** for non-moderators
 | POST | `/api/mod/tasks/:id/publish` | US-40/S1 | 200 | 409 `ALREADY_DECIDED` |
 | POST | `/api/mod/tasks/:id/reject` | US-40/S2, US-15/S2 | 200 | 400 `REASON_REQUIRED` · 409 `ALREADY_DECIDED`, `TASK_HAS_EXECUTOR` |
 | POST | `/api/mod/tasks/:id/resolve` (`release` \| `refund`) | A-09 (OQ-08) | 200 | 409 `INVALID_TRANSITION` |
-| GET | `/api/mod/withdrawals?status=requested` | A-10 (OQ-10) | 200 | |
-| POST | `/api/mod/withdrawals/:id/mark-paid` and `/reject` | A-10 | 200 | 409 `ALREADY_DECIDED` |
+| GET | `/api/mod/withdrawals?status=requested` | US-36, A-10 (OQ-10) | 200 (body: §4.1d) | 400 `VALIDATION_FAILED` (bad `status`) |
+| POST | `/api/mod/withdrawals/:id/mark-paid` and `/reject` | US-36, A-10 (OQ-10) | 200 (body: §4.1d) | 400 `REASON_REQUIRED` (reject) · 404 `NOT_FOUND` · 409 `ALREADY_DECIDED` |
 | GET, PUT | `/api/mod/settings` | US-03/S3, US-17 | 200 | 400 `VALIDATION_FAILED` |
 | GET, POST, DELETE | `/api/mod/university-domains` | A-17 | 200, 201, 204 | 409 `DOMAIN_EXISTS` |
 
@@ -288,6 +288,40 @@ The student's money in one answer: the balance that is available to withdraw, an
                "grossKopecks": 100000, "commissionKopecks": 10000, "netKopecks": 90000,
                "paidAt": "2026-11-18T10:00:00Z" } ] }
 ```
+
+### 4.1c `POST /api/me/withdrawals` and `GET /api/me/withdrawals` (US-36)
+
+A verified student asks to withdraw money from the available balance to a Ukrainian bank card. The MVP pays out by hand: the request waits for a moderator (§4.1d, A-10, OQ-10). Access "S+", the same checks as `GET /api/me/finance` (§4.1b). The access check runs before the body is validated, so a customer learns nothing about the rules of the body (403 before 400).
+
+```json
+POST /api/me/withdrawals
+{ "amountKopecks": 50000, "cardNumber": "4111 1111 1111 1111" }
+```
+
+- `amountKopecks` is a positive integer (400 `VALIDATION_FAILED` otherwise). `cardNumber` is 16 digits with a valid Luhn checksum; spaces are ignored (400 `CARD_INVALID` otherwise, US-36/S2). Whether the issuer is a Ukrainian bank cannot be checked without issuer (BIN) data: it is **not** checked (W-13, OQ-13). Unknown keys are stripped.
+- **One transaction** (ADR-0007): the conditional debit `available >= amount` of the student's balance (no row, or too little: 422 `INSUFFICIENT_BALANCE`, nothing changes, US-36/S3), the request `requested` with the full card number and its last four digits, and a negative `withdrawal` ledger entry with the request's id. The balance always equals the sum of its entries (INV-20). Two requests at once that together exceed the balance give one 201 and one 422.
+- The money leaves the available balance at once: it cannot be spent twice while the request waits (A-10).
+- **The full card number is never returned** to the student, in any answer. Only `cardLast4`. It is kept only while the request is `requested`, so the moderator can pay it, and the database clears it when the request is processed (`withdrawals_card_retention_check`).
+- Limited to 10 requests a minute per user (429 `RATE_LIMITED`).
+
+```json
+201 Created
+{ "withdrawal": { "id": "w-1…", "amountKopecks": 50000, "cardLast4": "1111", "status": "requested",
+                  "createdAt": "2026-11-19T10:00:00Z", "processedAt": null, "reason": null },
+  "balance": { "availableKopecks": 40000 } }
+```
+
+`GET /api/me/withdrawals` gives the caller's own requests only, newest first, at most 100 (`LIMITS.withdrawalsMax`), in the same shape: `{ "withdrawals": [ … ] }`. `reason` is the moderator's reason of a `rejected` request, `null` otherwise. The display labels are `WITHDRAWAL_STATUS_LABELS_UK`: «Очікує виплати», «Виплачено», «Відхилено».
+
+### 4.1d Withdrawal processing by a moderator (US-36, A-10, OQ-10)
+
+No story covers who pays a request out (OQ-10). The MVP decision A-10: a moderator pays it by hand outside the platform and records the result here. Moderators only (INV-25): 401 without a session, 403 `ROLE_FORBIDDEN` for anyone else.
+
+- `GET /api/mod/withdrawals?status=requested` (`status` is `requested`, the default, `paid` or `rejected`; anything else is 400 `VALIDATION_FAILED`): oldest first, so the queue is served in order, at most 100. Each item adds the student `{ id, displayName }` and, **only while it is `requested`**, the full `cardNumber`, which the moderator needs to make the payment (OQ-42). A processed request has `cardNumber: null`.
+- `POST /api/mod/withdrawals/:id/mark-paid` (empty body): one transaction, the conditional update `requested` → `paid` that also clears the card number and sets `processedBy` and `processedAt`, and an audit event `withdrawal.paid`. No balance changes: the money already left at request time.
+- `POST /api/mod/withdrawals/:id/reject` `{ "reason": "…" }` (1 to 500 characters, 400 `REASON_REQUIRED` when empty): one transaction, the conditional update `requested` → `rejected` with the reason, the card number cleared, the amount credited back to the student's balance with a positive `withdrawal_reversal` entry (INV-20), and an audit event `withdrawal.rejected`.
+- Both decide only a request that is still `requested`: the first decision wins and a second, or two at once, is 409 `ALREADY_DECIDED` with no change (INV-24). An unknown id is 404 `NOT_FOUND`. The answer is `{ "withdrawal": { … } }` in the shape of the list.
+- The student gets no notification yet: `withdrawal_processed` is proposed with no story (A-15). The status is seen in `GET /api/me/withdrawals`.
 
 ### 4.2 `POST /api/tasks/:id/accept` (accept result)
 
