@@ -136,13 +136,33 @@ describe('db:seed:work (development data for Epic 5)', () => {
     expect(before.user.studentVerifiedAt).toBeNull();
   });
 
-  it('never changes an existing seed account: an unverified student of that email stops the run, unchanged', async () => {
-    const existing = await createUser({ email: SEED_STUDENT_EMAIL });
+  it('never changes an existing seed account: a confirmed but unverified student of that email stops the run, unchanged', async () => {
+    const existing = await prisma.user.update({ where: { id: (await createUser({ email: SEED_STUDENT_EMAIL })).id }, data: { emailConfirmedAt: new Date() } });
 
     await expect(seedWorkData(prisma, passwords)).rejects.toThrow(/not a verified student/);
 
     expect(await prisma.user.findUniqueOrThrow({ where: { id: existing.id } })).toEqual(existing);
     expect(await prisma.task.count()).toBe(0);
+  });
+
+  it('never changes an existing seed account: one whose email is not confirmed stops the run, unchanged', async () => {
+    const existing = await createUser({ email: SEED_STUDENT_EMAIL }); // the factory leaves emailConfirmedAt empty
+    expect(existing.emailConfirmedAt).toBeNull();
+
+    await expect(seedWorkData(prisma, passwords)).rejects.toThrow(/email is not confirmed/);
+
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: existing.id } })).toEqual(existing);
+    expect(await prisma.task.count()).toBe(0);
+  });
+
+  it('an existing seed customer with an unconfirmed email also stops the run, unchanged', async () => {
+    const student = await seedWorkData(prisma, passwords); // everything in place first
+    expect(student.taskId).not.toBeNull();
+    const customer = await prisma.user.update({ where: { email: SEED_CUSTOMER_EMAIL }, data: { emailConfirmedAt: null } });
+
+    await expect(seedWorkData(prisma, {})).rejects.toThrow(/email is not confirmed/);
+
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: customer.id } })).toEqual(customer);
   });
 
   it('dry-run reads only: it describes the steps and writes nothing', async () => {
