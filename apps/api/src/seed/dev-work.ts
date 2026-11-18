@@ -81,7 +81,8 @@ async function ensureUser(
   options: { email: string; role: 'student' | 'customer'; displayName: string; password: string | undefined; envName: string; verified: boolean },
 ): Promise<{ user: User; created: boolean }> {
   const existing = await prisma.user.findUnique({ where: { email: options.email } });
-if (existing.role !== options.role) throw new Error(`${options.email} exists with role ${existing.role}; not changed, stopping`);
+  if (existing) {
+    if (existing.role !== options.role) throw new Error(`${options.email} exists with role ${existing.role}; not changed, stopping`);
     if (existing.emailConfirmedAt === null) {
       throw new Error(`${options.email} exists but its email is not confirmed; accounts are never changed, stopping`);
     }
