@@ -418,14 +418,13 @@ describe('Access to a result is for its executor only in US-27 (INV-14, NFR-07)'
     expect((await upload(othersTask.id, other.cookie, pdf(), 'mine.pdf')).status).toBe(201);
   });
 
-  it('the customer cannot replace the result: uploading is 403 and there is no delete endpoint yet (US-29), so the file stays', async () => {
+  it('the customer cannot replace the result: uploading and deleting are both 403 NOT_EXECUTOR, so the file stays', async () => {
     const { task, id } = await taskWithFile();
 
     forbidden(await upload(task.id, customer.cookie, pdf(400), 'replacement.pdf'), 'NOT_EXECUTOR');
     const removal = await api().delete(`/api/tasks/${task.id}/result/files/${id}`).set('Cookie', customer.cookie).set('Origin', ORIGIN);
 
-    // The route does not exist yet, so this is a plain 404. US-29 builds it and changes this assertion to 403 for the customer.
-    expect(removal.status).toBe(404);
+    forbidden(removal, 'NOT_EXECUTOR'); // US-29 built the delete route: it is the same access rule as the upload
     expect(await prisma.resultFile.count()).toBe(1);
     expect((await download(id, student.cookie)).status).toBe(200);
   });

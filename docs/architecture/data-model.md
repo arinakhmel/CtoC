@@ -112,7 +112,7 @@ Primary key: `(user_id, skill_id)`.
 | size_bytes | INTEGER | NOT NULL, CHECK > 0 |
 | sha256 | TEXT | NOT NULL |
 | created_at | INTEGER | NOT NULL |
-| deleted_at | INTEGER | NULL |
+| deleted_at | INTEGER | NULL. Set when the executor deletes a result file from a draft (US-29). The row stays (hash, history); its `result_files` link is removed, so the file leaves the list and the limit of ten, and `GET /api/files/:fileId` answers 404. The bytes are removed after the commit. |
 
 Index: `(owner_id)`.
 

@@ -70,3 +70,31 @@ export const useSubmitResult = (taskId: string) => {
     },
   });
 };
+
+/**
+ * DELETE /api/tasks/:id/result/files/:fileId (api.md §4.14, US-29). 204 without a body. On success the file leaves the cached
+ * list at once. A 409 RESULT_LOCKED or INVALID_TRANSITION means the task was moved on (sent for review in another tab): the
+ * task, the result and «Мої активні завдання» are fetched again, so the page shows what is really allowed. A 404 means the
+ * file is already gone (a second click, another tab): the result is fetched again and the list is right.
+ */
+export const useDeleteResultFile = (taskId: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (fileId: string) =>
+      apiFetch<void>(`/tasks/${encodeURIComponent(taskId)}/result/files/${encodeURIComponent(fileId)}`, { method: 'DELETE' }),
+    onSuccess: (_answer, fileId) =>
+      client.setQueryData(resultKey(taskId), (previous: Result | null | undefined) =>
+        previous ? { ...previous, files: previous.files.filter((file) => file.id !== fileId) } : previous,
+      ),
+    onError: (error) => {
+      if (!(error instanceof ApiClientError)) return;
+      if (error.code === 'RESULT_LOCKED' || error.code === 'INVALID_TRANSITION') {
+        void client.invalidateQueries({ queryKey: taskKey(taskId) });
+        void client.invalidateQueries({ queryKey: myWorkKey });
+      }
+      if (error.code === 'RESULT_LOCKED' || error.code === 'INVALID_TRANSITION' || error.code === 'NOT_FOUND') {
+        void client.invalidateQueries({ queryKey: resultKey(taskId) });
+      }
+    },
+  });
+};

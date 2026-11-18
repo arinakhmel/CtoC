@@ -83,7 +83,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | GET | `/api/me/work` | US-22, US-29 | S+ (executor) | 200 (body: §4.13a): the student's tasks as executor, with status | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` |
 | POST | `/api/tasks/:id/result/files` | US-27 | Ex | 201 (body: §4.14) | 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_TOO_LARGE`, `TOO_MANY_FILES`, `VALIDATION_FAILED` (no file) · 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` · 409 `RESULT_LOCKED`, `INVALID_TRANSITION` |
 | GET | `/api/tasks/:id/result` | US-27, US-29 | Ex | 200 (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` |
-| DELETE | `/api/tasks/:id/result/files/:fileId` | US-29/S3 | Ex | 204 | 403 · 409 `RESULT_LOCKED` |
+| DELETE | `/api/tasks/:id/result/files/:fileId` | US-29/S3 | Ex | 204 (no body, §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR`, `ORIGIN_MISMATCH` · 404 `NOT_FOUND` · 409 `RESULT_LOCKED`, `INVALID_TRANSITION` |
 | POST | `/api/tasks/:id/result/submit` | US-28, US-48, US-29, US-32/S1 | Ex | 200 (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` · 409 `NO_RESULT_FILES`, `ALREADY_IN_REVIEW`, `INVALID_TRANSITION` |
 | POST | `/api/tasks/:id/accept` | US-31, US-30, US-34, US-37 | Own | 200 | 403 `NOT_TASK_OWNER` · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` |
 | POST | `/api/tasks/:id/return` | US-32, US-33 | Own | 200 | 400 `COMMENT_REQUIRED`, `COMMENT_TOO_LONG` · 403 · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` |
@@ -200,7 +200,7 @@ Messages marked **[AC]** are quoted from a Gherkin scenario and must match exact
 | 409 | `TASK_ALREADY_ASSIGNED` | An executor is already selected. | «Виконавця вже обрано» | US-25/S2 |
 | 409 | `TASK_HAS_EXECUTOR` | Delete or unpublish after an executor was selected. | «Завдання з виконавцем не можна видалити» | US-22/S2 |
 | 409 | `APPLICATION_NOT_PENDING` | The application was already decided. | «Рішення щодо відгуку вже ухвалено» | US-20 |
-| 409 | `RESULT_LOCKED` | Changing files of a submitted version. | «Результат на перевірці, редагування заблоковано» | US-29/S3 |
+| 409 | `RESULT_LOCKED` | Changing the files of a submitted or returned version (INV-16), or any file of a task in review. | «Результат на перевірці, редагування заблоковано» | US-29/S3 |
 | 409 | `NO_RESULT_FILES` | Submit without files. | «Додайте файл результату» | US-28/S2 |
 | 409 | `ALREADY_IN_REVIEW` | Submitting again while in `in_review`. | «Результат уже на перевірці» | US-28/S3 |
 | 409 | `TASK_NOT_IN_REVIEW` | Accept or return when not in `in_review`. | «Немає результату на перевірці» | US-32/CL |
@@ -652,3 +652,17 @@ The unknown task is 404, anyone but the executor 403 `NOT_EXECUTOR` (OQ-35 b). T
 409 Conflict
 { "error": { "code": "NO_RESULT_FILES", "message": "Додайте файл результату" } }
 ```
+
+#### Delete a file of the result: `DELETE /api/tasks/:id/result/files/:fileId` (US-29)
+
+The executor deletes a file from the **draft** version, only while the task is `in_progress` or `revision`. 204 without a body. A submitted, accepted or returned version is never changed (INV-16). It is one transaction, and its first write is the task lock that OQ-35 (i) asks for:
+
+1. the lock: a task already `in_review` is 409 `RESULT_LOCKED` (US-29/S3), `done` and `cancelled` are 409 `INVALID_TRANSITION`. This is what makes a delete and a submit at the same time safe: the one that gets the lock first decides. A submit that finds the last file gone is 409 `NO_RESULT_FILES` (INV-15); a delete after the submit is 409 `RESULT_LOCKED`;
+2. the file must belong to this task, otherwise 404 `NOT_FOUND` (a file of another task is not revealed, also not when it is the same executor's). A file of a version that is not a draft is 409 `RESULT_LOCKED`;
+3. the link to the version is deleted by a conditional delete and `files.deleted_at` is set, each with its count checked. The file leaves the result and frees its place in the limit of ten.
+
+The bytes are removed **after** the commit. If that fails it is logged and the request still succeeds: the file is out of the list and `GET /api/files/:fileId` answers 404 for it, so the leftover bytes are never served. There is no cleanup job yet. A second delete of the same file is 404. Anyone but the executor is 403 `NOT_EXECUTOR`, an unknown task 404, and a request with the session cookie but no matching `Origin` is 403 `ORIGIN_MISMATCH`.
+
+After the last file is deleted the draft stays: a submit is then 409 `NO_RESULT_FILES` until a file is uploaded again.
+
+On the card, «Видалити» is shown next to a file only for a draft of an editable task. In review there is no form, no «Видалити» and no send button, and a note says «Результат на перевірці, редагування заблоковано до рішення замовника».

@@ -60,3 +60,25 @@ export const findDraftVersion = (tx: Tx, taskId: string) =>
  */
 export const submitVersion = (tx: Tx, id: string, now: Date) =>
   tx.resultVersion.updateMany({ where: { id, status: DRAFT }, data: { status: SUBMITTED, submittedAt: now } });
+
+/**
+ * US-29. The link of a file to a version of this task, with the status of that version. A file that was deleted is not found.
+ * The service uses it to tell "no such file" (404) from "its version is no longer a draft" (409 RESULT_LOCKED).
+ */
+export const findResultFileLink = (tx: Tx, taskId: string, fileId: string) =>
+  tx.resultFile.findFirst({
+    where: { fileId, resultVersion: { taskId }, file: { deletedAt: null } },
+    select: { resultVersion: { select: { status: true } }, file: { select: { storageKey: true } } },
+  });
+
+/**
+ * US-29 sc.3 (INV-16, ADR-0007). The conditional delete of the link: only a file of a DRAFT version of this task. `count` 0 means
+ * the file is gone or its version is no longer a draft. The link goes, so the file leaves the list and the limit of ten
+ * (both count `result_files` rows); the `files` row stays and is marked deleted.
+ */
+export const removeFileFromDraft = (tx: Tx, taskId: string, fileId: string) =>
+  tx.resultFile.deleteMany({ where: { fileId, resultVersion: { taskId, status: DRAFT } } });
+
+/** US-29. Marks the executor's own result file as deleted (the column `files.deleted_at`). `count` 0: not theirs, or already marked. */
+export const markFileDeleted = (tx: Tx, fileId: string, ownerId: string, now: Date) =>
+  tx.file.updateMany({ where: { id: fileId, ownerId, kind: 'result', deletedAt: null }, data: { deletedAt: now } });
