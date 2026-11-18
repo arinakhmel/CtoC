@@ -111,3 +111,10 @@ export const VERIFICATION_STATUS_LABELS_UK: Record<VerificationStatus, string> =
   rejected: 'Відхилено',
   revoked: 'Скасовано',
 };
+
+/** US-36: the words the user sees for a withdrawal request (api.md §4.1c). One place, so the student's list and the moderator's queue agree. */
+export const WITHDRAWAL_STATUS_LABELS_UK: Record<WithdrawalStatus, string> = {
+  requested: 'Очікує виплати',
+  paid: 'Виплачено',
+  rejected: 'Відхилено',
+};

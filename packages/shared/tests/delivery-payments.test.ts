@@ -6,9 +6,12 @@ import {
   commissionOf,
   createWithdrawalSchema,
   isExecutableContent,
+  modWithdrawalsQuerySchema,
   returnForRevisionSchema,
   sendMessageSchema,
   splitPrice,
+  WITHDRAWAL_STATUSES,
+  WITHDRAWAL_STATUS_LABELS_UK,
 } from '../src';
 import { codesOf } from './helpers';
 
@@ -109,6 +112,34 @@ describe('US-36 withdrawal', () => {
   it('US-36 sc.3: the amount must be a positive integer (the balance check is in the API)', () => {
     expect(createWithdrawalSchema.safeParse({ amountKopecks: 50_000, cardNumber: '4111111111111111' }).success).toBe(true);
     expect(codesOf(createWithdrawalSchema, { amountKopecks: 0, cardNumber: '4111111111111111' })).toEqual(['VALIDATION_FAILED']);
+  });
+
+  it('US-36 sc.2: letters, 15 and 17 digits are CARD_INVALID; a foreign issuer is not detected (W-13, OQ-13: no BIN data)', () => {
+    expect(codesOf(cardNumberSchema, '4111 1111 1111 111')).toEqual(['CARD_INVALID']);
+    expect(codesOf(cardNumberSchema, '4111 1111 1111 1111 0')).toEqual(['CARD_INVALID']);
+    expect(codesOf(cardNumberSchema, 'abcd efgh ijkl mnop')).toEqual(['CARD_INVALID']);
+    expect(codesOf(cardNumberSchema, 4111111111111111)).toEqual(['CARD_INVALID']);
+    // A valid Luhn number of a foreign bank passes: the issuer cannot be told from the digits alone (W-13, decided).
+    expect(cardNumberSchema.parse('5555 5555 5555 4444')).toBe('5555555555554444');
+  });
+
+  it('US-36: a fractional amount and a forged status or owner are refused or stripped', () => {
+    expect(codesOf(createWithdrawalSchema, { amountKopecks: 100.5, cardNumber: '4111111111111111' })).toEqual(['VALIDATION_FAILED']);
+    expect(createWithdrawalSchema.parse({ amountKopecks: 100, cardNumber: '4111111111111111', status: 'paid', studentId: 'x' })).toEqual({
+      amountKopecks: 100,
+      cardNumber: '4111111111111111',
+    });
+  });
+
+  it('US-36 (A-10): the moderator queue defaults to requested and refuses an unknown status', () => {
+    expect(modWithdrawalsQuerySchema.parse({})).toEqual({ status: 'requested' });
+    expect(modWithdrawalsQuerySchema.parse({ status: 'paid' })).toEqual({ status: 'paid' });
+    expect(codesOf(modWithdrawalsQuerySchema, { status: 'deleted' })).toEqual(['VALIDATION_FAILED']);
+  });
+
+  it('US-36: every withdrawal status has a Ukrainian label', () => {
+    expect(Object.keys(WITHDRAWAL_STATUS_LABELS_UK).sort()).toEqual([...WITHDRAWAL_STATUSES].sort());
+    expect(WITHDRAWAL_STATUS_LABELS_UK.requested).toBe('Очікує виплати');
   });
 });
 

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { WITHDRAWAL_STATUSES } from '../enums';
 import { LIMITS } from '../limits';
 
 const luhnValid = (digits: string): boolean => {
@@ -34,6 +35,13 @@ export const createWithdrawalSchema = z.object({
     .positive('VALIDATION_FAILED'),
   cardNumber: cardNumberSchema,
 });
+export type CreateWithdrawalInput = z.infer<typeof createWithdrawalSchema>;
+
+/** US-36, A-10: `GET /api/mod/withdrawals?status=` (api.md §4.1d). The queue of open requests by default. */
+export const modWithdrawalsQuerySchema = z.object({
+  status: z.enum(WITHDRAWAL_STATUSES, { errorMap: () => ({ message: 'VALIDATION_FAILED' }) }).default('requested'),
+});
+export type ModWithdrawalsQuery = z.infer<typeof modWithdrawalsQuerySchema>;
 
 /**
  * US-26 (OQ-09, A-06): the sandbox top-up of a customer's balance. An integer number of kopecks (ADR-0007), from 1 UAH to the
