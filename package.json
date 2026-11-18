@@ -16,7 +16,8 @@
     "db:generate": "pnpm --filter @ctoc/api db:generate",
     "db:migrate": "pnpm --filter @ctoc/api db:migrate",
     "db:reset": "pnpm --filter @ctoc/api db:reset",
-    "db:seed": "pnpm --filter @ctoc/api db:seed"
+    "db:seed": "pnpm --filter @ctoc/api db:seed",
+    "db:seed:work": "pnpm --filter @ctoc/api db:seed:work"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
