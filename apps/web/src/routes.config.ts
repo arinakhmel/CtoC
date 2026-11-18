@@ -100,7 +100,7 @@ export const PAGES: PageConfig[] = [
     path: "/work/:taskId",
     title: "Workspace: terms, chat, result upload and submit, revision comment",
     access: "S+ (executor)",
-    stories: ["US-22", "US-23", "US-27", "US-28", "US-29", "US-32", "US-33"],
+    stories: ["US-21", "US-22", "US-23", "US-27", "US-28", "US-29", "US-30", "US-32", "US-33"],
   },
   {
     path: "/me/finance",

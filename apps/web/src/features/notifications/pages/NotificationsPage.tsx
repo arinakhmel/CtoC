@@ -1,4 +1,4 @@
-import { MESSAGES_UK, executorSelectedPayloadSchema, resultSubmittedPayloadSchema } from '@ctoc/shared';
+import { MESSAGES_UK, executorSelectedPayloadSchema, resultAcceptedPayloadSchema, resultSubmittedPayloadSchema } from '@ctoc/shared';
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
@@ -21,6 +21,11 @@ const linkOf = (notification: AppNotification): string | null => {
   if (notification.type === 'result_submitted') {
     const parsed = resultSubmittedPayloadSchema.safeParse(notification.payload);
     return parsed.success ? `/c/tasks/${parsed.data.taskId}` : null;
+  }
+  if (notification.type === 'result_accepted') {
+    // US-30: «Ваш результат прийнято…» goes to the executor's card, which still reads a task that is `done`.
+    const parsed = resultAcceptedPayloadSchema.safeParse(notification.payload);
+    return parsed.success ? `/work/${parsed.data.taskId}` : null;
   }
   return null;
 };

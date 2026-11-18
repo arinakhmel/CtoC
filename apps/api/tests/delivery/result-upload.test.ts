@@ -381,10 +381,15 @@ describe('Access to a result is for its executor only in US-27 (INV-14, NFR-07)'
     expect(res.body.error.code).toBe(code);
   };
 
-  it("the task's customer cannot read the result: 403 NOT_EXECUTOR (US-28/US-31 add the customer's view of a submitted result)", async () => {
+  it("the task's customer does not see a draft: the result is null, and the executor still sees it (the customer's view of a submitted result is US-31)", async () => {
     const { task } = await taskWithFile();
 
-    forbidden(await readResult(task.id, customer.cookie), 'NOT_EXECUTOR');
+    const asCustomer = await readResult(task.id, customer.cookie);
+    const asExecutor = await readResult(task.id, student.cookie);
+
+    expect(asCustomer.status).toBe(200);
+    expect(asCustomer.body).toEqual({ result: null }); // the files are still a draft, which only the executor sees
+    expect(asExecutor.body.result.files).toHaveLength(1);
   });
 
   it('an unrelated student cannot download the file: 403 FILE_FORBIDDEN', async () => {

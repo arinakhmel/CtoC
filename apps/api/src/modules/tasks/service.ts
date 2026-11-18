@@ -2,12 +2,14 @@ import { isResultEditable, LIMITS, type CreateTaskInput, type FeedQuery } from '
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
-import { assignRefusal, chatStateOf, deleteRefusal, newTaskData, resultRefusal, submitRefusal } from './domain';
+import { acceptRefusal, assignRefusal, chatStateOf, deleteRefusal, newTaskData, resultRefusal, submitRefusal } from './domain';
 import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed, assertTaskOwner } from './policy';
 import {
   assignTaskTx,
   cancelTaskWithoutExecutor,
+  completeTaskTx,
   findChatTask,
+  findAcceptedTaskFacts,
   findDeliveryTask,
   findFeedCursor,
   findTaskOwnerView,
@@ -194,4 +196,18 @@ export async function moveTaskToReview(tx: Prisma.TransactionClient, taskId: str
   if ((await submitTaskTx(tx, taskId, executorId)).count > 0) return;
   const now = await tx.task.findUnique({ where: { id: taskId }, select: { status: true } });
   throw new ApiError(submitRefusal(now?.status ?? 'cancelled'));
+}
+
+/**
+ * US-31 sc.1, sc.3 (INV-18). First statement of the accept transaction: the conditional update that closes the owner's task,
+ * `in_review` -> `done`, with the time. Zero rows means the deal is already closed (409 TASK_ALREADY_DONE) or the task has
+ * no result under review (409 TASK_NOT_IN_REVIEW). It is the write lock and the transition in one. Returns what the rest of the
+ * accept needs, read after the write in the same transaction. The delivery module calls this, not the tasks table (ADR-0002).
+ */
+export async function moveTaskToDone(tx: Prisma.TransactionClient, taskId: string, ownerId: string, now: Date) {
+  if ((await completeTaskTx(tx, taskId, ownerId, now)).count === 0) {
+    const current = await tx.task.findUnique({ where: { id: taskId }, select: { status: true } });
+    throw new ApiError(acceptRefusal(current?.status ?? 'cancelled'));
+  }
+  return findAcceptedTaskFacts(tx, taskId);
 }

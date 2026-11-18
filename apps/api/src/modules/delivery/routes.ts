@@ -4,7 +4,7 @@ import { requireUser } from '../../http/auth';
 import { receiveFile } from '../../http/upload';
 import { DOWNLOAD_CONTENT_TYPE } from './domain';
 import { serializeResult } from './serializer';
-import { deleteResultFile, downloadFile, getResult, requireExecutorOf, submitResult, uploadResultFile } from './service';
+import { acceptResult, deleteResultFile, downloadFile, getResult, requireExecutorOf, submitResult, uploadResultFile } from './service';
 
 const receiveResultFile = receiveFile(LIMITS.resultMaxBytes);
 
@@ -34,6 +34,11 @@ export function deliveryRouter(): Router {
   router.post('/tasks/:id/result/submit', requireUser, async (req, res) => {
     const { task, version } = await submitResult(req.user!, String(req.params.id));
     res.json({ task, ...serializeResult(version) });
+  });
+
+  router.post('/tasks/:id/accept', requireUser, async (req, res) => {
+    const { task, payout, experienceRecordId } = await acceptResult(req.user!, String(req.params.id));
+    res.json({ task: { ...task, completedAt: task.completedAt.toISOString() }, payout, experienceRecordId });
   });
 
   router.get('/tasks/:id/result', requireUser, async (req, res) => {

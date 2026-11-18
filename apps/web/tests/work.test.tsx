@@ -57,6 +57,17 @@ describe('/me/work «Мої активні завдання» (US-22)', () => {
     expect(within(item).getByRole('link', { name: 'Логотип для кав’ярні' })).toHaveAttribute('href', '/work/t1');
   });
 
+  it('US-30 the card that «Ваш результат прийнято…» links to reads a task that is done: its status «Виконано», no upload form and no send button', async () => {
+    taskDetails = () => json({ task: { ...work, status: 'done' } });
+    openCard();
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Логотип для кав’ярні' })).toBeInTheDocument();
+    expect(await screen.findByText('Виконано')).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Завантаження результату' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Надіслати на перевірку' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('US-22 an empty list says so and links to the feed', async () => {
     workList = () => json({ tasks: [] });
     openList();

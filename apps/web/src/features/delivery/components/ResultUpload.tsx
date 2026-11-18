@@ -4,7 +4,7 @@ import { API_BASE_URL, ApiClientError } from '../../../lib/api';
 import { useDeleteResultFile, useResult, useSubmitResult, useUploadResultFile, type ResultFile } from '../queries/result';
 
 const MB = 1024 * 1024;
-const sizeLabel = (bytes: number): string => (bytes >= MB ? `${(bytes / MB).toFixed(1)} МБ` : `${Math.max(1, Math.round(bytes / 1024))} КБ`);
+export const sizeLabel = (bytes: number): string => (bytes >= MB ? `${(bytes / MB).toFixed(1)} МБ` : `${Math.max(1, Math.round(bytes / 1024))} КБ`);
 
 /** Result texts for the two codes that read differently for a document (api.md §3), the common dictionary for the rest. */
 const messageFor = (code: string): string => {

@@ -23,3 +23,11 @@ export const hasRoomForAnotherFile = (filesInVersion: number): boolean => filesI
 
 /** `GET /api/files/:fileId` is always a download, whatever the file claims to be (no HTML or script served from our origin). */
 export const DOWNLOAD_CONTENT_TYPE = 'application/octet-stream';
+
+export const ACCEPTED = 'accepted' as const satisfies ResultVersionStatus;
+
+/**
+ * US-31 (INV-16). What the customer may see of a result: a version that was sent for review, accepted or returned. A `draft`
+ * is the executor's work in progress and stays hidden from the customer, also its files.
+ */
+export const visibleToOwner = (versionStatus: string): boolean => versionStatus !== DRAFT;
