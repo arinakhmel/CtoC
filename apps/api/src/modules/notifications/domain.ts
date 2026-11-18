@@ -1,4 +1,17 @@
-import { executorSelectedPayloadSchema, type ExecutorSelectedPayload } from '@ctoc/shared';
+import {
+  executorSelectedPayloadSchema,
+  resultSubmittedPayloadSchema,
+  type ExecutorSelectedPayload,
+  type ResultSubmittedPayload,
+} from '@ctoc/shared';
+
+/** US-48 sc.1 [AC]: «Студент надіслав результат за завданням «[Назва]» на перевірку». The title replaces the placeholder. */
+export const resultSubmittedText = (taskTitle: string): string => `Студент надіслав результат за завданням «${taskTitle}» на перевірку`;
+
+export const resultSubmittedPayload = (task: { id: string; title: string }): ResultSubmittedPayload => ({
+  taskId: task.id,
+  taskTitle: task.title,
+});
 
 /** US-21 sc.1 [AC]: «Вас обрано виконавцем завдання [Назва]». The title replaces the placeholder. */
 export const executorSelectedText = (taskTitle: string): string => `Вас обрано виконавцем завдання ${taskTitle}`;
@@ -22,6 +35,10 @@ export function notificationText(type: string, payload: unknown): string {
   if (type === 'executor_selected') {
     const parsed = executorSelectedPayloadSchema.safeParse(payload);
     if (parsed.success) return executorSelectedText(parsed.data.taskTitle);
+  }
+  if (type === 'result_submitted') {
+    const parsed = resultSubmittedPayloadSchema.safeParse(payload);
+    if (parsed.success) return resultSubmittedText(parsed.data.taskTitle);
   }
   return 'Нове сповіщення';
 }

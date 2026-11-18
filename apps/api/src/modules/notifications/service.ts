@@ -1,7 +1,7 @@
 import type { NotificationsQuery } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
-import { executorSelectedPayload } from './domain';
+import { executorSelectedPayload, resultSubmittedPayload } from './domain';
 import { assertCanUseNotifications } from './policy';
 import { insertNotification, listNotificationsOfUser, markNotificationRead, notificationExistsForUser } from './repo';
 
@@ -19,6 +19,23 @@ export async function notifyExecutorSelected(
     userId: executorId,
     type: 'executor_selected',
     payloadJson: JSON.stringify(executorSelectedPayload(task)),
+  });
+}
+
+/**
+ * US-28, US-48 sc.1, sc.3. Called by the submit transaction with its own `tx`, so the owner of the task is told in the same
+ * transaction that moves the task to review (INV-23). A failed submit, such as one with no files, rolls back and tells no one
+ * (US-48 sc.2). Every submitted version creates its own notification, also after a revision (sc.3).
+ */
+export async function notifyResultSubmitted(
+  tx: Prisma.TransactionClient,
+  ownerId: string,
+  task: { id: string; title: string },
+): Promise<void> {
+  await insertNotification(tx, {
+    userId: ownerId,
+    type: 'result_submitted',
+    payloadJson: JSON.stringify(resultSubmittedPayload(task)),
   });
 }
 

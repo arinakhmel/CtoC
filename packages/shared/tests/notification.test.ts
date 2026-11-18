@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { executorSelectedPayloadSchema, LIMITS, notificationsQuerySchema } from '../src';
+import { executorSelectedPayloadSchema, LIMITS, notificationsQuerySchema, resultSubmittedPayloadSchema } from '../src';
 
 describe('US-21 notification schemas', () => {
   it('US-21 the list query defaults to the page size and accepts after', () => {
@@ -15,5 +15,13 @@ describe('US-21 notification schemas', () => {
   it('US-21 the executor_selected payload needs a task id and a title', () => {
     expect(executorSelectedPayloadSchema.safeParse({ taskId: 't1', taskTitle: 'Назва' }).success).toBe(true);
     expect(executorSelectedPayloadSchema.safeParse({ taskId: 't1' }).success).toBe(false);
+  });
+});
+
+describe('US-48 notification schema', () => {
+  it('US-48 the result_submitted payload needs a task id and a title', () => {
+    expect(resultSubmittedPayloadSchema.safeParse({ taskId: 't1', taskTitle: 'Парсер сайту' }).success).toBe(true);
+    expect(resultSubmittedPayloadSchema.safeParse({ taskId: 't1' }).success).toBe(false);
+    expect(resultSubmittedPayloadSchema.safeParse({ taskTitle: 'Парсер сайту' }).success).toBe(false);
   });
 });

@@ -38,6 +38,27 @@ afterEach(() => vi.unstubAllGlobals());
 
 const open = () => render(<RouterProvider router={createTestRouter(['/notifications'])} future={providerFuture} />);
 
+describe('/notifications of the customer (US-48)', () => {
+  it('US-48 sc.1 «Студент надіслав результат…» is listed as new and links to the customer card of the task', async () => {
+    const text = 'Студент надіслав результат за завданням «Парсер сайту» на перевірку';
+    listResponse = () =>
+      json({
+        notifications: [
+          { id: 'n9', type: 'result_submitted', text, payload: { taskId: 't9', taskTitle: 'Парсер сайту' }, read: false, createdAt: '2026-11-13T10:00:00.000Z' },
+          { ...note(true), id: 'n8', type: 'result_submitted', text, payload: { unexpected: true } },
+        ],
+      });
+    open();
+
+    const article = await screen.findAllByRole('article', { name: text });
+    expect(article).toHaveLength(2);
+    expect(within(article[0]!).getByText('Нове:')).toBeInTheDocument();
+    const links = screen.getAllByRole('link', { name: 'Відкрити завдання' });
+    expect(links).toHaveLength(1); // a payload of another shape gives no link
+    expect(links[0]).toHaveAttribute('href', '/c/tasks/t9');
+  });
+});
+
 describe('/notifications links (US-21)', () => {
   it('US-21 «Вас обрано виконавцем» links to the executor card of the task; a payload of another shape gives no link', async () => {
     listResponse = () => json({ notifications: [note(false), { ...note(true), id: 'n2', payload: { unexpected: true } }] });
