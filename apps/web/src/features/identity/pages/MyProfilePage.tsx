@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
 import type { PageConfig } from '../../../routes.config';
 import { BioForm } from '../components/BioForm';
+import { ExperienceList, type ExperienceRecord } from '../../experience/components/ExperienceList';
 import { getMyProfile, saveSkills, suggestSkills } from '../queries/skills';
 
 const messageFor = (code: string): string =>
@@ -19,6 +20,7 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
   const [verified, setVerified] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [bio, setBio] = useState('');
+  const [experience, setExperience] = useState<ExperienceRecord[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
         setVerified(mine.verified);
         setSkills(mine.skills);
         setBio(mine.bio);
+        setExperience(mine.experience);
         setLoaded(true);
         suggestSkills().then(
           (result) => active && setSuggestions(result.skills),
@@ -165,6 +168,11 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
           )}
         </form>
         <BioForm initialBio={bio} />
+        {/* US-37, US-38: read only. Records are added by the platform when a customer accepts a result; there is no form for them. */}
+        <ExperienceList
+          records={experience}
+          emptyText="Записи про досвід додаються автоматично, коли замовник приймає ваш результат. Додати їх вручну не можна."
+        />
         </>
       )}
 

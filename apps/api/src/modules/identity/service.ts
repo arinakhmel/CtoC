@@ -39,6 +39,7 @@ import {
   findBio,
 } from './repo';
 import { serializeProfileCard } from './serializer';
+import { listExperienceRecords } from '../experience/service';
 
 const appUrl = () => process.env.APP_URL ?? 'http://localhost:5173';
 
@@ -155,11 +156,16 @@ export async function login(email: string, password: string) {
   return { user, sessionId, maxAgeMs: SESSION_TTL_MS };
 }
 
-/** US-09. A missing account and a non-student account are both NOT_FOUND, so the URL reveals nothing. */
+/** US-09, US-37, US-38. A missing account and a non-student account are both NOT_FOUND, so the URL reveals nothing. */
 export async function getPublicProfile(userId: string) {
   const user = await findStudentById(userId);
   if (!user) throw new ApiError('NOT_FOUND');
-  return { user, skills: sortSkillNames(await listSkillNames(user.id)), bio: await findBio(user.id) };
+  return {
+    user,
+    skills: sortSkillNames(await listSkillNames(user.id)),
+    bio: await findBio(user.id),
+    experience: await listExperienceRecords(user.id), // US-37, US-38: through the experience service (ADR-0002)
+  };
 }
 
 /**

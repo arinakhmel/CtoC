@@ -23,7 +23,8 @@ export default defineConfig({
       url: `http://localhost:${apiPort}/api/health`,
       timeout: 120_000,
       reuseExistingServer: false,
-      env: { PORT: String(apiPort), DATABASE_URL: 'file:../data/e2e.db?connection_limit=1' },
+      // APP_URL is the e2e web app, so a state-changing request from the browser passes the Origin check (ADR-0006).
+      env: { PORT: String(apiPort), DATABASE_URL: 'file:../data/e2e.db?connection_limit=1', APP_URL: `http://localhost:${webPort}` },
     },
     {
       command: 'pnpm --filter @ctoc/web dev',

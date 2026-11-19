@@ -3,11 +3,12 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
 import type { PageConfig } from '../../../routes.config';
+import { ExperienceList } from '../../experience/components/ExperienceList';
 import { getProfile, type PublicProfile } from '../queries/profile';
 
 type State = { kind: 'loading' } | { kind: 'ready'; profile: PublicProfile['profile'] } | { kind: 'failed'; message: string };
 
-/** /u/:userId: the public student profile (US-09). Skills, bio and experience come with US-10, 11, 37, 38. */
+/** /u/:userId: the public student profile: the badge (US-09), skills (US-10), bio (US-11) and the confirmed experience (US-37, US-38). */
 export function ProfilePage({ page }: { page: PageConfig }) {
   const { userId = '' } = useParams();
   const [state, setState] = useState<State>({ kind: 'loading' });
@@ -59,6 +60,10 @@ export function ProfilePage({ page }: { page: PageConfig }) {
             </ul>
           </section>
         )}
+        <ExperienceList
+          records={state.profile.experience ?? []}
+          emptyText="Поки що немає завершених завдань. Записи з’являються автоматично, коли замовник приймає результат."
+        />
         <p>
           <Link to="/">All pages</Link>
         </p>

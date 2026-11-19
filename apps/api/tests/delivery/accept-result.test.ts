@@ -291,15 +291,14 @@ describe('The experience record of the accept (US-37, creation only)', () => {
     expect(await prisma.experienceRecord.count()).toBe(1);
   });
 
-  it('INV-21 the record is not shown anywhere yet: the public profile of the student has no experience in it (US-37 sc.1 and US-38 build that)', async () => {
+  it('INV-21 the record of the accept is the one the public profile shows (US-37 sc.1; the full list is in tests/experience)', async () => {
     const { task } = await reviewTask();
-    await accept(task.id, customer.cookie);
+    const res = await accept(task.id, customer.cookie);
 
     const profile = await api().get(`/api/profiles/${student.user.id}`).set('Cookie', customer.cookie);
 
     expect(profile.status).toBe(200);
-    expect(JSON.stringify(profile.body)).not.toContain(task.title);
-    expect(profile.body.profile ?? profile.body).not.toHaveProperty('experience');
+    expect(profile.body.profile.experience).toEqual([expect.objectContaining({ id: res.body.experienceRecordId, title: task.title, confirmedBy: 'platform' })]);
   });
 });
 

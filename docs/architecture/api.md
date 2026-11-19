@@ -621,12 +621,16 @@ Optional. Active only when `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` and `TELEGRA
 Public, no session needed. `Cache-Control: no-store`, so a badge granted by a moderator shows on the next request.
 
 ```json
-{ "profile": { "id": "…", "displayName": "Олена Коваль", "verified": true, "skills": ["HTML", "Java"], "bio": "Студент 2 курсу…" } }
+{ "profile": { "id": "…", "displayName": "Олена Коваль", "verified": true, "skills": ["HTML", "Java"], "bio": "Студент 2 курсу…",
+               "experience": [ { "id": "x-41…", "title": "Логотип для кав’ярні", "description": "Векторний логотип…",
+                                 "completedAt": "2026-11-18T10:00:00Z", "confirmedBy": "platform" } ] } }
 ```
 
 - `verified` is `studentVerifiedAt IS NOT NULL` and nothing else (INV-03). A student who has not uploaded a document, or whose request is pending or rejected, has `verified: false`.
 - Every **student** account has a profile, including one with an unconfirmed email. A missing id, a customer and a moderator all give the same 404 `NOT_FOUND`, so the URL does not reveal which accounts exist.
-- The email, the role and the hash are never returned. `skills` is the list from US-10 (alphabetical, `[]` when empty). `bio` is the «Про мене» text from US-11 (`""` when empty), shown as plain text. Experience records are added to this body by US-37 and US-38.
+- The email, the role and the hash are never returned. `skills` is the list from US-10 (alphabetical, `[]` when empty). `bio` is the «Про мене» text from US-11 (`""` when empty), shown as plain text. `experience` is the list of US-37 and US-38, below.
+- `experience` (US-37, US-38, INV-21): the student's experience records, **newest first** by `completedAt`, then by `id` (US-37/S3), at most 100 (`LIMITS.experienceMax`), `[]` when there are none. A record is created only by the accept of a task (US-31, in its transaction) and copies the task's title and description and the completion time (W-15, OQ-14: «обсяг» of the story is read as the description). Only records of a `done` task are listed, so a cancelled task never shows one (US-37/S2, W-07). `confirmedBy` is always `"platform"`: the UI shows it as «Підтверджено платформою CtoC» (US-38/S1). The amounts of the task are not published.
+- **No endpoint writes an experience record** (US-38/S2): there is no `POST`, `PUT`, `PATCH` or `DELETE` under `/api/me/experience` or anywhere else, so such a request is 404 `NOT_FOUND`. Editing skills (`PUT /api/me/skills`) or the bio (`PUT /api/me/profile`) never touches the records (US-38/S3).
 - The only way to become verified is a moderator approving the request (US-39/S1). Until that endpoint exists, `studentVerifiedAt` can only be set in the database.
 
 ### 4.10 `PUT /api/me/skills` and `GET /api/skills` (US-10)

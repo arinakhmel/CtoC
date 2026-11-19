@@ -59,8 +59,8 @@ export function identityRouter(): Router {
 
   // Public (A-16). no-store comes from the API-wide middleware of app.ts: a badge granted by a moderator must show on the next request (US-09/S3).
   router.get('/profiles/:userId', async (req, res) => {
-    const { user, skills, bio } = await getPublicProfile(req.params.userId);
-    res.json(serializePublicProfile(user, skills, bio));
+    const { user, skills, bio, experience } = await getPublicProfile(req.params.userId);
+    res.json(serializePublicProfile(user, skills, bio, experience));
   });
 
   // US-11. Unknown keys are stripped by the shared schema.

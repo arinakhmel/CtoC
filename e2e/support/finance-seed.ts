@@ -12,12 +12,12 @@ const db = new PrismaClient({ datasources: { db: { url: `file:${resolve(process.
 
 const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
 
-async function userWithSession(role: 'student' | 'customer', stamp: number) {
+async function userWithSession(role: 'student' | 'customer' | 'moderator', stamp: number) {
   const user = await db.user.create({
     data: {
-      email: `finance-e2e-${role}-${stamp}@${role === 'student' ? 'university.edu.ua' : 'company.com'}`,
+      email: `finance-e2e-${role}-${stamp}@${role === 'student' ? 'university.edu.ua' : role === 'moderator' ? 'ctoc.local' : 'company.com'}`,
       passwordHash: 'not-a-real-hash',
-      displayName: role === 'student' ? 'Студент' : 'Замовник',
+      displayName: role === 'student' ? 'Студент' : role === 'moderator' ? 'Модератор' : 'Замовник',
       role,
       emailConfirmedAt: new Date(),
       studentVerifiedAt: role === 'student' ? new Date() : null,
@@ -67,5 +67,8 @@ export async function seedTasksInReview(tasks: ReviewTaskSeed[]) {
   }
   return { student, customer, taskIds: ids };
 }
+
+/** US-36 (A-10): a moderator with a session, to process withdrawal requests on /mod/withdrawals. There is no API that makes one. */
+export const seedModerator = () => userWithSession('moderator', Date.now());
 
 export const closeSeed = () => db.$disconnect();
