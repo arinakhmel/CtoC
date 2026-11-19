@@ -14,3 +14,13 @@ export const formatDeadline = (iso: string): string =>
 
 /** A payment date as the student reads it: the day only, in the browser's time zone. */
 export const formatDate = (iso: string): string => new Date(iso).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+/**
+ * A form shows UAH; the API takes integer kopecks (US-26 top-up, US-36 withdrawal). Only digits with an optional separator and at
+ * most two decimals are an amount: anything else (letters, `1e3`, `0x10`, a third decimal that would be rounded away) gives NaN,
+ * which the shared schema rejects.
+ */
+export const uahToKopecks = (uah: string): number => {
+  const text = uah.trim().replace(',', '.');
+  return /^\d+(\.\d{1,2})?$/.test(text) ? Math.round(Number(text) * 100) : Number.NaN;
+};
