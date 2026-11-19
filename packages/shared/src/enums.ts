@@ -118,3 +118,6 @@ export const WITHDRAWAL_STATUS_LABELS_UK: Record<WithdrawalStatus, string> = {
   paid: 'Виплачено',
   rejected: 'Відхилено',
 };
+
+/** US-38/S1: the mark next to every experience record. The API says `confirmedBy: "platform"`; this is how the UI reads it. */
+export const EXPERIENCE_CONFIRMED_LABEL_UK = 'Підтверджено платформою CtoC';
