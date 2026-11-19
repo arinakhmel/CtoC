@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach } from 'vitest';
+
+// The default 1 s of `findBy*` and `waitFor` is too short when the whole suite runs in parallel: a page that waits for the
+// session and then the task sometimes renders after it, and a different test fails each run. The test timeout in
+// vite.config.ts is raised above it, so a slow query still fails with its own message.
+configure({ asyncUtilTimeout: 5000 });
 
 afterEach(() => {
   cleanup();

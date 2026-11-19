@@ -21,6 +21,8 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: ['tests/setup.ts'],
       include: ['tests/**/*.test.{ts,tsx}'],
+      // Above the 5 s `asyncUtilTimeout` of tests/setup.ts, so a slow `findBy*` fails with its own message, not a test timeout.
+      testTimeout: 15_000,
     },
   };
 });
