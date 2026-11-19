@@ -56,3 +56,43 @@ export const creditBalance = async (tx: Tx, ownerId: string, amountKopecks: numb
   await ensureBalance(tx, ownerId);
   return incrementBalanceWithin(tx, ownerId, amountKopecks, maxKopecks);
 };
+
+/** US-36 sc.1. A new request. The CHECKs of the table refuse an amount of 0 and a card number kept after processing. */
+export const insertWithdrawal = (tx: Tx, data: Prisma.WithdrawalUncheckedCreateInput) => tx.withdrawal.create({ data });
+
+/**
+ * US-36, A-10 (INV-24, ADR-0007). The conditional decision `requested` → `paid` | `rejected`. `count` 0 means the request is
+ * unknown or already decided; the caller tells the two apart. `data` always clears the full card number.
+ */
+export const decideWithdrawal = (
+  tx: Tx,
+  id: string,
+  data: { status: 'paid' | 'rejected'; processedBy: string; processedAt: Date; reason?: string },
+) => tx.withdrawal.updateMany({ where: { id, status: 'requested' }, data: { ...data, cardNumber: null } });
+
+export const findWithdrawalTx = (tx: Tx, id: string) => tx.withdrawal.findUnique({ where: { id } });
+
+/** US-36. The caller's own requests, newest first. The full card number is never selected for the student. */
+export const listWithdrawalsOfStudent = (studentId: string, limit: number) =>
+  prisma.withdrawal.findMany({
+    where: { studentId },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: limit,
+    select: { id: true, amountKopecks: true, cardLast4: true, status: true, createdAt: true, processedAt: true, reason: true },
+  });
+
+/** A-10. The moderator's queue, oldest first, with the student's display name (never the email). */
+export const listWithdrawalsByStatus = (status: string, limit: number) =>
+  prisma.withdrawal.findMany({
+    where: { status },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    take: limit,
+    include: { student: { select: { id: true, displayName: true } } },
+  });
+
+export const findWithdrawalWithStudentTx = (tx: Tx, id: string) =>
+  tx.withdrawal.findUniqueOrThrow({ where: { id }, include: { student: { select: { id: true, displayName: true } } } });
+
+/** NFR-15. Append-only. Never holds a card number. */
+export const insertAuditEvent = (tx: Tx, data: { actorId: string; action: string; entityId: string; data: Record<string, unknown> }) =>
+  tx.auditEvent.create({ data: { actorId: data.actorId, action: data.action, entity: 'withdrawal', entityId: data.entityId, dataJson: JSON.stringify(data.data) } });
