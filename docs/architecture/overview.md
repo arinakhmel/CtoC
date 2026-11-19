@@ -187,7 +187,7 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 | `/c/balance` | Баланс і тестове поповнення | C | US-26 (OQ-09) |
 | `/mod/verifications` | Student document queue | M | US-39, US-41 |
 | `/mod/tasks` | Task moderation queue, deal resolution | M | US-40, US-14, US-15/S2 (resolution: OQ-08) |
-| `/mod/withdrawals` | Withdrawal requests | M | none (OQ-10) |
+| `/mod/withdrawals` | "Заявки на виведення" | M | US-36 (A-10, OQ-10, OQ-42) |
 | `/mod/settings` | Commission, price limits, university domains | M | US-03/S3 |
 
 Every one of the 50 stories (US-01 to US-42 and the added US-43 to US-50) appears in at least one page row. Logout (US-46) is a header button and is listed on the `/login` row.

@@ -152,9 +152,9 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/mod/withdrawals",
-    title: "Withdrawal requests",
+    title: "Заявки на виведення",
     access: "M",
-    stories: [],
+    stories: ["US-36"],
   },
   {
     path: "/mod/settings",
