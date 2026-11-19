@@ -25,6 +25,7 @@ import {
   returnTaskTx,
   submitTaskTx,
   lockOpenTask,
+  listDoneTasksOfExecutor,
 } from './repo';
 
 /**
@@ -97,6 +98,12 @@ export async function getMyWork(user: User) {
   assertCanListMyWork(user);
   return listTasksOfExecutor(user.id, LIMITS.myWorkMax);
 }
+
+/**
+ * US-35. The done tasks of an executor with their stored price split, for the finance page. The caller (payments) has already
+ * checked who may ask, so this takes the executor id of the session and nobody else's.
+ */
+export const listPaidTasks = (executorId: string) => listDoneTasksOfExecutor(executorId, LIMITS.myWorkMax);
 
 /**
  * US-22 sc.2 (INV-13, A-08). The owner cancels a task that has no executor. Unknown id is 404, someone else's task is

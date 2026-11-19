@@ -11,6 +11,7 @@ import { MyWorkPage } from '../features/tasks/pages/MyWorkPage';
 import { WorkTaskPage } from '../features/tasks/pages/WorkTaskPage';
 import { CustomerTaskPage } from '../features/tasks/pages/CustomerTaskPage';
 import { BalancePage } from '../features/payments/pages/BalancePage';
+import { FinancePage } from '../features/payments/pages/FinancePage';
 import { FeedPage } from '../features/tasks/pages/FeedPage';
 import { NewTaskPage } from '../features/tasks/pages/NewTaskPage';
 import { TaskPage } from '../features/tasks/pages/TaskPage';
@@ -34,6 +35,7 @@ const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
   '/me/work': (page) => <MyWorkPage page={page} />,
   '/c/tasks/:id': () => <CustomerTaskPage />,
   '/c/balance': (page) => <BalancePage page={page} />,
+  '/me/finance': (page) => <FinancePage page={page} />,
   '/work/:taskId': () => <WorkTaskPage />,
   '/notifications': (page) => <NotificationsPage page={page} />,
   '/c/tasks/new': (page) => <NewTaskPage page={page} />,

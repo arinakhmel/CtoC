@@ -2,7 +2,10 @@ import type { SandboxTopUpInput } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { prisma } from '../../platform/db';
 import type { HoldRequest, PaymentProvider, ReleaseRequest } from '../../platform/ports/payment-provider';
-import { assertCanReadBalance, assertCanTopUp } from './policy';
+import { ApiError } from '../../errors';
+import { listPaidTasks } from '../tasks/service';
+import { assertCanReadBalance, assertCanReadFinance, assertCanTopUp } from './policy';
+import type { FinanceTaskRow } from './serializer';
 import { findBalance, findEscrowByKey } from './repo';
 import { sandboxPaymentProvider, sandboxTopUp } from './sandbox-provider';
 
@@ -35,6 +38,24 @@ export async function topUpBalance(user: User, input: SandboxTopUpInput): Promis
 export async function getMyBalance(user: User): Promise<number> {
   assertCanReadBalance(user);
   return (await findBalance(user.id))?.availableKopecks ?? 0;
+}
+
+/**
+ * US-35, US-34. The student's available balance and the breakdown of the tasks they were paid for, from the snapshot stored on
+ * each task (A-07): nothing is recalculated. A done task without a split or a completion time is a broken invariant (OQ-39 a):
+ * logged and 500 INTERNAL_ERROR, neither recomputed nor left out. Only the caller's own tasks are read.
+ */
+export async function getMyFinance(user: User): Promise<{ availableKopecks: number; tasks: FinanceTaskRow[] }> {
+  assertCanReadFinance(user);
+  const availableKopecks = (await findBalance(user.id))?.availableKopecks ?? 0;
+  const tasks = (await listPaidTasks(user.id)).map((task): FinanceTaskRow => {
+    if (task.commissionKopecks === null || task.netKopecks === null || task.completedAt === null) {
+      console.error(`Task ${task.id} is done but has no price split or completion time: it cannot be shown on the finance page (OQ-39 a)`);
+      throw new ApiError('INTERNAL_ERROR');
+    }
+    return { ...task, commissionKopecks: task.commissionKopecks, netKopecks: task.netKopecks, completedAt: task.completedAt };
+  });
+  return { availableKopecks, tasks };
 }
 
 /**

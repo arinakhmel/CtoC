@@ -5,6 +5,7 @@ import { ApiClientError } from '../../../lib/api';
 import { formatDeadline } from '../../../lib/money';
 import { ChatPanel } from '../../chat/components/ChatPanel';
 import { ResultUpload } from '../../delivery/components/ResultUpload';
+import { PayoutBreakdown } from '../../payments/components/PayoutBreakdown';
 import { PriceBlock } from '../components/PriceBlock';
 import { useTask } from '../queries/task';
 
@@ -13,7 +14,7 @@ const messageFor = (code: string): string =>
 
 /**
  * /work/:taskId: US-22. The executor's card of the active task: the full terms, the deadline in the browser's local time
- * zone (sc.3) and the agreed price, and the chat with the customer (US-23), and the result upload (US-27). The submit (US-28),
+ * zone (sc.3) and the agreed price (for a done task, the payout breakdown of US-35), and the chat with the customer (US-23), and the result upload (US-27). The submit (US-28),
  * the lock in review (US-29) and the revision comment (US-32, US-33) come with their own stories.
  */
 export function WorkTaskPage() {
@@ -55,7 +56,15 @@ export function WorkTaskPage() {
           </p>
           <h2>Умови завдання</h2>
           <p>{shown.description}</p>
-          <PriceBlock priceKopecks={shown.priceKopecks} netKopecks={shown.netKopecks} grossLabel="Узгоджена ціна" />
+          {shown.status === 'done' && shown.commissionKopecks !== null && shown.netKopecks !== null ? (
+            // US-35 sc.1: a finished task shows the payout breakdown, from the snapshot of the task (A-07), never recalculated.
+            <section aria-labelledby="payout-title">
+              <h2 id="payout-title">Виплата</h2>
+              <PayoutBreakdown grossKopecks={shown.priceKopecks} commissionKopecks={shown.commissionKopecks} netKopecks={shown.netKopecks} />
+            </section>
+          ) : (
+            <PriceBlock priceKopecks={shown.priceKopecks} netKopecks={shown.netKopecks} grossLabel="Узгоджена ціна" />
+          )}
           <p>
             Виконати до: <time dateTime={shown.deadlineAt}>{formatDeadline(shown.deadlineAt)}</time>
           </p>

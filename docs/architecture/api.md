@@ -103,7 +103,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | Method | Path | Stories | Access | Success | Errors |
 |---|---|---|---|---|---|
 | GET | `/api/me/balance` | US-26, US-34 | S+ · C | 200 (body: §4.1a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` |
-| GET | `/api/me/finance` | US-35 | S+ | 200 | |
+| GET | `/api/me/finance` | US-35, US-34 | S+ | 200 (body: §4.1b) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN` (a customer too), `EMAIL_NOT_CONFIRMED`, `STUDENT_NOT_VERIFIED` · 500 `INTERNAL_ERROR` (a done task without a price split, OQ-39 a) |
 | POST | `/api/me/balance/sandbox-topup` | US-26 (OQ-09) | C | 200 (body: §4.1a) | 400 `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` · 429 `RATE_LIMITED` |
 | POST | `/api/me/withdrawals` | US-36 | S+ | 201 | 400 `CARD_INVALID` · 422 `INSUFFICIENT_BALANCE` |
 | GET | `/api/me/withdrawals` | US-36 | S+ | 200 | |
@@ -268,6 +268,25 @@ Another tab already assigned an executor (US-25/S2):
 ```json
 200 OK
 { "balance": { "availableKopecks": 50000 } }
+```
+
+### 4.1b `GET /api/me/finance` (US-35, US-34)
+
+The student's money in one answer: the balance that is available to withdraw, and the breakdown of every task they were paid for. Access "S+" only: a customer is 403 `ROLE_FORBIDDEN` (unlike `GET /api/me/balance`, which a customer may also read), and a student goes through the same checks as for the balance (401 `AUTH_REQUIRED`, 403 `EMAIL_NOT_CONFIRMED`, 403 `STUDENT_NOT_VERIFIED`). The answer has `Cache-Control: no-store`. There is no query and no body.
+
+- `balance.availableKopecks` is the same number as in `GET /api/me/balance` (0 if there is no balance yet).
+- `tasks` holds only the caller's own tasks (`executor` is the caller) that are `done`. A task that is not `done`, and every task of another student, is never in it.
+- Newest first, by the time of the payment, then by `taskId` descending for a tie. No pagination: the full list, at most 100 items, the same limit as `GET /api/me/work` (`LIMITS.myWorkMax`).
+- The three amounts come from the task, not from today's rate (A-07, INV-08): `grossKopecks` is `price_kopecks`, `commissionKopecks` and `netKopecks` are the snapshot taken at publication, so `grossKopecks = commissionKopecks + netKopecks` exactly. Nothing is recalculated. `commissionKopecks` is 0 when the commission was 0 (OQ-39 b).
+- `paidAt` is the time the task was completed (`completed_at`): the accept writes it in the same transaction as the `payout` entry (INV-18), so it is the time of the payment. ISO 8601, UTC.
+- A `done` task without a price split cannot be accepted (OQ-39 a), so it should not exist. If one does, the answer is 500 `INTERNAL_ERROR`, logged, with no internals in the body: it is neither recomputed nor left out.
+
+```json
+200 OK
+{ "balance": { "availableKopecks": 90000 },
+  "tasks": [ { "taskId": "7d0c…", "title": "Логотип для кав’ярні",
+               "grossKopecks": 100000, "commissionKopecks": 10000, "netKopecks": 90000,
+               "paidAt": "2026-11-18T10:00:00Z" } ] }
 ```
 
 ### 4.2 `POST /api/tasks/:id/accept` (accept result)

@@ -98,13 +98,13 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/work/:taskId",
-    title: "Workspace: terms, chat, result upload and submit, revision comment",
+    title: "Workspace: terms, chat, result upload and submit, revision comment, payout breakdown of a done task",
     access: "S+ (executor)",
-    stories: ["US-21", "US-22", "US-23", "US-27", "US-28", "US-29", "US-30", "US-32", "US-33"],
+    stories: ["US-21", "US-22", "US-23", "US-27", "US-28", "US-29", "US-30", "US-32", "US-33", "US-35"],
   },
   {
     path: "/me/finance",
-    title: "Balance, per-task breakdown, withdrawal",
+    title: "Фінанси",
     access: "S+",
     stories: ["US-34", "US-35", "US-36"],
   },

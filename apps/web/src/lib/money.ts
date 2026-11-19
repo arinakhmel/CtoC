@@ -11,3 +11,6 @@ export function formatUah(kopecks: number): string {
 /** A deadline as the student reads it: date and time in the browser's time zone. */
 export const formatDeadline = (iso: string): string =>
   new Date(iso).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+/** A payment date as the student reads it: the day only, in the browser's time zone. */
+export const formatDate = (iso: string): string => new Date(iso).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
