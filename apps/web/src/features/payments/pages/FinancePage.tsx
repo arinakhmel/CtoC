@@ -5,7 +5,10 @@ import { ApiClientError } from '../../../lib/api';
 import { formatDate, formatUah } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { PayoutBreakdown } from '../components/PayoutBreakdown';
+import { WithdrawalForm } from '../components/WithdrawalForm';
+import { WithdrawalList } from '../components/WithdrawalList';
 import { useFinance } from '../queries/finance';
+import { useMyWithdrawals } from '../queries/withdrawals';
 
 const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
@@ -15,11 +18,12 @@ const messageFor = (code: string): string =>
  * amounts «Загальна сума / Комісія платформи / До отримання». All numbers come from the API (the snapshot of the task, A-07):
  * nothing is calculated here, and every amount goes through the one formatter of kopecks. Each task is a card whose three
  * amounts stack on a narrow screen (the same `price-block` rows as the task price), so none of them needs a sideways scroll.
- * The withdrawal itself is US-36.
+ * Below the balance, the withdrawal to a card and the list of the student's requests (US-36).
  */
 export function FinancePage({ page }: { page: PageConfig }) {
   const navigate = useNavigate();
   const finance = useFinance();
+  const withdrawals = useMyWithdrawals();
 
   const errorCode = finance.isError ? (finance.error instanceof ApiClientError ? finance.error.code : 'UNKNOWN_ERROR') : null;
 
@@ -49,6 +53,9 @@ export function FinancePage({ page }: { page: PageConfig }) {
               <strong>{formatUah(finance.data.balance.availableKopecks)}</strong>
             </p>
           </section>
+
+          <WithdrawalForm availableKopecks={finance.data.balance.availableKopecks} />
+          {withdrawals.isSuccess && <WithdrawalList withdrawals={withdrawals.data} />}
 
           <section aria-labelledby="finance-tasks">
             <h2 id="finance-tasks">Виплати за завдання</h2>

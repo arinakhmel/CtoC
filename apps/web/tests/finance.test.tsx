@@ -41,6 +41,7 @@ beforeEach(() => {
       return json({ task: { id: 't1', status: 'done' } });
     }
     if (url === '/api/me/finance') return financeResponse ? financeResponse() : json({ balance: { availableKopecks: available }, tasks });
+    if (url === '/api/me/withdrawals') return json({ withdrawals: [] }); // US-36, on the same page
     return json({ status: 'ok' });
   });
   vi.stubGlobal('fetch', fetchMock);
