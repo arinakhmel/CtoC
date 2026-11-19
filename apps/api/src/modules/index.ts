@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { adminRouter } from './admin/routes';
 import { applicationsRouter } from './applications/routes';
 import { chatRouter } from './chat/routes';
 import { deliveryRouter } from './delivery/routes';
@@ -24,6 +25,7 @@ export function createModulesRouter(): Router {
   router.use(chatRouter());
   router.use(paymentsRouter());
   router.use(deliveryRouter());
+  router.use(adminRouter());
   router.use(devRouter());
   return router;
 }
