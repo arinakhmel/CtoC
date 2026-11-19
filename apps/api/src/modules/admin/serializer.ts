@@ -1,3 +1,5 @@
+import { isWithdrawalOpen } from '../payments/domain';
+
 /** A withdrawal request as the moderator's queue reads it (api.md §4.1d). */
 export interface ModWithdrawalRow {
   id: string;
@@ -20,7 +22,7 @@ export const serializeModWithdrawal = (withdrawal: ModWithdrawalRow) => ({
   id: withdrawal.id,
   student: { id: withdrawal.student.id, displayName: withdrawal.student.displayName },
   amountKopecks: withdrawal.amountKopecks,
-  cardNumber: withdrawal.status === 'requested' ? withdrawal.cardNumber : null,
+  cardNumber: isWithdrawalOpen(withdrawal.status) ? withdrawal.cardNumber : null,
   cardLast4: withdrawal.cardLast4,
   status: withdrawal.status,
   createdAt: withdrawal.createdAt.toISOString(),

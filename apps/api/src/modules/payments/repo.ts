@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../platform/db';
+import { WITHDRAWAL_REQUESTED } from './domain';
 
 type Tx = Prisma.TransactionClient;
 
@@ -68,7 +69,7 @@ export const decideWithdrawal = (
   tx: Tx,
   id: string,
   data: { status: 'paid' | 'rejected'; processedBy: string; processedAt: Date; reason?: string },
-) => tx.withdrawal.updateMany({ where: { id, status: 'requested' }, data: { ...data, cardNumber: null } });
+) => tx.withdrawal.updateMany({ where: { id, status: WITHDRAWAL_REQUESTED }, data: { ...data, cardNumber: null } });
 
 export const findWithdrawalTx = (tx: Tx, id: string) => tx.withdrawal.findUnique({ where: { id } });
 
