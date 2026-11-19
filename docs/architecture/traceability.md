@@ -129,9 +129,9 @@ All **150 scenarios** (50 stories × 3) are mapped. Counted from the matrix abov
 | `[UNIT]` | 1 | Money rounding (US-35/S2) |
 | `[DESIGN]` | 1 | Not testable by code (US-41/S3) |
 
-**10 scenarios are still marked ⚠** because they conflict with the requirements or the design, or cannot be implemented as worded: US-02/S2, US-02/S3, US-12/S2, US-13/S2, US-15/S2, US-24/S2, US-25/S3, US-36/S2, US-37/S2, US-41/S3. Each has an entry in §4. None of the 24 new scenarios (US-43 to US-50) is marked.
+**8 scenarios are still marked ⚠** because they conflict with the requirements or the design, or cannot be implemented as worded: US-02/S2, US-02/S3, US-12/S2, US-13/S2, US-15/S2, US-24/S2, US-25/S3, US-41/S3. Each has an entry in §4. None of the 24 new scenarios (US-43 to US-50) is marked.
 
-**5 scenarios are marked ✔**: the conflict was decided by the product owner and the scenario is implemented as decided: US-18/S3, US-21/S2, US-30/S2, US-34/S2, US-34/S3.
+**7 scenarios are marked ✔**: the conflict was decided by the product owner and the scenario is implemented as decided: US-18/S3, US-21/S2, US-30/S2, US-34/S2, US-34/S3, US-36/S2 (W-13), US-37/S2 (W-07).
 
 Endpoints in `api.md` that **no story covers directly**. Each exists to support a story or an assumption:
 
