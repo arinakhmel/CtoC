@@ -1,12 +1,34 @@
-import type { SandboxTopUpInput } from '@ctoc/shared';
+import { LIMITS, type CreateWithdrawalInput, type SandboxTopUpInput, type WithdrawalStatus } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { prisma } from '../../platform/db';
 import type { HoldRequest, PaymentProvider, ReleaseRequest } from '../../platform/ports/payment-provider';
 import { ApiError } from '../../errors';
 import { listPaidTasks } from '../tasks/service';
-import { assertCanReadBalance, assertCanReadFinance, assertCanTopUp } from './policy';
+import { assertCanReadBalance, assertCanReadFinance, assertCanTopUp, assertCanWithdraw } from './policy';
 import type { FinanceTaskRow } from './serializer';
-import { findBalance, findEscrowByKey } from './repo';
+import {
+  cardLast4Of,
+  WITHDRAWAL_PAID,
+  WITHDRAWAL_REJECTED,
+  WITHDRAWAL_REQUESTED,
+  withdrawalEntry,
+  withdrawalReversalEntry,
+} from './domain';
+import {
+  creditBalance,
+  debitBalance,
+  decideWithdrawal,
+  findBalance,
+  findBalanceTx,
+  findEscrowByKey,
+  findWithdrawalTx,
+  findWithdrawalWithStudentTx,
+  insertAuditEvent,
+  insertLedgerEntry,
+  insertWithdrawal,
+  listWithdrawalsByStatus,
+  listWithdrawalsOfStudent,
+} from './repo';
 import { sandboxPaymentProvider, sandboxTopUp } from './sandbox-provider';
 
 /** The provider in use (ADR-0007 §6). The sandbox follows the internal ledger. A real provider replaces this one line. */
@@ -65,3 +87,85 @@ export async function getMyFinance(user: User): Promise<{ availableKopecks: numb
  * nothing is credited (US-34 sc.2, W-06).
  */
 export const releaseEscrow = (tx: Prisma.TransactionClient, input: ReleaseInput) => paymentProvider.release(tx, input);
+
+/**
+ * US-36 sc.1, sc.3 (INV-02, INV-20, ADR-0007, A-10). A verified student asks to withdraw `amountKopecks` to the card. One transaction:
+ * the conditional debit of the available balance (nothing, or too little: 422 INSUFFICIENT_BALANCE and nothing changes), the
+ * request `requested` with the card number (kept only until it is processed) and its last four digits, and the negative
+ * `withdrawal` ledger entry. Two requests at once cannot both take the same money: the debit is one conditional write. `input` is
+ * already validated (16 digits and Luhn, sc.2). Returns the request and the new available balance.
+ */
+export async function requestWithdrawal(user: User, input: CreateWithdrawalInput) {
+  assertCanWithdraw(user);
+  // No balance can be above the cap, so a larger amount is short of money anyway; refusing it here also keeps the number
+  // within the 32-bit integer of the database column.
+  if (input.amountKopecks > LIMITS.balanceMaxKopecks) throw new ApiError('INSUFFICIENT_BALANCE');
+  return prisma.$transaction(async (tx) => {
+    const debited = await debitBalance(tx, user.id, input.amountKopecks);
+    if (debited.count === 0) throw new ApiError('INSUFFICIENT_BALANCE');
+    const withdrawal = await insertWithdrawal(tx, {
+      studentId: user.id,
+      amountKopecks: input.amountKopecks,
+      cardNumber: input.cardNumber,
+      cardLast4: cardLast4Of(input.cardNumber),
+      status: WITHDRAWAL_REQUESTED,
+    });
+    await insertLedgerEntry(tx, withdrawalEntry(withdrawal.id, user.id, input.amountKopecks));
+    const balance = await findBalanceTx(tx, user.id);
+    return { withdrawal, availableKopecks: balance.availableKopecks };
+  });
+}
+
+/** US-36. The caller's own withdrawal requests, newest first, without the card number. */
+export async function getMyWithdrawals(user: User) {
+  assertCanWithdraw(user);
+  return listWithdrawalsOfStudent(user.id, LIMITS.withdrawalsMax);
+}
+
+/**
+ * A-10 (OQ-10, OQ-42). The withdrawal requests in one status, oldest first, for the moderator who pays them by hand. The caller
+ * (the admin module) has already checked the moderator role (INV-25). Read only, so no transaction.
+ */
+export const listWithdrawalsForModeration = (status: WithdrawalStatus) => listWithdrawalsByStatus(status, LIMITS.withdrawalsMax);
+
+/** INV-24. Why a decision changed nothing: an unknown request is 404, a decided one is 409 ALREADY_DECIDED. */
+async function decisionConflict(tx: Prisma.TransactionClient, id: string): Promise<ApiError> {
+  const existing = await findWithdrawalTx(tx, id);
+  return new ApiError(existing === null ? 'NOT_FOUND' : 'ALREADY_DECIDED');
+}
+
+/**
+ * A-10 (INV-24, NFR-15). The moderator records that the money was sent to the card. One transaction: the conditional update
+ * `requested` → `paid`, which also clears the full card number, and the audit event. No balance changes: the money already left
+ * the balance when the request was made. The caller has already checked the moderator role.
+ */
+export async function markWithdrawalPaid(moderatorId: string, id: string) {
+  return prisma.$transaction(async (tx) => {
+    const moved = await decideWithdrawal(tx, id, { status: WITHDRAWAL_PAID, processedBy: moderatorId, processedAt: new Date() });
+    if (moved.count === 0) throw await decisionConflict(tx, id);
+    const withdrawal = await findWithdrawalWithStudentTx(tx, id);
+    await insertAuditEvent(tx, { actorId: moderatorId, action: 'withdrawal.paid', entityId: id, data: { amountKopecks: withdrawal.amountKopecks } });
+    return withdrawal;
+  });
+}
+
+/**
+ * A-10 (INV-20, INV-24, NFR-15). The moderator refuses a request, with a reason the student sees. One transaction: the conditional
+ * update `requested` → `rejected` (card number cleared), the amount credited back to the student's balance with a
+ * `withdrawal_reversal` entry, and the audit event. A credit that would pass the balance cap is a broken invariant: 500, logged,
+ * and nothing changes. The caller has already checked the moderator role and validated the reason.
+ */
+export async function rejectWithdrawal(moderatorId: string, id: string, reason: string) {
+  return prisma.$transaction(async (tx) => {
+    const moved = await decideWithdrawal(tx, id, { status: WITHDRAWAL_REJECTED, processedBy: moderatorId, processedAt: new Date(), reason });
+    if (moved.count === 0) throw await decisionConflict(tx, id);
+    const withdrawal = await findWithdrawalWithStudentTx(tx, id);
+    if ((await creditBalance(tx, withdrawal.studentId, withdrawal.amountKopecks, LIMITS.balanceMaxKopecks)).count === 0) {
+      console.error(`Returning ${withdrawal.amountKopecks} kopecks of withdrawal ${id} would pass the balance limit: the rejection was rolled back`);
+      throw new ApiError('INTERNAL_ERROR');
+    }
+    await insertLedgerEntry(tx, withdrawalReversalEntry(id, withdrawal.studentId, withdrawal.amountKopecks));
+    await insertAuditEvent(tx, { actorId: moderatorId, action: 'withdrawal.rejected', entityId: id, data: { amountKopecks: withdrawal.amountKopecks, reason } });
+    return withdrawal;
+  });
+}

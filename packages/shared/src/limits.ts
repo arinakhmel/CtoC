@@ -24,6 +24,8 @@ export const LIMITS = {
   cardNumberLength: 16,
   feedPage: { default: 20, max: 50 },
   myWorkMax: 100,
+  /** US-36: the student's withdrawal list and the moderator's queue, both without paging (api.md §4.1c, §4.1d). */
+  withdrawalsMax: 100,
   sandboxTopUp: { min: 100, max: PRICE_MAX_KOPECKS },
   /** The highest balance of one account, in kopecks (10 000 000 UAH). Far below the 32-bit integer of the database column. */
   balanceMaxKopecks: 1_000_000_000,

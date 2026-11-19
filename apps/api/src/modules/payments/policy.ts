@@ -27,3 +27,9 @@ export function assertCanReadFinance(user: User): void {
   assertStudentWithConfirmedEmail(user);
   if (!isVerifiedStudent(user)) throw new ApiError('STUDENT_NOT_VERIFIED');
 }
+
+/** Access "S+" of api.md §4.1c (US-36, INV-02): only a verified student with a confirmed email withdraws and lists withdrawals. */
+export function assertCanWithdraw(user: User): void {
+  assertStudentWithConfirmedEmail(user);
+  if (!isVerifiedStudent(user)) throw new ApiError('STUDENT_NOT_VERIFIED');
+}

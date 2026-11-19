@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
-import { formatUah } from '../../../lib/money';
+import { formatUah, uahToKopecks } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { useBalance, useTopUp } from '../queries/balance';
 
@@ -12,15 +12,6 @@ const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
 
 const codeOf = (error: unknown): string => (error instanceof ApiClientError ? error.code : 'UNKNOWN_ERROR');
-
-/**
- * The form shows UAH; the API takes integer kopecks. Only digits with an optional separator and at most two decimals are an amount:
- * anything else (letters, `1e3`, `0x10`, a third decimal that would be rounded away) gives NaN, which the schema rejects.
- */
-const uahToKopecks = (uah: string): number => {
-  const text = uah.trim().replace(',', '.');
-  return /^\d+(\.\d{1,2})?$/.test(text) ? Math.round(Number(text) * 100) : Number.NaN;
-};
 
 /**
  * /c/balance: US-26 (OQ-09, A-06). The customer's available balance and the SANDBOX top-up: a test amount that is added with

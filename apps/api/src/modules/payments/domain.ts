@@ -47,3 +47,33 @@ export function payoutSplitOf(task: { priceKopecks: number; commissionKopecks: n
   if (commission === null || net === null || commission < 0 || net <= 0 || commission + net !== gross) return null;
   return { grossKopecks: gross, commissionKopecks: commission, netKopecks: net };
 }
+
+export const LEDGER_WITHDRAWAL = 'withdrawal' as const;
+export const LEDGER_WITHDRAWAL_REVERSAL = 'withdrawal_reversal' as const;
+
+/** domain-model.md §3, Withdrawal: (none) → `requested` → `paid` | `rejected`. Nothing leaves `paid` or `rejected` (A-10). */
+export const WITHDRAWAL_REQUESTED = 'requested' as const;
+export const WITHDRAWAL_PAID = 'paid' as const;
+export const WITHDRAWAL_REJECTED = 'rejected' as const;
+
+/** INV-24: a moderator decides only a request that is still open. The first decision wins. */
+export const isWithdrawalOpen = (status: string): boolean => status === WITHDRAWAL_REQUESTED;
+
+/** US-36 sc.1 (INV-20). The money leaves the available balance when the request is made: a negative entry on the student's balance. */
+export const withdrawalEntry = (withdrawalId: string, studentId: string, amountKopecks: number) => ({
+  ownerId: studentId,
+  kind: LEDGER_WITHDRAWAL,
+  amountKopecks: -amountKopecks,
+  withdrawalId,
+});
+
+/** US-36, A-10 (INV-20). A rejected request gives the money back: a positive entry of the same amount, one per request. */
+export const withdrawalReversalEntry = (withdrawalId: string, studentId: string, amountKopecks: number) => ({
+  ownerId: studentId,
+  kind: LEDGER_WITHDRAWAL_REVERSAL,
+  amountKopecks,
+  withdrawalId,
+});
+
+/** US-36. The only part of a card number that is ever shown again (`withdrawals.card_last4`). `digits` is already validated. */
+export const cardLast4Of = (digits: string): string => digits.slice(-4);
