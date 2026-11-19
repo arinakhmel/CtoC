@@ -136,7 +136,7 @@ A resend creates a new token and invalidates older unused ones (US-07/S3; invali
 
 | Attribute | Constraint | Source |
 |---|---|---|
-| `title`, `description` | Copied from the task when it completes. Created in the transaction of the accept (INV-18), one per task (INV-21); showing it in the profile is US-37/US-38. | US-37/CL, US-37/S1 (overview OQ-14) |
+| `title`, `description` | Copied from the task when it completes. Created in the transaction of the accept (INV-18), one per task (INV-21), never edited. Shown in the public profile, newest first, marked «Підтверджено платформою CtoC» (US-37, US-38, `api.md` §4.9). | US-37/CL, US-37/S1 (overview OQ-14) |
 | `completedAt` | The task's completion time. | US-37/S1 |
 | marker | Always «Підтверджено платформою CtoC». Nobody can edit it. | US-38/CL |
 
