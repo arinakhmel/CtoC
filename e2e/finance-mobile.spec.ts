@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 import { closeSeed, seedTasksInReview } from './support/finance-seed';
 
 const API = `http://localhost:${process.env.E2E_API_PORT ?? 3101}`;
-const ORIGIN = 'http://localhost:5173'; // the origin the API expects for a state-changing request (APP_URL default)
 const WEB = `http://localhost:${process.env.E2E_WEB_PORT ?? 5174}`;
+const ORIGIN = WEB; // the API of the e2e run expects the e2e web app as Origin (APP_URL in playwright.config.ts)
 
 test.afterAll(closeSeed);
 
