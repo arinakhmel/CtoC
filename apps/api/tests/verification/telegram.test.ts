@@ -63,11 +63,11 @@ async function studentWithPendingRequest() {
   return { student, request };
 }
 
-const click = (action: 'verify' | 'reject', userId: string, overrides: Record<string, unknown> = {}) => ({
+const click = (action: 'verify' | 'reject', requestId: string, overrides: Record<string, unknown> = {}) => ({
   callback_query: {
     id: 'cbq-1',
     from: { id: 42, username: 'mod_olena' },
-    data: `${action}:${userId}`,
+    data: `${action}:${requestId}`,
     message: { message_id: 7, chat: { id: CHAT_ID }, caption: 'Student verification request\nEmail: a@b.ua' },
     ...overrides,
   },
@@ -97,10 +97,13 @@ describe('US-08 sc.1 (Telegram): the document goes to the moderators group', () 
     expect(form.get('photo')).toBeInstanceOf(Blob);
     expect(String(form.get('caption'))).toContain(student.email);
     expect(String(form.get('caption'))).toContain(student.id);
+    const request = await prisma.verificationRequest.findFirstOrThrow({ where: { userId: student.id } });
     const buttons = JSON.parse(String(form.get('reply_markup'))).inline_keyboard[0];
+    // The button carries the id of the document, not of the user, and stays inside Telegram's 64-byte limit of callback_data.
+    for (const button of buttons) expect(Buffer.byteLength(button.callback_data)).toBeLessThanOrEqual(64);
     expect(buttons).toEqual([
-      { text: '✅ Approve', callback_data: `verify:${student.id}` },
-      { text: '❌ Reject', callback_data: `reject:${student.id}` },
+      { text: '✅ Approve', callback_data: `verify:${request.id}` },
+      { text: '❌ Reject', callback_data: `reject:${request.id}` },
     ]);
   });
 
@@ -134,7 +137,7 @@ describe('POST /api/webhooks/telegram: access', () => {
   it('a missing or wrong secret header is 404 NOT_FOUND and changes nothing', async () => {
     const { student, request } = await studentWithPendingRequest();
     for (const secret of [null, 'wrong-secret']) {
-      const res = await webhook(click('verify', student.id), secret);
+      const res = await webhook(click('verify', request.id), secret);
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
     }
@@ -150,7 +153,7 @@ describe('POST /api/webhooks/telegram: access', () => {
 
   it('a click from another chat is ignored (200) and changes nothing', async () => {
     const { student, request } = await studentWithPendingRequest();
-    const res = await webhook(click('verify', student.id, { message: { message_id: 7, chat: { id: 999 } } }));
+    const res = await webhook(click('verify', request.id, { message: { message_id: 7, chat: { id: 999 } } }));
     expect(res.status).toBe(200);
     expect((await prisma.verificationRequest.findUnique({ where: { id: request.id } }))?.status).toBe('pending');
     expect(calls).toHaveLength(0);
@@ -173,7 +176,7 @@ describe('POST /api/webhooks/telegram: access', () => {
 describe('US-39 sc.1 (Telegram): ✅ Approve', () => {
   it('approves the request, gives the badge, records the moderator, edits the message and emails the student', async () => {
     const { student, request } = await studentWithPendingRequest();
-    const res = await webhook(click('verify', student.id));
+    const res = await webhook(click('verify', request.id));
     expect(res.status).toBe(200);
 
     const after = await prisma.verificationRequest.findUnique({ where: { id: request.id } });
@@ -198,10 +201,10 @@ describe('US-39 sc.1 (Telegram): ✅ Approve', () => {
   });
 
   it('a second click (double click or another moderator) decides nothing and sends no second email', async () => {
-    const { student } = await studentWithPendingRequest();
-    await webhook(click('verify', student.id));
+    const { student, request } = await studentWithPendingRequest();
+    await webhook(click('verify', request.id));
     calls.length = 0;
-    const second = await webhook(click('reject', student.id, { from: { id: 43, username: 'mod_two' } }));
+    const second = await webhook(click('reject', request.id, { from: { id: 43, username: 'mod_two' } }));
     expect(second.status).toBe(200);
     expect(sentEmails).toHaveLength(1);
     expect(callsTo('editMessageCaption')).toHaveLength(0);
@@ -211,17 +214,17 @@ describe('US-39 sc.1 (Telegram): ✅ Approve', () => {
   });
 
   it('two simultaneous clicks produce exactly one decision', async () => {
-    const { student } = await studentWithPendingRequest();
-    await Promise.all([webhook(click('verify', student.id)), webhook(click('verify', student.id))]);
+    const { student, request } = await studentWithPendingRequest();
+    await Promise.all([webhook(click('verify', request.id)), webhook(click('verify', request.id))]);
     expect(await prisma.auditEvent.count()).toBe(1);
     expect(sentEmails).toHaveLength(1);
   });
 
   it('a Telegram failure after the commit does not undo the decision or the email', async () => {
-    const { student } = await studentWithPendingRequest();
+    const { student, request } = await studentWithPendingRequest();
     stubTelegram(500);
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const res = await webhook(click('verify', student.id));
+    const res = await webhook(click('verify', request.id));
     expect(res.status).toBe(200);
     expect((await prisma.user.findUnique({ where: { id: student.id } }))?.studentVerifiedAt).not.toBeNull();
     expect(sentEmails).toHaveLength(1);
@@ -232,7 +235,7 @@ describe('US-39 sc.1 (Telegram): ✅ Approve', () => {
 describe('US-39 sc.2 (Telegram): ❌ Reject', () => {
   it('rejects the request without the badge, edits the message and emails the student', async () => {
     const { student, request } = await studentWithPendingRequest();
-    const res = await webhook(click('reject', student.id));
+    const res = await webhook(click('reject', request.id));
     expect(res.status).toBe(200);
 
     const after = await prisma.verificationRequest.findUnique({ where: { id: request.id } });
@@ -246,9 +249,36 @@ describe('US-39 sc.2 (Telegram): ❌ Reject', () => {
   });
 
   it('a student may upload again after a rejection (INV-04 counts only pending)', async () => {
-    const { student } = await studentWithPendingRequest();
-    await webhook(click('reject', student.id));
+    const { student, request } = await studentWithPendingRequest();
+    await webhook(click('reject', request.id));
     const file = await createFile(student.id);
     await expect(prisma.verificationRequest.create({ data: { userId: student.id, fileId: file.id, status: 'pending' } })).resolves.toBeTruthy();
+  });
+});
+
+describe('US-39 a Telegram button of an old document never decides a newer one (INV-04, INV-24)', () => {
+  it('request A was rejected on the web and the student sent B: the old button of A is «Already decided», B stays pending, no badge', async () => {
+    const { student, request: a } = await studentWithPendingRequest();
+    await prisma.verificationRequest.update({ where: { id: a.id }, data: { status: 'rejected', reason: 'Старий' } });
+    const file = await createFile(student.id);
+    const b = await prisma.verificationRequest.create({ data: { userId: student.id, fileId: file.id, status: 'pending' } });
+
+    for (const action of ['verify', 'reject'] as const) {
+      const res = await webhook(click(action, a.id));
+      expect(res.status).toBe(200);
+    }
+
+    expect(callsTo('answerCallbackQuery').map((c) => jsonBody(c).text)).toEqual(['Already decided', 'Already decided']);
+    expect((await prisma.verificationRequest.findUniqueOrThrow({ where: { id: b.id } })).status).toBe('pending');
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: student.id } })).studentVerifiedAt).toBeNull();
+    expect(await prisma.auditEvent.count()).toBe(0);
+    expect(sentEmails).toHaveLength(0);
+  });
+
+  it('a button with an unknown request id is «Already decided» and changes nothing', async () => {
+    const { request } = await studentWithPendingRequest();
+    await webhook(click('verify', '00000000-0000-4000-8000-000000000000'));
+    expect(callsTo('answerCallbackQuery').map((c) => jsonBody(c).text)).toEqual(['Already decided']);
+    expect((await prisma.verificationRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe('pending');
   });
 });

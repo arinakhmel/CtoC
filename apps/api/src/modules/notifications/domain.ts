@@ -3,7 +3,10 @@ import {
   resultAcceptedPayloadSchema,
   resultReturnedPayloadSchema,
   resultSubmittedPayloadSchema,
+  verificationApprovedPayloadSchema,
+  verificationRejectedPayloadSchema,
   type ExecutorSelectedPayload,
+  type VerificationRejectedPayload,
   type ResultAcceptedPayload,
   type ResultReturnedPayload,
   type ResultSubmittedPayload,
@@ -48,6 +51,14 @@ export const executorSelectedPayload = (task: { id: string; title: string }): Ex
   taskTitle: task.title,
 });
 
+/** US-39 (A-15): the student's document was approved. A fixed text; the badge is already on the profile in the same transaction. */
+export const VERIFICATION_APPROVED_TEXT = 'Вашу верифікацію підтверджено. На профілі є позначка «Верифікований студент»';
+
+/** US-39 sc.2: the reason of the moderator is part of the text, so the student reads why. */
+export const verificationRejectedText = (reason: string): string => `Вашу верифікацію відхилено. Причина: ${reason}. Ви можете завантажити новий документ`;
+
+export const verificationRejectedPayload = (reason: string): VerificationRejectedPayload => ({ reason });
+
 /** The stored payload as an object, or null if it is not valid JSON of the expected shape. */
 export function parsePayload(payloadJson: string): unknown {
   try {
@@ -73,6 +84,13 @@ export function notificationText(type: string, payload: unknown): string {
   if (type === 'result_returned') {
     const parsed = resultReturnedPayloadSchema.safeParse(payload);
     if (parsed.success) return resultReturnedText(parsed.data.taskTitle);
+  }
+  if (type === 'verification_approved') {
+    return verificationApprovedPayloadSchema.safeParse(payload).success ? VERIFICATION_APPROVED_TEXT : 'Нове сповіщення';
+  }
+  if (type === 'verification_rejected') {
+    const parsed = verificationRejectedPayloadSchema.safeParse(payload);
+    if (parsed.success) return verificationRejectedText(parsed.data.reason);
   }
   return 'Нове сповіщення';
 }

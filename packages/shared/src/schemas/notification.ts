@@ -40,3 +40,13 @@ export const resultReturnedPayloadSchema = z.object({
   taskTitle: z.string().min(1),
 });
 export type ResultReturnedPayload = z.infer<typeof resultReturnedPayloadSchema>;
+
+/** US-39 (A-15): the payload of a `verification_approved` notification. There is nothing to carry, the text is fixed. */
+export const verificationApprovedPayloadSchema = z.object({}).passthrough();
+export type VerificationApprovedPayload = z.infer<typeof verificationApprovedPayloadSchema>;
+
+/** US-39/S2: the payload of a `verification_rejected` notification. The reason is shown to the student. */
+export const verificationRejectedPayloadSchema = z.object({
+  reason: z.string().min(1),
+});
+export type VerificationRejectedPayload = z.infer<typeof verificationRejectedPayloadSchema>;

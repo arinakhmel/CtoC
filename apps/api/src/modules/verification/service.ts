@@ -1,14 +1,27 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { checkDocumentUpload, type TelegramUpdate } from '@ctoc/shared';
+import { checkDocumentUpload, LIMITS, type ModVerificationsQuery, type TelegramUpdate } from '@ctoc/shared';
 import { Prisma, type User, type VerificationRequest } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { getFileStorage } from '../../platform/ports/file-storage';
 import { getMailer } from '../../platform/ports/mailer';
 import { answerCallback, editCaption, sendReviewRequest, telegramConfig } from '../../platform/telegram';
-import { detectDocumentMime, parseDecision } from './domain';
+import { notifyVerificationApproved, notifyVerificationRejected } from '../notifications/service';
+import { detectDocumentMime, parseDecision, TELEGRAM_REJECT_REASON, VERIFICATION_APPROVED, VERIFICATION_REJECTED } from './domain';
 import { assertStudentWithConfirmedEmail } from './policy';
-import { decidePending, findLatestRequest, findUserEmail, guardNotVerified, insertAuditEvent, insertDocumentFile, insertPendingRequest, markStudentVerified } from './repo';
+import {
+  decidePending,
+  findLatestRequest,
+  findRequestById,
+  findRequestWithStudentTx,
+  findUserEmail,
+  guardNotVerified,
+  insertAuditEvent,
+  insertDocumentFile,
+  insertPendingRequest,
+  listRequestsByStatus,
+  markStudentVerified,
+} from './repo';
 
 export interface UploadedDocument {
   bytes: Buffer;
@@ -66,12 +79,12 @@ export async function submitDocument(user: User, upload: UploadedDocument) {
     throw error;
   }
 
-  await notifyModerators(user, upload, mime!);
+  await notifyModerators(user, request.id, upload, mime!);
   return request;
 }
 
 /** A failed send never fails the upload: the request stays pending and the error is logged. */
-async function notifyModerators(user: User, upload: UploadedDocument, mime: string): Promise<void> {
+async function notifyModerators(user: User, requestId: string, upload: UploadedDocument, mime: string): Promise<void> {
   const config = telegramConfig();
   if (!config) return;
   try {
@@ -80,7 +93,7 @@ async function notifyModerators(user: User, upload: UploadedDocument, mime: stri
       mime,
       fileName: upload.originalName,
       caption: `Student verification request\nEmail: ${user.email}\nID: ${user.id}`,
-      userId: user.id,
+      requestId,
     });
   } catch (error) {
     console.error('Verification request was not sent to Telegram', error instanceof Error ? error.message : error);
@@ -92,10 +105,70 @@ export async function getMyVerification(user: User) {
   return findLatestRequest(user.id);
 }
 
-const REJECT_REASON = 'Відхилено модератором';
-
 const moderatorName = (from: { id: number; username?: string | undefined; first_name?: string | undefined }) =>
   from.username ? `@${from.username}` : (from.first_name ?? `id ${from.id}`);
+
+interface Decision {
+  userId: string;
+  approve: boolean;
+  /** Null on approve. */
+  reason: string | null;
+  /** The request the moderator saw (the web `:id`, the Telegram button). Only this request is decided, never a newer one of the same student. */
+  requestId: string;
+  /** Set by the web screen: the moderator's account. Telegram moderators have none, so it stays empty. */
+  moderatorId?: string;
+  audit: Record<string, unknown>;
+}
+
+/**
+ * The one decision, for both entrances (INV-03, INV-04, INV-24, ADR-0007). One transaction: the conditional update of the
+ * pending request, the badge on approve, the audit event and the notification to the student (INV-23). Returns null when nothing
+ * was pending (already decided), and the email of the student otherwise. The email is sent by the caller after the commit.
+ */
+async function decideVerification(decision: Decision): Promise<{ email: string | null } | null> {
+  return prisma.$transaction(async (tx) => {
+    const now = new Date();
+    const status = decision.approve ? VERIFICATION_APPROVED : VERIFICATION_REJECTED;
+    const moved = await decidePending(tx, { userId: decision.userId, requestId: decision.requestId, status, reason: decision.reason, decidedBy: decision.moderatorId, now });
+    if (moved.count === 0) return null;
+    if (decision.approve) {
+      await markStudentVerified(tx, decision.userId, now);
+      await notifyVerificationApproved(tx, decision.userId);
+    } else {
+      await notifyVerificationRejected(tx, decision.userId, decision.reason ?? TELEGRAM_REJECT_REASON);
+    }
+    await insertAuditEvent(tx, {
+      action: decision.approve ? 'verification.approved' : 'verification.rejected',
+      entityId: decision.userId,
+      actorId: decision.moderatorId,
+      data: decision.audit,
+    });
+    return { email: (await findUserEmail(tx, decision.userId))?.email ?? null };
+  });
+}
+
+/** US-39. The moderator's queue (api.md §4.8b). The caller has already checked the moderator role (INV-25). */
+export const listVerificationQueue = (query: ModVerificationsQuery) => listRequestsByStatus(query.status, LIMITS.verificationQueueMax);
+
+/**
+ * US-39 sc.1, sc.2. A moderator decides the request they saw. An unknown id is 404, a request that is no longer pending (decided,
+ * or the student sent a newer document) is 409 ALREADY_DECIDED and nothing changes. The result email follows the commit.
+ */
+export async function decideByModerator(moderatorId: string, requestId: string, outcome: { approve: true } | { approve: false; reason: string }) {
+  const request = await findRequestById(requestId);
+  if (!request) throw new ApiError('NOT_FOUND');
+  const decided = await decideVerification({
+    userId: request.userId,
+    requestId,
+    moderatorId,
+    approve: outcome.approve,
+    reason: outcome.approve ? null : outcome.reason,
+    audit: { via: 'web', requestId },
+  });
+  if (!decided) throw new ApiError('ALREADY_DECIDED');
+  if (decided.email) await sendResultEmail(decided.email, outcome.approve, outcome.approve ? null : outcome.reason);
+  return prisma.$transaction((tx) => findRequestWithStudentTx(tx, requestId));
+}
 
 /**
  * A moderator clicked a button under the document in the Telegram group (webhook, already authenticated by policy).
@@ -115,19 +188,17 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     return;
   }
 
+  // The button names the document the moderator saw. An unknown id or one that is no longer pending decides nothing (INV-04, INV-24).
+  const request = await findRequestById(decision.requestId);
   const approve = decision.action === 'verify';
-  const email = await prisma.$transaction(async (tx) => {
-    const now = new Date();
-    const moved = await decidePending(tx, decision.userId, approve ? 'approved' : 'rejected', approve ? null : REJECT_REASON, now);
-    if (moved.count === 0) return null;
-    if (approve) await markStudentVerified(tx, decision.userId, now);
-    await insertAuditEvent(tx, {
-      action: approve ? 'verification.approved' : 'verification.rejected',
-      entityId: decision.userId,
-      data: { via: 'telegram', moderator: moderatorName(click.from), telegramUserId: click.from.id },
-    });
-    return (await findUserEmail(tx, decision.userId))?.email ?? null;
+  const decided = request === null ? null : await decideVerification({
+    userId: request.userId,
+    requestId: request.id,
+    approve,
+    reason: approve ? null : TELEGRAM_REJECT_REASON,
+    audit: { via: 'telegram', moderator: moderatorName(click.from), telegramUserId: click.from.id },
   });
+  const email = decided?.email ?? null;
 
   if (email === null) {
     await toast('Already decided');
@@ -136,13 +207,13 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
 
   const who = moderatorName(click.from);
   const status = approve ? `✅ Approved by ${who}` : `❌ Rejected by ${who}`;
-  const caption = `${click.message.caption ?? `ID: ${decision.userId}`}\n\n${status}`;
+  const caption = `${click.message.caption ?? `ID: ${request?.userId ?? decision.requestId}`}\n\n${status}`;
   await editCaption(config, click.message.chat.id, click.message.message_id, caption).catch(logFailure('editMessageCaption'));
   await toast(approve ? 'Approved' : 'Rejected');
-  await sendResultEmail(email, approve);
+  await sendResultEmail(email, approve, approve ? null : TELEGRAM_REJECT_REASON);
 }
 
-async function sendResultEmail(to: string, approved: boolean): Promise<void> {
+async function sendResultEmail(to: string, approved: boolean, reason: string | null): Promise<void> {
   const link = `${appUrl()}/me/verification`;
   try {
     await getMailer().send(
@@ -155,7 +226,7 @@ async function sendResultEmail(to: string, approved: boolean): Promise<void> {
         : {
             to,
             subject: 'Верифікацію студента відхилено в CtoC',
-            text: `Вашу верифікацію відхилено. Ви можете завантажити новий документ: ${link}`,
+            text: `Вашу верифікацію відхилено.${reason ? ` Причина: ${reason}.` : ''} Ви можете завантажити новий документ: ${link}`,
             link,
           },
     );

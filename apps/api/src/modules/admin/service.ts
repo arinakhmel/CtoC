@@ -1,6 +1,7 @@
-import type { WithdrawalStatus } from '@ctoc/shared';
+import type { ModVerificationsQuery, WithdrawalStatus } from '@ctoc/shared';
 import type { User } from '@prisma/client';
 import { listWithdrawalsForModeration, markWithdrawalPaid, rejectWithdrawal } from '../payments/service';
+import { decideByModerator, listVerificationQueue } from '../verification/service';
 import { assertModerator } from './policy';
 
 /**
@@ -22,4 +23,22 @@ export function payWithdrawal(user: User, id: string) {
 export function refuseWithdrawal(user: User, id: string, reason: string) {
   assertModerator(user);
   return rejectWithdrawal(user.id, id, reason);
+}
+
+/** US-39. The queue of student documents. The requests belong to the verification module (ADR-0002): this only checks the role. */
+export function getVerificationQueue(user: User, query: ModVerificationsQuery) {
+  assertModerator(user);
+  return listVerificationQueue(query);
+}
+
+/** US-39/S1. The moderator approves the document they saw: the student gets the badge (INV-03). */
+export function approveVerification(user: User, id: string) {
+  assertModerator(user);
+  return decideByModerator(user.id, id, { approve: true });
+}
+
+/** US-39/S2. The moderator rejects it with a reason: no badge, the student is told why. */
+export function rejectVerification(user: User, id: string, reason: string) {
+  assertModerator(user);
+  return decideByModerator(user.id, id, { approve: false, reason });
 }
