@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestRouter, providerFuture } from '../src/app/router';
+import { expectNoBidControls } from './no-bid-controls';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 const apiError = (code: string, status: number) => json({ error: { code, message: 'x' } }, status);
@@ -28,14 +29,6 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 const flat = (text: string) => text.replace(/\s+/g, ' ');
-
-/** The student sees no way to offer a price: no text or number field, no bid button. */
-function expectNoBidControls() {
-  expect(screen.queryByRole('textbox')).toBeNull();
-  expect(screen.queryByRole('spinbutton')).toBeNull();
-  expect(screen.queryByRole('button', { name: /ставк/i })).toBeNull();
-  expect(screen.queryByLabelText(/ціна|ставка|пропоную/i)).toBeNull();
-}
 
 describe('/tasks/:id page (US-13)', () => {
   it('US-13 sc.1 shows the fixed price of 500 грн and no field to offer another price', async () => {
@@ -96,5 +89,26 @@ describe('/feed cards (US-13)', () => {
     expectNoBidControls();
     // each card links to the details page
     expect(within(cards[0]!).getByRole('link', { name: 'Завдання 1' })).toHaveAttribute('href', '/tasks/t1');
+  });
+});
+
+describe('no auction on the feed and the task card (US-42)', () => {
+  it('US-42 sc.3 the feed and its cards have no price field and no bid, haggling or auction wording', async () => {
+    respond = () => json({ tasks: [task(1), task(2)], nextCursor: null });
+
+    render(<RouterProvider router={createTestRouter(['/feed'])} future={providerFuture} />);
+
+    const list = await screen.findByRole('list', { name: 'Доступні завдання' });
+    expect(within(list).getAllByRole('article')).toHaveLength(2);
+    expectNoBidControls();
+  });
+
+  it('US-42 sc.3 the task card has no price field and no bid, haggling or auction wording', async () => {
+    respond = (url) => (url === '/api/tasks/t1' ? json({ task: task(1) }) : apiError('NOT_FOUND', 404));
+
+    render(<RouterProvider router={createTestRouter(['/tasks/t1'])} future={providerFuture} />);
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'Завдання 1' })).toBeInTheDocument();
+    expectNoBidControls();
   });
 });

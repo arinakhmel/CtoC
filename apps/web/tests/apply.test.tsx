@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestRouter, providerFuture } from '../src/app/router';
+import { expectNoBidControls } from './no-bid-controls';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 const apiError = (code: string, status: number) => json({ error: { code, message: 'x' } }, status);
@@ -167,5 +168,25 @@ describe('Note with the application on /tasks/:id (US-19)', () => {
 
     expect(await screen.findByText('Відгук надіслано')).toBeInTheDocument();
     expect(postBody()).toEqual({});
+  });
+});
+
+describe('The apply form has no price (US-42)', () => {
+  it('US-42 sc.1 both apply buttons and the note block have no price, budget or number field; the fixed price is sent as set', async () => {
+    const user = userEvent.setup();
+    await openTask();
+
+    expect(screen.getByRole('button', { name: 'Відгукнутися' })).toBeInTheDocument();
+    expect(screen.getByText('Фіксована ціна').nextElementSibling).toHaveTextContent('500 грн');
+    expectNoBidControls();
+
+    await user.click(screen.getByRole('button', { name: 'Відгукнутися із запискою' }));
+    expect(screen.getByLabelText('Записка замовнику (необов’язково)')).toBeInTheDocument();
+    expectNoBidControls({ allowNote: true }); // the only text field is the note
+
+    await user.click(screen.getByRole('button', { name: 'Підтвердити' }));
+    expect(await screen.findByText('Відгук надіслано')).toBeInTheDocument();
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({}); // no price key in the request
   });
 });

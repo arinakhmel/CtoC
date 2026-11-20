@@ -96,7 +96,7 @@ describe('US-18, US-19 and US-42 application', () => {
   });
 
   it('US-42 sc.2, US-13 sc.2: a forged price is stripped, the application has no price', () => {
-    const parsed = createApplicationSchema.parse({ note: 'hi', priceKopecks: 100, price: 1 });
+    const parsed = createApplicationSchema.parse({ note: 'hi', priceKopecks: 100, price: 1, budget: 100, bid: 100 });
     expect(parsed).toEqual({ note: 'hi' });
   });
 });
