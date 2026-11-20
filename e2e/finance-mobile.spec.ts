@@ -14,9 +14,9 @@ test.describe('Journey accept-and-payout: the finance page of the student', () =
   // US-34 sc.1, US-35 sc.1, US-35 sc.3
   test('Journey accept-and-payout: after the accept the student sees the balance and all three amounts on a 390 px screen without sideways scroll', async ({ page, request }) => {
     const longTitle = 'Логотип для кав’ярні «Зерно» з довгою назвою завдання, щоб перевірити перенесення тексту на вузькому екрані';
-    const seeded = await seedTasksInReview([
-      { title: longTitle, priceKopecks: 100_000, commissionKopecks: 10_000 }, // 1000 / 100 / 900
-      { title: 'Банер з непарними копійками', priceKopecks: 99_999, commissionKopecks: 10_000 }, // 999,99 / 100 / 899,99
+    const seeded = await seedTasksInReview(request, [
+      { title: longTitle, priceKopecks: 100_000 }, // 1000 / 100 / 900
+      { title: 'Банер з непарними копійками', priceKopecks: 99_999 }, // 999,99 / 100 / 899,99
     ]);
 
     // The customer accepts both results through the real endpoint: the payout is written there (US-31, US-34).

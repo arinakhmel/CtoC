@@ -4,9 +4,9 @@ import { closeSeed, seedModerator, seedTasksInReview } from './support/finance-s
 /**
  * Journey step 7 of requirements.md §1 (Epic 6): after the customer accepts the result, the student sees the payout and its
  * breakdown (US-34, US-35), asks to withdraw to a Ukrainian card (US-36), a moderator pays it by hand (A-10), and the profile
- * shows the experience record «Підтверджено платформою CtoC» (US-37, US-38). The accounts and the task under review are seeded
- * in the e2e database because verifying a student (US-39) and publishing a task (US-40) have no API yet; every step after that
- * goes through the real endpoints and pages.
+ * shows the experience record «Підтверджено платформою CtoC» (US-37, US-38). The accounts are seeded in the e2e database; the student
+ * is verified and the task published through the real API (US-39, US-40), the executor, escrow and result are written to the
+ * database; every step after that goes through the real endpoints and pages.
  */
 
 const API = `http://localhost:${process.env.E2E_API_PORT ?? 3101}`;
@@ -17,7 +17,7 @@ test.afterAll(closeSeed);
 
 test('Journey payout-and-experience: accept, breakdown, withdrawal to a card, paid by a moderator, confirmed experience in the profile', async ({ browser, request }) => {
   const title = 'Логотип для кав’ярні «Зерно»';
-  const seeded = await seedTasksInReview([{ title, priceKopecks: 100_000, commissionKopecks: 10_000 }]);
+  const seeded = await seedTasksInReview(request, [{ title, priceKopecks: 100_000 }]);
   const moderator = await seedModerator();
 
   // The customer accepts through the real endpoint (US-31): the payout and the experience record are written in its transaction.
