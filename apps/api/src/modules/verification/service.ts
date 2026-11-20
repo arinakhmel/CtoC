@@ -113,8 +113,8 @@ interface Decision {
   approve: boolean;
   /** Null on approve. */
   reason: string | null;
-  /** Set by the web screen: only this document is decided (the one the moderator saw). Telegram knows only the user. */
-  requestId?: string;
+  /** The request the moderator saw (the web `:id`, the Telegram button). Only this request is decided, never a newer one of the same student. */
+  requestId: string;
   /** Set by the web screen: the moderator's account. Telegram moderators have none, so it stays empty. */
   moderatorId?: string;
   audit: Record<string, unknown>;
