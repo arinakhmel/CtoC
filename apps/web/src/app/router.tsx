@@ -12,6 +12,7 @@ import { WorkTaskPage } from '../features/tasks/pages/WorkTaskPage';
 import { CustomerTaskPage } from '../features/tasks/pages/CustomerTaskPage';
 import { BalancePage } from '../features/payments/pages/BalancePage';
 import { FinancePage } from '../features/payments/pages/FinancePage';
+import { TasksQueuePage } from '../features/admin/pages/TasksQueuePage';
 import { VerificationsQueuePage } from '../features/admin/pages/VerificationsQueuePage';
 import { WithdrawalsQueuePage } from '../features/admin/pages/WithdrawalsQueuePage';
 import { FeedPage } from '../features/tasks/pages/FeedPage';
@@ -38,6 +39,7 @@ const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
   '/c/tasks/:id': () => <CustomerTaskPage />,
   '/c/balance': (page) => <BalancePage page={page} />,
   '/me/finance': (page) => <FinancePage page={page} />,
+  '/mod/tasks': (page) => <TasksQueuePage page={page} />,
   '/mod/verifications': (page) => <VerificationsQueuePage page={page} />,
   '/mod/withdrawals': (page) => <WithdrawalsQueuePage page={page} />,
   '/work/:taskId': () => <WorkTaskPage />,

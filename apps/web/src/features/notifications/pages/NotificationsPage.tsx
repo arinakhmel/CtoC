@@ -1,6 +1,8 @@
 import {
   MESSAGES_UK,
   executorSelectedPayloadSchema,
+  taskPublishedPayloadSchema,
+  taskRejectedPayloadSchema,
   resultAcceptedPayloadSchema,
   resultReturnedPayloadSchema,
   resultSubmittedPayloadSchema,
@@ -37,6 +39,11 @@ const linkOf = (notification: AppNotification): string | null => {
     // US-30: «Ваш результат прийнято…» goes to the executor's card, which still reads a task that is `done`.
     const parsed = resultAcceptedPayloadSchema.safeParse(notification.payload);
     return parsed.success ? `/work/${parsed.data.taskId}` : null;
+  }
+  // US-40, US-49: the customer's notice of the moderator's decision goes to the card of the task (`/c/tasks/:id`).
+  if (notification.type === 'task_published' || notification.type === 'task_rejected') {
+    const parsed = (notification.type === 'task_published' ? taskPublishedPayloadSchema : taskRejectedPayloadSchema).safeParse(notification.payload);
+    return parsed.success ? `/c/tasks/${parsed.data.taskId}` : null;
   }
   // US-39: the student reads the result of the document check on the verification page (the reason is already in the text).
   if (notification.type === 'verification_rejected' || notification.type === 'verification_approved') return '/me/verification';

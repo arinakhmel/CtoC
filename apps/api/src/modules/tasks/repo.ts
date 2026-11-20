@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../platform/db';
-import { RESULT_EDITABLE_STATUSES } from '@ctoc/shared';
-import { ACCEPTABLE_STATUS, ASSIGNABLE_STATUS, CANCELLABLE_BY_OWNER, CANCELLED, CHAT_OPEN_STATUSES, DONE, IN_PROGRESS, IN_REVIEW, REVISION } from './domain';
+import { LIMITS, RESULT_EDITABLE_STATUSES, type ModTaskStatus } from '@ctoc/shared';
+import { ACCEPTABLE_STATUS, ASSIGNABLE_STATUS, CANCELLABLE_BY_OWNER, CANCELLED, CHAT_OPEN_STATUSES, DONE, IN_PROGRESS, IN_REVIEW, MODERATABLE_STATUS, PUBLISHED, REJECTED, REVISION } from './domain';
 
 /**
  * INV-06: the feed holds only published tasks that have no executor and a future deadline.
@@ -188,3 +188,34 @@ export const returnTaskTx = (tx: Prisma.TransactionClient, id: string, ownerId: 
     where: { id, customerId: ownerId, status: ACCEPTABLE_STATUS },
     data: { status: REVISION },
   });
+
+/** US-40. The moderator's queue: oldest first, at most 100 (api.md §4.14a). */
+const MOD_QUEUE_MAX = 100;
+export const modTaskInclude = { customer: { select: { id: true, displayName: true } } } satisfies Prisma.TaskInclude;
+export const listTasksForModeration = (status: ModTaskStatus) =>
+  prisma.task.findMany({ where: { status }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: MOD_QUEUE_MAX, include: modTaskInclude });
+export const findModTaskTx = (tx: Prisma.TransactionClient, id: string) =>
+  tx.task.findUnique({ where: { id }, include: modTaskInclude });
+
+/** US-40/S1, INV-08. The rate in force: the setting, or the default when the row does not exist yet (US-03 is not built). */
+export const readCommissionBp = async (tx: Prisma.TransactionClient): Promise<number> =>
+  (await tx.setting.findUnique({ where: { key: 'commission_bp' } }))?.value ?? LIMITS.commissionBp.default;
+
+/** US-40/S1 (INV-24, ADR-0007). One conditional write: only a task still waiting is published, and the snapshot is written with the status. */
+export const publishTaskTx = (
+  tx: Prisma.TransactionClient,
+  id: string,
+  snapshot: { commissionBp: number; commissionKopecks: number; netKopecks: number },
+  now: Date,
+) =>
+  tx.task.updateMany({
+    where: { id, status: MODERATABLE_STATUS },
+    data: { status: PUBLISHED, publishedAt: now, ...snapshot },
+  });
+
+/** US-40/S2. Same rule: only a task still waiting is rejected; the reason is stored. No snapshot. */
+export const rejectTaskTx = (tx: Prisma.TransactionClient, id: string, reason: string) =>
+  tx.task.updateMany({ where: { id, status: MODERATABLE_STATUS }, data: { status: REJECTED, moderationReason: reason } });
+
+export const insertTaskAuditEvent = (tx: Prisma.TransactionClient, data: { actorId: string; action: string; entityId: string; data: Record<string, unknown> }) =>
+  tx.auditEvent.create({ data: { actorId: data.actorId, action: data.action, entity: 'task', entityId: data.entityId, dataJson: JSON.stringify(data.data) } });

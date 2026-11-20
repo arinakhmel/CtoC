@@ -707,3 +707,8 @@ article form + form {
     border: 2px solid ButtonText;
   }
 }
+
+/* US-40, OQ-43 d: a task whose deadline has passed is marked in the moderator's queue (colour and the words «дедлайн минув»). */
+.deadline-expired {
+  color: var(--danger-text);
+}

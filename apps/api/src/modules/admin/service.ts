@@ -1,6 +1,7 @@
-import type { ModVerificationsQuery, WithdrawalStatus } from '@ctoc/shared';
+import type { ModTaskStatus, ModVerificationsQuery, WithdrawalStatus } from '@ctoc/shared';
 import type { User } from '@prisma/client';
 import { listWithdrawalsForModeration, markWithdrawalPaid, rejectWithdrawal } from '../payments/service';
+import { listModerationQueue, publishTask, rejectTask } from '../tasks/service';
 import { decideByModerator, listVerificationQueue } from '../verification/service';
 import { assertModerator } from './policy';
 
@@ -41,4 +42,22 @@ export function approveVerification(user: User, id: string) {
 export function rejectVerification(user: User, id: string, reason: string) {
   assertModerator(user);
   return decideByModerator(user.id, id, { approve: false, reason });
+}
+
+/** US-40. The queue of tasks to check. The tasks belong to the tasks module (ADR-0002): this only checks the role. */
+export function getTaskQueue(user: User, status: ModTaskStatus) {
+  assertModerator(user);
+  return listModerationQueue(status);
+}
+
+/** US-40/S1. The moderator publishes: the task enters the feed with the commission snapshot. */
+export function publishTaskByModerator(user: User, id: string) {
+  assertModerator(user);
+  return publishTask(user.id, id);
+}
+
+/** US-40/S2. The moderator rejects with a reason: the task never reaches the feed, the customer reads why. */
+export function rejectTaskByModerator(user: User, id: string, reason: string) {
+  assertModerator(user);
+  return rejectTask(user.id, id, reason);
 }

@@ -79,3 +79,11 @@ export const REVISION = 'revision' as const;
  */
 export const returnRefusal = (status: string): 'TASK_ALREADY_DONE' | 'TASK_NOT_IN_REVIEW' =>
   status === DONE ? 'TASK_ALREADY_DONE' : 'TASK_NOT_IN_REVIEW';
+
+/**
+ * US-40 (domain-model.md §3.1, INV-24). The moderator decides only on a task still waiting: `pending_moderation` → `published` or
+ * `rejected`. The first decision wins. `published` → `rejected` (G-17) is not built in the MVP (OQ-43 c).
+ */
+export const MODERATABLE_STATUS = 'pending_moderation' as const;
+export const PUBLISHED = 'published' as const;
+export const REJECTED = 'rejected' as const;

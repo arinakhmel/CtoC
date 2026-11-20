@@ -1,7 +1,7 @@
 import type { NotificationsQuery } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
-import { executorSelectedPayload, resultAcceptedPayload, resultReturnedPayload, resultSubmittedPayload, verificationRejectedPayload } from './domain';
+import { executorSelectedPayload, resultAcceptedPayload, resultReturnedPayload, resultSubmittedPayload, taskPublishedPayload, taskRejectedPayload, verificationRejectedPayload } from './domain';
 import { assertCanUseNotifications } from './policy';
 import { insertNotification, listNotificationsOfUser, markNotificationRead, notificationExistsForUser } from './repo';
 
@@ -92,6 +92,21 @@ export async function notifyResultReturned(
     type: 'result_returned',
     payloadJson: JSON.stringify(resultReturnedPayload(task)),
   });
+}
+
+/** US-40, US-49 sc.1 (INV-23). The customer is told on the transaction that publishes the task, so a rollback leaves no notification. */
+export async function notifyTaskPublished(tx: Prisma.TransactionClient, customerId: string, task: { id: string; title: string }): Promise<void> {
+  await insertNotification(tx, { userId: customerId, type: 'task_published', payloadJson: JSON.stringify(taskPublishedPayload(task)) });
+}
+
+/** US-40/S2, US-49 sc.2. Same rule, with the reason of the moderator. */
+export async function notifyTaskRejected(
+  tx: Prisma.TransactionClient,
+  customerId: string,
+  task: { id: string; title: string },
+  reason: string,
+): Promise<void> {
+  await insertNotification(tx, { userId: customerId, type: 'task_rejected', payloadJson: JSON.stringify(taskRejectedPayload(task, reason)) });
 }
 
 /**

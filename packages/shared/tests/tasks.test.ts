@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { APPLICATION_STATUS_UK, APPLICATION_STATUSES, TASK_STATUS_UK, TASK_STATUSES, createApplicationSchema, createTaskSchema, feedQuerySchema, LIMITS, moderationRejectSchema } from '../src';
+import { APPLICATION_STATUS_UK, APPLICATION_STATUSES, TASK_STATUS_UK, TASK_STATUSES, createApplicationSchema, createTaskSchema, feedQuerySchema, LIMITS, moderationRejectSchema, modTasksQuerySchema, taskPublishedPayloadSchema, taskRejectedPayloadSchema } from '../src';
 import { codesOf, fieldsOf } from './helpers';
 
 const inOneWeek = () => new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
@@ -121,5 +121,19 @@ describe('US-22 task status labels', () => {
       cancelled: 'Скасовано',
     });
     expect(Object.keys(TASK_STATUS_UK).sort()).toEqual([...TASK_STATUSES].sort());
+  });
+});
+
+describe('US-40 moderator queue and notification payloads', () => {
+  it('the queue status defaults to pending_moderation and accepts only published and rejected besides it', () => {
+    expect(modTasksQuerySchema.parse({}).status).toBe('pending_moderation');
+    expect(modTasksQuerySchema.parse({ status: 'rejected' }).status).toBe('rejected');
+    expect(codesOf(modTasksQuerySchema, { status: 'done' })).toEqual(['VALIDATION_FAILED']);
+  });
+
+  it('task_published needs taskId and taskTitle; task_rejected also needs the reason', () => {
+    expect(taskPublishedPayloadSchema.safeParse({ taskId: 't', taskTitle: 'Назва' }).success).toBe(true);
+    expect(taskRejectedPayloadSchema.safeParse({ taskId: 't', taskTitle: 'Назва' }).success).toBe(false);
+    expect(taskRejectedPayloadSchema.safeParse({ taskId: 't', taskTitle: 'Назва', reason: 'Домашня робота' }).success).toBe(true);
   });
 });

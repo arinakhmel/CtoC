@@ -157,7 +157,7 @@ Indexes:
 Table-level CHECKs:
 - `commission_kopecks + net_kopecks = price_kopecks` when not NULL (INV-08);
 - `status NOT IN ('in_progress','in_review','revision','done') OR executor_id IS NOT NULL`;
-- `status = 'pending_moderation' OR commission_bp IS NOT NULL OR status IN ('rejected','cancelled')`.
+- `status = 'pending_moderation' OR commission_bp IS NOT NULL OR status IN ('rejected','cancelled')`: **this CHECK is not in the database** (OQ-43 b, variant B: no migration, the `tasks` table is not rebuilt). The snapshot of a `published` task is guaranteed by the domain transaction of `POST /api/mod/tasks/:id/publish` (api.md §4.14a), which writes the status and the snapshot in one conditional update, not by a DB CHECK. Only `commission_kopecks + net_kopecks = price_kopecks` is a DB CHECK (INV-08).
 
 Indexes:
 - `(status, published_at DESC)` for the feed and the moderation queue;

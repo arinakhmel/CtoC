@@ -50,3 +50,18 @@ export const verificationRejectedPayloadSchema = z.object({
   reason: z.string().min(1),
 });
 export type VerificationRejectedPayload = z.infer<typeof verificationRejectedPayloadSchema>;
+
+/** US-40, US-49: the payload of a `task_published` notification, which the customer gets. */
+export const taskPublishedPayloadSchema = z.object({
+  taskId: z.string().min(1),
+  taskTitle: z.string().min(1),
+});
+export type TaskPublishedPayload = z.infer<typeof taskPublishedPayloadSchema>;
+
+/** US-40/S2, US-49: the payload of a `task_rejected` notification. The reason of the moderator is part of the text the customer reads. */
+export const taskRejectedPayloadSchema = z.object({
+  taskId: z.string().min(1),
+  taskTitle: z.string().min(1),
+  reason: z.string().min(1),
+});
+export type TaskRejectedPayload = z.infer<typeof taskRejectedPayloadSchema>;

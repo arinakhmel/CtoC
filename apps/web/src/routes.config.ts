@@ -146,7 +146,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/mod/tasks",
-    title: "Task moderation queue, deal resolution",
+    title: "Модерація завдань",
     access: "M",
     stories: ["US-40", "US-14", "US-15"],
   },

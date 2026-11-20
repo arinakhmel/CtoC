@@ -118,9 +118,9 @@ All return 401 without a session and **403 `ROLE_FORBIDDEN`** for non-moderators
 | POST | `/api/mod/verifications/:id/approve` | US-39/S1, US-09 | 200 (body: §4.8b) | 404 `NOT_FOUND` · 409 `ALREADY_DECIDED` |
 | POST | `/api/mod/verifications/:id/reject` | US-39/S2, US-41/S2 | 200 (body: §4.8b) | 404 `NOT_FOUND` · 400 `REASON_REQUIRED` · 409 `ALREADY_DECIDED` |
 | POST | `/api/mod/users/:id/revoke-student` | A-18 | 200 | 409 `INVALID_TRANSITION` |
-| GET | `/api/mod/tasks?status=pending_moderation` | US-40 | 200 | |
-| POST | `/api/mod/tasks/:id/publish` | US-40/S1 | 200 | 409 `ALREADY_DECIDED` |
-| POST | `/api/mod/tasks/:id/reject` | US-40/S2, US-15/S2 | 200 | 400 `REASON_REQUIRED` · 409 `ALREADY_DECIDED`, `TASK_HAS_EXECUTOR` |
+| GET | `/api/mod/tasks?status=pending_moderation` | US-40 | 200 (body: §4.14a) | 400 `VALIDATION_FAILED` (bad `status`) |
+| POST | `/api/mod/tasks/:id/publish` | US-40/S1, US-49/S1 | 200 (body: §4.14a) | 404 `NOT_FOUND` · 409 `ALREADY_DECIDED` |
+| POST | `/api/mod/tasks/:id/reject` | US-40/S2, US-15/S2 | 200 | 400 `REASON_REQUIRED` · 404 `NOT_FOUND` · 409 `ALREADY_DECIDED` (`TASK_HAS_EXECUTOR` is unreachable here in the MVP: the unpublish of G-17 is not built, OQ-43 c) |
 | POST | `/api/mod/tasks/:id/resolve` (`release` \| `refund`) | A-09 (OQ-08) | 200 | 409 `INVALID_TRANSITION` |
 | GET | `/api/mod/withdrawals?status=requested` | US-36, A-10 (OQ-10) | 200 (body: §4.1d) | 400 `VALIDATION_FAILED` (bad `status`) |
 | POST | `/api/mod/withdrawals/:id/mark-paid` and `/reject` | US-36, A-10 (OQ-10) | 200 (body: §4.1d) | 400 `REASON_REQUIRED` (reject) · 404 `NOT_FOUND` · 409 `ALREADY_DECIDED` |
@@ -736,6 +736,25 @@ GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
 `GET /api/me/work` returns `{ "tasks": [ … ] }`: the tasks where the caller is the executor, in every status, last assigned first, at most 100 (OQ-29).
 
 `DELETE /api/tasks/:id` (US-22/S2, INV-13): the owner cancels a task that has no executor. 204 and the task becomes `cancelled` from `pending_moderation` or `published`. With an executor: 409 `TASK_HAS_EXECUTOR`, nothing changes. In any other state (rejected, cancelled, done): 409 `INVALID_TRANSITION`. Someone else's task: 403 `NOT_TASK_OWNER`. It is one conditional update.
+
+### 4.14a `GET /api/mod/tasks`, `POST /api/mod/tasks/:id/publish` | `/reject` (US-40, US-49)
+
+The moderator's queue of new tasks (`/mod/tasks`). Access: a moderator only (INV-25). The role is checked before the query or the body, so a student or a customer is 403 `ROLE_FORBIDDEN` even with an invalid body, and no session is 401 `AUTH_REQUIRED`.
+
+- `GET /api/mod/tasks?status=pending_moderation|published|rejected` (default `pending_moderation`; anything else is 400 `VALIDATION_FAILED`): oldest first, at most 100.
+
+```json
+{ "items": [ { "id": "…", "title": "Логотип для кав’ярні", "description": "…", "priceKopecks": 100000,
+               "deadlineAt": "2026-11-27T10:00:00.000Z", "customer": { "id": "…", "displayName": "Кав’ярня «Зерно»" },
+               "status": "pending_moderation", "moderationReason": null, "createdAt": "2026-11-20T10:00:00.000Z" } ] }
+```
+
+The customer's email is never in it.
+
+- `POST …/:id/publish` (empty body) and `POST …/:id/reject` `{ "reason": "…" }` (the shared `moderationRejectSchema`, 1 to 500 characters after trimming, 400 `REASON_REQUIRED` when empty or spaces only). Unknown id is 404 `NOT_FOUND`. The answer is `{ "task": { … } }` in the shape of a list item.
+- **Publish** is one transaction: the rate is read (`Setting commission_bp`, or `LIMITS.commissionBp.default` when there is no row), the split is `splitPrice` (INV-08), and ONE conditional update `WHERE status = 'pending_moderation'` writes `status = published`, `commission_bp`, `commission_kopecks`, `net_kopecks`, `published_at`. An audit event `task.published` and a notification `task_published` (`{ taskId, taskTitle }`, text «Ваше завдання «Назва» опубліковано») to the customer are in the same transaction.
+- **Reject** is the same shape: the conditional update `pending_moderation` → `rejected` with `moderation_reason`, no snapshot, an audit event `task.rejected` and a notification `task_rejected` (`{ taskId, taskTitle, reason }`, text «Ваше завдання «Назва» відхилено. Причина: …»).
+- The first decision wins (INV-24): a repeat, two at once, or a task the owner cancelled in between is 409 `ALREADY_DECIDED` with no change. The unpublish of a `published` task (G-17) is not built in the MVP (OQ-43 c).
 
 ### 4.14 Result files of a task (US-27)
 

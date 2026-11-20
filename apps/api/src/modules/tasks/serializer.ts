@@ -41,3 +41,20 @@ export const serializeWorkTask = (task: FeedTaskRow & Pick<Task, 'status' | 'ass
   status: task.status,
   assignedAt: task.assignedAt?.toISOString() ?? null,
 });
+
+export type ModTaskRow = Pick<Task, 'id' | 'title' | 'description' | 'priceKopecks' | 'deadlineAt' | 'status' | 'moderationReason' | 'createdAt'> & {
+  customer: { id: string; displayName: string };
+};
+
+/** api.md §4.14a. The moderator's view: the customer by name and id, never the email; the reason of a rejection. */
+export const serializeModTask = (task: ModTaskRow) => ({
+  id: task.id,
+  title: task.title,
+  description: task.description,
+  priceKopecks: task.priceKopecks,
+  deadlineAt: task.deadlineAt.toISOString(),
+  customer: { id: task.customer.id, displayName: task.customer.displayName },
+  status: task.status,
+  moderationReason: task.moderationReason,
+  createdAt: task.createdAt.toISOString(),
+});
