@@ -244,6 +244,20 @@ describe('POST /api/tasks/:id/applications: US-18', () => {
   });
 });
 
+/** A malicious body: every way to name a price (US-13 sc.2, US-42 sc.2). */
+const FORGED_PRICE_BODY = { note: 'Маю досвід', priceKopecks: 100, price: 1, budget: 100, bid: 100 };
+const PRICE_KEYS = ['priceKopecks', 'price', 'budget', 'bid'];
+
+/** 201, no price anywhere in the answer or in the stored row, the task keeps the customer's price. */
+async function expectPriceIgnored(res: { status: number; body: any }, taskId: string, price: number) {
+  expect(res.status).toBe(201);
+  for (const key of PRICE_KEYS) expect(res.body.application).not.toHaveProperty(key);
+  const rows = await prisma.application.findMany({ where: { taskId } });
+  expect(rows).toHaveLength(1);
+  for (const key of PRICE_KEYS) expect(rows[0]).not.toHaveProperty(key);
+  expect((await prisma.task.findUniqueOrThrow({ where: { id: taskId } })).priceKopecks).toBe(price);
+}
+
 describe('POST /api/tasks/:id/applications: US-13 sc.2 / US-42', () => {
   // W-05, decided: a forged price is stripped, the request succeeds and the task keeps the customer's price.
   it('US-13 sc.2 a forged priceKopecks is stripped: 201, no price in the answer, the task price is unchanged', async () => {
@@ -259,5 +273,25 @@ describe('POST /api/tasks/:id/applications: US-13 sc.2 / US-42', () => {
     const [row] = await prisma.application.findMany();
     expect(row?.status).toBe('sent');
     expect(row?.studentId).not.toBe('someone-else');
+  });
+
+  it('US-42 sc.1 an application without a price is created and the task keeps the price set by the customer', async () => {
+    const { cookie } = await loginAs();
+    const task = await publish({ priceKopecks: 50_000 });
+
+    const res = await apply(task.id, {}, cookie);
+
+    await expectPriceIgnored(res, task.id, 50_000);
+    expect(res.body.application.status).toBe('sent');
+  });
+
+  it('US-42 sc.2 a body with priceKopecks 100, budget and bid is ignored: 201, no price in the answer or in the database', async () => {
+    const { cookie } = await loginAs();
+    const task = await publish({ priceKopecks: 50_000 });
+
+    const res = await apply(task.id, FORGED_PRICE_BODY, cookie);
+
+    await expectPriceIgnored(res, task.id, 50_000);
+    expect(res.body.application.note).toBe('Маю досвід');
   });
 });
