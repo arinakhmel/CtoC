@@ -25,6 +25,7 @@ Numbers are targets for the whole project, not per story. The skeleton today has
 it('US-18 sc.2: applying twice to the same task answers 409 ALREADY_APPLIED', async () => { … });
 ```
 
+- The `US-<nn> sc.<N>` prefix is for the unit, component and API tests (`packages/shared`, `apps/web`, `apps/api`). End-to-end tests in `e2e/*.spec.ts` follow a journey, not one scenario, so they are named `Journey <name>: <what the user achieves>`, with a comment listing the stories and scenarios they cover (`// US-39 sc.1`), as the `/e2e-tests` skill prescribes (§5).
 - If one rule serves two scenarios (US-32 sc.3 and US-33 sc.2), write one test and name both: `US-32 sc.3, US-33 sc.2: …`.
 - Infrastructure tests, which protect a document or a mechanism rather than a scenario, are named after the document section: `api.md §3 error code dictionary …`, `data-model.md §2 INV-09 …`.
 - A scenario marked ⚠ or ✔ in `traceability.md` is tested **as decided**, with a comment naming the conflict (`// W-02, decided: variant B`). Do not silently bend the test to the wording of a scenario we know is contradictory.
@@ -84,7 +85,7 @@ The reference test today is `apps/api/tests/concurrency-adr0007.test.ts`. When t
 ## 5. End-to-end rules
 
 - **One spec per journey**, named after it (`e2e/registration-verification.spec.ts`, `e2e/order-to-payout.spec.ts`). A journey crosses several stories and follows the user journey in `requirements.md` §1. Maximum about eight specs.
-- **Seed through the API**, not through the UI. A spec gets its customer, student and task by calling the real endpoints with Playwright's `request` fixture (`register`, `login`, `POST /api/tasks`, moderator `publish`). Only the step under test is driven through the browser. Use unique emails (for example with a timestamp) so specs do not depend on a reset.
+- **Seed through the API**, not through the UI. Accounts and their sessions are the one exception: they are created directly in the e2e database with `userWithSession` (`e2e/support/finance-seed.ts`), because `POST /api/auth/register` is limited to 10 sign-ups per hour per address and confirming an email is not what a journey tests. Every later action goes through the real endpoints with Playwright's `request` fixture and the session of its own account: the student's document upload, the moderator's approval, `POST /api/tasks`, moderator `publish`. Only the step under test is driven through the browser. Use unique emails (for example with a timestamp) so specs do not depend on a reset.
 - **Locate by role and label**: `getByRole('button', { name: 'Відгукнутися' })`, `getByLabel`, `getByRole('heading')`. Never by CSS class or test id unless there is no accessible name. If a role locator is hard to write, the markup is wrong: fix the markup (see `.claude/rules/web.md`).
 - **No sleeps.** No `waitForTimeout`. Use `expect(...).toBeVisible()` and other web-first assertions, which wait and retry. For polling features (chat, notifications), assert with `expect.poll` or `toHaveText` with a timeout.
 - **Own database and ports.** The config starts the API on 3101 and the web app on 5174 with `apps/api/data/e2e.db`, so e2e never touches development data.
