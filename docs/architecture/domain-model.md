@@ -195,7 +195,7 @@ stateDiagram-v2
     pending_moderation --> rejected: moderator rejects [reason] (US-40/S2, US-15/S2)
     pending_moderation --> cancelled: owner deletes (A-08)
     published --> in_progress: owner selects executor [applicant, escrow held] (US-25, US-26)
-    published --> rejected: moderator unpublishes [no executor] (G-17)
+    published --> rejected: moderator unpublishes [no executor] (G-17, not built in the MVP, OQ-43 c)
     published --> cancelled: owner deletes [no executor] (A-08, US-22/S2)
     in_progress --> in_review: executor submits [≥1 file] (US-28)
     in_review --> done: owner accepts / moderator releases (US-31, A-09)

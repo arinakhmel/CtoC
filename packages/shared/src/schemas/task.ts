@@ -48,3 +48,11 @@ export const moderationRejectSchema = z.object({
     .min(1, 'REASON_REQUIRED')
     .max(LIMITS.moderationReasonMax, 'VALIDATION_FAILED'),
 });
+
+/** US-40: the queue of tasks the moderator reads (api.md §4.14a). Waiting tasks by default. */
+export const MOD_TASK_STATUSES = ['pending_moderation', 'published', 'rejected'] as const;
+export type ModTaskStatus = (typeof MOD_TASK_STATUSES)[number];
+export const modTasksQuerySchema = z.object({
+  status: z.enum(MOD_TASK_STATUSES, { errorMap: () => ({ message: 'VALIDATION_FAILED' }) }).default('pending_moderation'),
+});
+export type ModTasksQuery = z.infer<typeof modTasksQuerySchema>;

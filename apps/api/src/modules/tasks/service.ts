@@ -1,6 +1,7 @@
-import { isResultEditable, LIMITS, type CreateTaskInput, type FeedQuery } from '@ctoc/shared';
+import { isResultEditable, LIMITS, splitPrice, type CreateTaskInput, type FeedQuery, type ModTaskStatus } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
+import { notifyTaskPublished, notifyTaskRejected } from '../notifications/service';
 import { prisma } from '../../platform/db';
 import { acceptRefusal, assignRefusal, chatStateOf, deleteRefusal, newTaskData, resultRefusal, returnRefusal, REVISION, submitRefusal } from './domain';
 import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed, assertTaskOwner } from './policy';
@@ -17,7 +18,13 @@ import {
   findTaskForDelete,
   findTaskOfExecutor,
   findTaskState,
+  findModTaskTx,
   insertTask,
+  insertTaskAuditEvent,
+  listTasksForModeration,
+  publishTaskTx,
+  findCommissionBpSetting,
+  rejectTaskTx,
   listFeed,
   listTasksOfExecutor,
   lockChatTask,
@@ -232,4 +239,55 @@ export async function moveTaskToRevision(tx: Prisma.TransactionClient, taskId: s
   if ((await returnTaskTx(tx, taskId, ownerId)).count > 0) return REVISION;
   const current = await tx.task.findUnique({ where: { id: taskId }, select: { status: true } });
   throw new ApiError(returnRefusal(current?.status ?? 'cancelled'));
+}
+
+/** US-40. The queue of the moderator. The role is checked by the admin module (INV-25). */
+export const listModerationQueue = (status: ModTaskStatus) => listTasksForModeration(status);
+
+/**
+ * US-40, INV-08. The rate in force: the setting, or `LIMITS.commissionBp.default` when there is no row yet (US-03 is not built). The database
+ * constrains only the key, so a stored value is checked here against the documented range (an integer in 0..5000). A bad value is never
+ * written into a snapshot (it could give a negative net): 500 `INTERNAL_ERROR`, logged, the publish rolled back, as OQ-39 (a).
+ */
+async function commissionBpInForce(tx: Prisma.TransactionClient): Promise<number> {
+  const stored = await findCommissionBpSetting(tx);
+  if (stored === null) return LIMITS.commissionBp.default;
+  if (!Number.isInteger(stored) || stored < LIMITS.commissionBp.min || stored > LIMITS.commissionBp.max) {
+    console.error(`Setting commission_bp is ${stored}, outside ${LIMITS.commissionBp.min}..${LIMITS.commissionBp.max}: the task cannot be published`);
+    throw new ApiError('INTERNAL_ERROR');
+  }
+  return stored;
+}
+
+/**
+ * US-40 sc.1, INV-05, INV-08, INV-24. One transaction: the rate in force (the setting, or the default), the split with `splitPrice`,
+ * then ONE conditional write `pending_moderation` → `published` with the snapshot (commission, net, rate) and `publishedAt`. A count of 0
+ * is a repeat, a race, or a task the owner already cancelled: 409 `ALREADY_DECIDED`, an unknown id is 404. The audit event and the
+ * notification to the customer are in the same transaction, so «опубліковано» is true when it is read.
+ */
+export async function publishTask(moderatorId: string, id: string) {
+  return prisma.$transaction(async (tx) => {
+    const task = await findModTaskTx(tx, id);
+    if (!task) throw new ApiError('NOT_FOUND');
+    const commissionBp = await commissionBpInForce(tx);
+    const split = splitPrice(task.priceKopecks, commissionBp);
+    const changed = await publishTaskTx(tx, id, { commissionBp, commissionKopecks: split.commissionKopecks, netKopecks: split.netKopecks }, new Date());
+    if (changed.count === 0) throw new ApiError('ALREADY_DECIDED');
+    await insertTaskAuditEvent(tx, { actorId: moderatorId, action: 'task.published', entityId: id, data: { commissionBp, ...split } });
+    await notifyTaskPublished(tx, task.customerId, { id, title: task.title });
+    return (await findModTaskTx(tx, id))!;
+  });
+}
+
+/** US-40 sc.2, US-49 sc.2. The same transaction shape: `pending_moderation` → `rejected` with the reason, an audit event, the notification with the reason. */
+export async function rejectTask(moderatorId: string, id: string, reason: string) {
+  return prisma.$transaction(async (tx) => {
+    const task = await findModTaskTx(tx, id);
+    if (!task) throw new ApiError('NOT_FOUND');
+    const changed = await rejectTaskTx(tx, id, reason);
+    if (changed.count === 0) throw new ApiError('ALREADY_DECIDED');
+    await insertTaskAuditEvent(tx, { actorId: moderatorId, action: 'task.rejected', entityId: id, data: { reason } });
+    await notifyTaskRejected(tx, task.customerId, { id, title: task.title }, reason);
+    return (await findModTaskTx(tx, id))!;
+  });
 }

@@ -55,12 +55,12 @@ describe('US-16 sc.1: a valid form goes to moderation', () => {
     expect(feed.body.tasks).toHaveLength(0);
   });
 
-  it('US-16 sc.1 / US-40 sc.3 a forged status, executor and commission are ignored', async () => {
-    const res = await post(customer.cookie, { ...valid(), status: 'published', executorId: 'x', commissionKopecks: 1, customerId: 'other' });
+  it('US-16 sc.1 / US-40 sc.3 a forged status, executor and commission are ignored (// OQ-03: «На перевірці» = pending_moderation)', async () => {
+    const res = await post(customer.cookie, { ...valid(), status: 'published', executorId: 'x', commissionKopecks: 1, commissionBp: 1, netKopecks: 39_999, customerId: 'other' });
 
     expect(res.status).toBe(201);
     const row = await prisma.task.findUniqueOrThrow({ where: { id: res.body.task.id } });
-    expect(row).toMatchObject({ status: 'pending_moderation', executorId: null, commissionKopecks: null, customerId: customer.user.id });
+    expect(row).toMatchObject({ status: 'pending_moderation', executorId: null, commissionBp: null, commissionKopecks: null, netKopecks: null, publishedAt: null, customerId: customer.user.id });
   });
 });
 

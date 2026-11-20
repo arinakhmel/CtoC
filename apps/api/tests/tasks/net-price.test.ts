@@ -34,8 +34,20 @@ beforeEach(async () => {
 describe('US-15 sc.1: gross price and net amount', () => {
   const snapshot = { priceKopecks: 100_000, commissionBp: 1000, commissionKopecks: 10_000, netKopecks: 90_000 };
 
-  it('US-15 sc.1 the feed card carries 100000 gross, 10000 commission and 90000 net', async () => {
-    await publish(snapshot);
+  /** US-40: the snapshot is written by the real moderator publish (OQ-22), 1000 грн at the default 10 %. */
+  const publishThroughModerator = async () => {
+    const moderator = await prisma.user.create({
+      data: { email: 'net-mod@ctoc.local', passwordHash: 'x', displayName: 'Модератор', role: 'moderator', emailConfirmedAt: new Date() },
+    });
+    await prisma.session.create({ data: { id: hashSessionId('net-mod-session'), userId: moderator.id, expiresAt: new Date(Date.now() + 3600_000) } });
+    const task = await createTask(customerId, { status: 'pending_moderation', priceKopecks: 100_000 });
+    const res = await api().post(`/api/mod/tasks/${task.id}/publish`).set('Cookie', 'sid=net-mod-session').set('Origin', 'http://localhost:5173');
+    expect(res.status).toBe(200);
+    return task;
+  };
+
+  it('US-15 sc.1 the feed card carries 100000 gross, 10000 commission and 90000 net (task published by the moderator)', async () => {
+    await publishThroughModerator();
 
     const res = await get('/api/tasks');
 
@@ -44,8 +56,8 @@ describe('US-15 sc.1: gross price and net amount', () => {
     expect(res.body.tasks[0]).toMatchObject({ priceKopecks: 100_000, commissionKopecks: 10_000, netKopecks: 90_000 });
   });
 
-  it('US-15 sc.1 the details carry the same amounts', async () => {
-    const task = await publish(snapshot);
+  it('US-15 sc.1 the details carry the same amounts (task published by the moderator)', async () => {
+    const task = await publishThroughModerator();
 
     const res = await get(`/api/tasks/${task.id}`);
 

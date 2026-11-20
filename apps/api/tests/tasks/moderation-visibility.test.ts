@@ -5,19 +5,23 @@ import { prisma, resetDb } from '../helpers/db';
 import { createTask, createUser } from '../helpers/factories';
 
 /**
- * US-14. Only moderated tasks reach students (INV-06). The publish and reject endpoints belong to US-40, so these
- * tests put the task rows into the states those endpoints produce.
+ * US-14. Only moderated tasks reach students (INV-06). The tasks reach their states through the real moderator endpoints of US-40
+ * (`POST /api/mod/tasks/:id/publish` and `/reject`), not through seeded rows.
  */
 
+const ORIGIN = 'http://localhost:5173';
+const decide = (cookie: string, id: string, action: 'publish' | 'reject', body: object = {}) =>
+  api().post(`/api/mod/tasks/${id}/${action}`).set('Cookie', cookie).set('Origin', ORIGIN).send(body);
+
 let counter = 0;
-async function loginAs() {
+async function loginAs(role: 'student' | 'moderator' = 'student') {
   counter += 1;
   const user = await prisma.user.create({
     data: {
-      email: `modvis${counter}@university.edu.ua`,
+      email: `modvis${counter}@${role === 'student' ? 'university.edu.ua' : 'ctoc.local'}`,
       passwordHash: 'x',
       displayName: 'Олена Коваль',
-      role: 'student',
+      role,
       emailConfirmedAt: new Date(),
     },
   });
@@ -42,7 +46,9 @@ beforeEach(async () => {
 describe('US-14 sc.1 a task that passed moderation', () => {
   it('US-14 sc.1 a published task is in the feed and can be opened', async () => {
     const { cookie } = await loginAs();
-    const task = await createTask(customerId, { status: 'published', publishedAt: new Date() });
+    const moderator = await loginAs('moderator');
+    const task = await createTask(customerId, { status: 'pending_moderation' });
+    expect((await decide(moderator.cookie, task.id, 'publish')).status).toBe(200);
 
     expect(await feedIds(cookie)).toEqual([task.id]);
     const res = await getTask(task.id, cookie);
@@ -54,7 +60,9 @@ describe('US-14 sc.1 a task that passed moderation', () => {
 describe('US-14 sc.2 a task waiting for moderation', () => {
   it('US-14 sc.2 a pending_moderation task is absent from the feed', async () => {
     const { cookie } = await loginAs();
-    const visible = await createTask(customerId, { status: 'published', publishedAt: new Date() });
+    const moderator = await loginAs('moderator');
+    const visible = await createTask(customerId, { status: 'pending_moderation' });
+    await decide(moderator.cookie, visible.id, 'publish');
     await createTask(customerId, { status: 'pending_moderation', publishedAt: null });
 
     expect(await feedIds(cookie)).toEqual([visible.id]);
@@ -76,11 +84,9 @@ describe('US-14 sc.2 a task waiting for moderation', () => {
 describe('US-14 sc.3 a task rejected by the moderator', () => {
   it('US-14 sc.3 a rejected task never appears in the feed and GET /:id is 404 NOT_FOUND', async () => {
     const { cookie } = await loginAs();
-    const rejected = await createTask(customerId, {
-      status: 'rejected',
-      publishedAt: null,
-      moderationReason: 'Схоже на домашнє завдання',
-    });
+    const moderator = await loginAs('moderator');
+    const rejected = await createTask(customerId, { status: 'pending_moderation' });
+    expect((await decide(moderator.cookie, rejected.id, 'reject', { reason: 'Схоже на домашнє завдання' })).status).toBe(200);
 
     expect(await feedIds(cookie)).toEqual([]);
     const res = await getTask(rejected.id, cookie);

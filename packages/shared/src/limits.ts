@@ -28,6 +28,8 @@ export const LIMITS = {
   withdrawalsMax: 100,
   /** US-39: the most documents `GET /api/mod/verifications` returns (api.md §4.8b). */
   verificationQueueMax: 100,
+  /** US-40: the most tasks `GET /api/mod/tasks` returns (api.md §4.14a). */
+  taskQueueMax: 100,
   /** US-37: the experience records in a public profile, newest first, without paging (api.md §4.9). */
   experienceMax: 100,
   sandboxTopUp: { min: 100, max: PRICE_MAX_KOPECKS },

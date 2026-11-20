@@ -3,6 +3,8 @@ import {
   resultAcceptedPayloadSchema,
   resultReturnedPayloadSchema,
   resultSubmittedPayloadSchema,
+  taskPublishedPayloadSchema,
+  taskRejectedPayloadSchema,
   verificationApprovedPayloadSchema,
   verificationRejectedPayloadSchema,
   type ExecutorSelectedPayload,
@@ -10,6 +12,8 @@ import {
   type ResultAcceptedPayload,
   type ResultReturnedPayload,
   type ResultSubmittedPayload,
+  type TaskPublishedPayload,
+  type TaskRejectedPayload,
 } from '@ctoc/shared';
 
 /**
@@ -59,6 +63,20 @@ export const verificationRejectedText = (reason: string): string => `Вашу в
 
 export const verificationRejectedPayload = (reason: string): VerificationRejectedPayload => ({ reason });
 
+/** US-40, US-49 sc.1 [AC]: «Ваше завдання «Назва» опубліковано». */
+export const taskPublishedText = (taskTitle: string): string => `Ваше завдання «${taskTitle}» опубліковано`;
+
+export const taskPublishedPayload = (task: { id: string; title: string }): TaskPublishedPayload => ({ taskId: task.id, taskTitle: task.title });
+
+/** US-40/S2, US-49 sc.2 [AC]: «Ваше завдання «Назва» відхилено. Причина: …». The reason of the moderator is in the text. */
+export const taskRejectedText = (taskTitle: string, reason: string): string => `Ваше завдання «${taskTitle}» відхилено. Причина: ${reason}`;
+
+export const taskRejectedPayload = (task: { id: string; title: string }, reason: string): TaskRejectedPayload => ({
+  taskId: task.id,
+  taskTitle: task.title,
+  reason,
+});
+
 /** The stored payload as an object, or null if it is not valid JSON of the expected shape. */
 export function parsePayload(payloadJson: string): unknown {
   try {
@@ -91,6 +109,14 @@ export function notificationText(type: string, payload: unknown): string {
   if (type === 'verification_rejected') {
     const parsed = verificationRejectedPayloadSchema.safeParse(payload);
     if (parsed.success) return verificationRejectedText(parsed.data.reason);
+  }
+  if (type === 'task_published') {
+    const parsed = taskPublishedPayloadSchema.safeParse(payload);
+    if (parsed.success) return taskPublishedText(parsed.data.taskTitle);
+  }
+  if (type === 'task_rejected') {
+    const parsed = taskRejectedPayloadSchema.safeParse(payload);
+    if (parsed.success) return taskRejectedText(parsed.data.taskTitle, parsed.data.reason);
   }
   return 'Нове сповіщення';
 }
