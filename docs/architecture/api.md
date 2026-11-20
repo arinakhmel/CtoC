@@ -650,7 +650,7 @@ Public, no session needed. `Cache-Control: no-store`, so a badge granted by a mo
 - The email, the role and the hash are never returned. `skills` is the list from US-10 (alphabetical, `[]` when empty). `bio` is the «Про мене» text from US-11 (`""` when empty), shown as plain text. `experience` is the list of US-37 and US-38, below.
 - `experience` (US-37, US-38, INV-21): the student's experience records, **newest first** by `completedAt`, then by `id` (US-37/S3), at most 100 (`LIMITS.experienceMax`), `[]` when there are none. A record is created only by the accept of a task (US-31, in its transaction) and copies the task's title and description and the completion time (W-15, OQ-14: «обсяг» of the story is read as the description). Only records of a `done` task are listed, so a cancelled task never shows one (US-37/S2, W-07). `confirmedBy` is always `"platform"`: the UI shows it as «Підтверджено платформою CtoC» (US-38/S1). The amounts of the task are not published.
 - **No endpoint writes an experience record** (US-38/S2): there is no `POST`, `PUT`, `PATCH` or `DELETE` under `/api/me/experience` or anywhere else, so such a request is 404 `NOT_FOUND`. Editing skills (`PUT /api/me/skills`) or the bio (`PUT /api/me/profile`) never touches the records (US-38/S3).
-- The only way to become verified is a moderator approving the request (US-39/S1). Until that endpoint exists, `studentVerifiedAt` can only be set in the database.
+- The only way to become verified is a moderator approving the request (US-39/S1).
 
 ### 4.10 `PUT /api/me/skills` and `GET /api/skills` (US-10)
 
@@ -719,7 +719,7 @@ GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
 
 - Access: the same as the feed (any student with a confirmed email), checked first: 401 `AUTH_REQUIRED`, 403 `ROLE_FORBIDDEN`, 403 `EMAIL_NOT_CONFIRMED`.
 - Visibility for a student is the feed rule (INV-06). A task that is pending, rejected, cancelled, taken or expired is 404 `NOT_FOUND`, so its existence is not leaked (US-14/S2).
-- The executor of the task reads it in any state (§4.13a, US-22). The owner and the moderator read other states with US-40 and US-50. This section is extended then.
+- The executor of the task reads it in any state (§4.13a, US-22). Reading a task that is not published, by its owner or by a moderator, stays with US-22 and US-50; US-40 built the moderator's queue (§4.14a) and does not extend this section.
 
 ### 4.13a The executor's view of a task (US-22)
 

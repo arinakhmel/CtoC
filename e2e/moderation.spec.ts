@@ -86,7 +86,8 @@ test.describe('Journey moderation: the moderator decides on student documents an
     expect(asStudent.status()).toBe(404);
     const feed = await pageAs(browser, student);
     await feed.page.goto('/feed');
-    await expect(feed.page.getByRole('heading', { level: 1 })).toBeVisible();
+    // Wait for the loaded feed (a list, or the empty message) before asserting that the card is absent.
+    await expect(feed.page.getByRole('list', { name: 'Доступні завдання' }).or(feed.page.getByText('Поки що немає доступних завдань.'))).toBeVisible();
     await expect(feed.page.getByRole('article', { name: title })).toHaveCount(0);
 
     // The customer's notification carries the reason.
