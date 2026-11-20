@@ -27,9 +27,9 @@ export const findLatestRequest = (userId: string) =>
 
 /**
  * A moderator decision on a pending request (INV-04: at most one per user). Zero rows means it was already decided (a second
- * click) or there is nothing to decide. With `requestId` (the web screen) only the document the moderator saw is decided: a newer
- * pending document of the same student does not match. Telegram knows only the user, so it passes no `requestId` and `decidedBy`
- * stays empty (a Telegram moderator has no account).
+ * click) or there is nothing to decide. Both web and Telegram pass `requestId` for the document the moderator saw, so an older
+ * button cannot decide a newer pending document of the same student. `decidedBy` stays empty only for Telegram, whose moderator
+ * has no account.
  */
 export const decidePending = (
   tx: Tx,
