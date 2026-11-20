@@ -23,7 +23,7 @@ import {
   insertTaskAuditEvent,
   listTasksForModeration,
   publishTaskTx,
-  readCommissionBp,
+  findCommissionBpSetting,
   rejectTaskTx,
   listFeed,
   listTasksOfExecutor,
@@ -245,6 +245,21 @@ export async function moveTaskToRevision(tx: Prisma.TransactionClient, taskId: s
 export const listModerationQueue = (status: ModTaskStatus) => listTasksForModeration(status);
 
 /**
+ * US-40, INV-08. The rate in force: the setting, or `LIMITS.commissionBp.default` when there is no row yet (US-03 is not built). The database
+ * constrains only the key, so a stored value is checked here against the documented range (an integer in 0..5000). A bad value is never
+ * written into a snapshot (it could give a negative net): 500 `INTERNAL_ERROR`, logged, the publish rolled back, as OQ-39 (a).
+ */
+async function commissionBpInForce(tx: Prisma.TransactionClient): Promise<number> {
+  const stored = await findCommissionBpSetting(tx);
+  if (stored === null) return LIMITS.commissionBp.default;
+  if (!Number.isInteger(stored) || stored < LIMITS.commissionBp.min || stored > LIMITS.commissionBp.max) {
+    console.error(`Setting commission_bp is ${stored}, outside ${LIMITS.commissionBp.min}..${LIMITS.commissionBp.max}: the task cannot be published`);
+    throw new ApiError('INTERNAL_ERROR');
+  }
+  return stored;
+}
+
+/**
  * US-40 sc.1, INV-05, INV-08, INV-24. One transaction: the rate in force (the setting, or the default), the split with `splitPrice`,
  * then ONE conditional write `pending_moderation` → `published` with the snapshot (commission, net, rate) and `publishedAt`. A count of 0
  * is a repeat, a race, or a task the owner already cancelled: 409 `ALREADY_DECIDED`, an unknown id is 404. The audit event and the
@@ -254,7 +269,7 @@ export async function publishTask(moderatorId: string, id: string) {
   return prisma.$transaction(async (tx) => {
     const task = await findModTaskTx(tx, id);
     if (!task) throw new ApiError('NOT_FOUND');
-    const commissionBp = await readCommissionBp(tx);
+    const commissionBp = await commissionBpInForce(tx);
     const split = splitPrice(task.priceKopecks, commissionBp);
     const changed = await publishTaskTx(tx, id, { commissionBp, commissionKopecks: split.commissionKopecks, netKopecks: split.netKopecks }, new Date());
     if (changed.count === 0) throw new ApiError('ALREADY_DECIDED');

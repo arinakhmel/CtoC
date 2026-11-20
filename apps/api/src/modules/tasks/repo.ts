@@ -189,17 +189,16 @@ export const returnTaskTx = (tx: Prisma.TransactionClient, id: string, ownerId: 
     data: { status: REVISION },
   });
 
-/** US-40. The moderator's queue: oldest first, at most 100 (api.md §4.14a). */
-const MOD_QUEUE_MAX = 100;
+/** US-40. The moderator's queue: oldest first, at most `LIMITS.taskQueueMax` (api.md §4.14a). */
 export const modTaskInclude = { customer: { select: { id: true, displayName: true } } } satisfies Prisma.TaskInclude;
 export const listTasksForModeration = (status: ModTaskStatus) =>
-  prisma.task.findMany({ where: { status }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: MOD_QUEUE_MAX, include: modTaskInclude });
+  prisma.task.findMany({ where: { status }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: LIMITS.taskQueueMax, include: modTaskInclude });
 export const findModTaskTx = (tx: Prisma.TransactionClient, id: string) =>
   tx.task.findUnique({ where: { id }, include: modTaskInclude });
 
-/** US-40/S1, INV-08. The rate in force: the setting, or the default when the row does not exist yet (US-03 is not built). */
-export const readCommissionBp = async (tx: Prisma.TransactionClient): Promise<number> =>
-  (await tx.setting.findUnique({ where: { key: 'commission_bp' } }))?.value ?? LIMITS.commissionBp.default;
+/** US-40/S1. The stored rate as it is, or null when the row does not exist yet (US-03 is not built). The caller checks the range. */
+export const findCommissionBpSetting = async (tx: Prisma.TransactionClient): Promise<number | null> =>
+  (await tx.setting.findUnique({ where: { key: 'commission_bp' } }))?.value ?? null;
 
 /** US-40/S1 (INV-24, ADR-0007). One conditional write: only a task still waiting is published, and the snapshot is written with the status. */
 export const publishTaskTx = (

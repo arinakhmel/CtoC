@@ -91,6 +91,42 @@ describe('/notifications of the student: «Ваш результат прийн�
   });
 });
 
+describe('/notifications of the customer: the decision of the moderator on a task (US-40, US-49)', () => {
+  const PUBLISHED = 'Ваше завдання «Логотип» опубліковано';
+  const REJECTED = 'Ваше завдання «Логотип» відхилено. Причина: домашнє завдання';
+
+  it('US-49 sc.1 «опубліковано» is listed as new and links to the customer card; a payload of another shape gives no link', async () => {
+    listResponse = () =>
+      json({
+        notifications: [
+          { id: 'n11', type: 'task_published', text: PUBLISHED, payload: { taskId: 't11', taskTitle: 'Логотип' }, read: false, createdAt: '2026-11-13T10:00:00.000Z' },
+          { ...note(true), id: 'n10', type: 'task_published', text: 'Нове сповіщення', payload: { unexpected: true } },
+        ],
+      });
+    open();
+
+    const article = await screen.findByRole('article', { name: PUBLISHED });
+    expect(within(article).getByText('Нове:')).toBeInTheDocument();
+    expect(within(article).getByRole('link', { name: 'Відкрити завдання' })).toHaveAttribute('href', '/c/tasks/t11');
+    expect(screen.getAllByRole('link', { name: 'Відкрити завдання' })).toHaveLength(1); // the bad payload has no link
+  });
+
+  it('US-49 sc.2 «відхилено. Причина: …» links to the customer card; a payload without the reason gives no link', async () => {
+    listResponse = () =>
+      json({
+        notifications: [
+          { id: 'n13', type: 'task_rejected', text: REJECTED, payload: { taskId: 't13', taskTitle: 'Логотип', reason: 'домашнє завдання' }, read: false, createdAt: '2026-11-13T10:00:00.000Z' },
+          { ...note(true), id: 'n12', type: 'task_rejected', text: 'Нове сповіщення', payload: { taskId: 't12', taskTitle: 'Логотип' } },
+        ],
+      });
+    open();
+
+    const article = await screen.findByRole('article', { name: REJECTED });
+    expect(within(article).getByRole('link', { name: 'Відкрити завдання' })).toHaveAttribute('href', '/c/tasks/t13');
+    expect(screen.getAllByRole('link', { name: 'Відкрити завдання' })).toHaveLength(1);
+  });
+});
+
 describe('/notifications of the customer (US-48)', () => {
   it('US-48 sc.1 «Студент надіслав результат…» is listed as new and links to the customer card of the task', async () => {
     const text = 'Студент надіслав результат за завданням «Парсер сайту» на перевірку';

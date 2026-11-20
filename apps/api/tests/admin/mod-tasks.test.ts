@@ -1,3 +1,4 @@
+import { LIMITS } from '@ctoc/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { hashSessionId } from '../../src/modules/identity/domain';
 import * as notificationsRepo from '../../src/modules/notifications/repo';
@@ -76,6 +77,50 @@ describe('US-40 sc.1 publish', () => {
     await publish(task.id, moderator.cookie);
 
     expect(await prisma.task.findUniqueOrThrow({ where: { id: task.id } })).toMatchObject({ commissionBp: 2000, commissionKopecks: 20_000, netKopecks: 80_000 });
+  });
+
+  it.each([20_000, -1, 5001])('US-40 sc.1 a stored rate of %s is outside 0..5000: 500 INTERNAL_ERROR, nothing published, no snapshot, no notification', async (value) => {
+    await prisma.setting.create({ data: { key: 'commission_bp', value } });
+    const task = await pendingTask();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const res = await publish(task.id, moderator.cookie);
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(await prisma.task.findUniqueOrThrow({ where: { id: task.id } })).toMatchObject({
+      status: 'pending_moderation',
+      commissionBp: null,
+      commissionKopecks: null,
+      netKopecks: null,
+      publishedAt: null,
+    });
+    expect(await auditCount()).toBe(0);
+    expect(await prisma.notification.count()).toBe(0);
+  });
+
+  it.each([0, 5000])('US-40 sc.1 the limits of the range, %s, are accepted', async (value) => {
+    await prisma.setting.create({ data: { key: 'commission_bp', value } });
+    const task = await pendingTask();
+
+    expect((await publish(task.id, moderator.cookie)).status).toBe(200);
+    const row = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+    expect(row.commissionKopecks! + row.netKopecks!).toBe(100_000);
+    expect(row.netKopecks).toBeGreaterThanOrEqual(0);
+  });
+
+  it('US-40 the queue holds at most LIMITS.taskQueueMax rows', async () => {
+    await prisma.task.createMany({
+      data: Array.from({ length: LIMITS.taskQueueMax + 2 }, (_, i) => ({
+        customerId: customer.user.id,
+        title: `Завдання ${i}`,
+        description: 'Опис',
+        priceKopecks: 10_000,
+        deadlineAt: new Date(Date.now() + 86_400_000),
+        status: 'pending_moderation',
+      })),
+    });
+    expect((await queue(moderator.cookie)).body.items).toHaveLength(LIMITS.taskQueueMax);
   });
 
   it('US-40 sc.1 an unknown id is 404 NOT_FOUND', async () => {

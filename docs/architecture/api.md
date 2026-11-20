@@ -741,7 +741,7 @@ GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
 
 The moderator's queue of new tasks (`/mod/tasks`). Access: a moderator only (INV-25). The role is checked before the query or the body, so a student or a customer is 403 `ROLE_FORBIDDEN` even with an invalid body, and no session is 401 `AUTH_REQUIRED`.
 
-- `GET /api/mod/tasks?status=pending_moderation|published|rejected` (default `pending_moderation`; anything else is 400 `VALIDATION_FAILED`): oldest first, at most 100.
+- `GET /api/mod/tasks?status=pending_moderation|published|rejected` (default `pending_moderation`; anything else is 400 `VALIDATION_FAILED`): oldest first, at most `LIMITS.taskQueueMax` (100).
 
 ```json
 { "items": [ { "id": "…", "title": "Логотип для кав’ярні", "description": "…", "priceKopecks": 100000,
@@ -752,7 +752,7 @@ The moderator's queue of new tasks (`/mod/tasks`). Access: a moderator only (INV
 The customer's email is never in it.
 
 - `POST …/:id/publish` (empty body) and `POST …/:id/reject` `{ "reason": "…" }` (the shared `moderationRejectSchema`, 1 to 500 characters after trimming, 400 `REASON_REQUIRED` when empty or spaces only). Unknown id is 404 `NOT_FOUND`. The answer is `{ "task": { … } }` in the shape of a list item.
-- **Publish** is one transaction: the rate is read (`Setting commission_bp`, or `LIMITS.commissionBp.default` when there is no row), the split is `splitPrice` (INV-08), and ONE conditional update `WHERE status = 'pending_moderation'` writes `status = published`, `commission_bp`, `commission_kopecks`, `net_kopecks`, `published_at`. An audit event `task.published` and a notification `task_published` (`{ taskId, taskTitle }`, text «Ваше завдання «Назва» опубліковано») to the customer are in the same transaction.
+- **Publish** is one transaction: the rate is read (`Setting commission_bp`, or `LIMITS.commissionBp.default` when there is no row; a stored value outside the integers `LIMITS.commissionBp.min`..`max` (0..5000) is never used: 500 `INTERNAL_ERROR`, logged, nothing is published, as OQ-39 a), the split is `splitPrice` (INV-08), and ONE conditional update `WHERE status = 'pending_moderation'` writes `status = published`, `commission_bp`, `commission_kopecks`, `net_kopecks`, `published_at`. An audit event `task.published` and a notification `task_published` (`{ taskId, taskTitle }`, text «Ваше завдання «Назва» опубліковано») to the customer are in the same transaction.
 - **Reject** is the same shape: the conditional update `pending_moderation` → `rejected` with `moderation_reason`, no snapshot, an audit event `task.rejected` and a notification `task_rejected` (`{ taskId, taskTitle, reason }`, text «Ваше завдання «Назва» відхилено. Причина: …»).
 - The first decision wins (INV-24): a repeat, two at once, or a task the owner cancelled in between is 409 `ALREADY_DECIDED` with no change. The unpublish of a `published` task (G-17) is not built in the MVP (OQ-43 c).
 
