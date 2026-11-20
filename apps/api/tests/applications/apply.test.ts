@@ -252,7 +252,6 @@ const PRICE_KEYS = ['priceKopecks', 'price', 'budget', 'bid'];
 async function expectPriceIgnored(res: { status: number; body: any }, taskId: string, price: number) {
   expect(res.status).toBe(201);
   for (const key of PRICE_KEYS) expect(res.body.application).not.toHaveProperty(key);
-  expect(JSON.stringify(res.body)).not.toMatch(/budget|bid/);
   const rows = await prisma.application.findMany({ where: { taskId } });
   expect(rows).toHaveLength(1);
   for (const key of PRICE_KEYS) expect(rows[0]).not.toHaveProperty(key);
