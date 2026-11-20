@@ -1,8 +1,8 @@
 # Epic 7. Межі продукту та довіра (наскрізні історії): план і промпти
 
-Історії: **US-39, US-40, US-41, US-42**
+Історії: **US-39, US-40, US-41, US-42**; торкається також **US-14, US-15, US-18** (перепрогін через справжній publish і справжній approve)
 
-> Стан у розділі 1 зафіксовано **до** початку роботи (20.11.2026, `main` = `7e0c115`). Поточний стан після кожного PR дивитися в `docs/architecture/traceability.md` §5.
+> Розділ 1 описує **фінальний стан** після Епіку 7 (звірено 20.11.2026 з кодом, тестами й `docs/architecture/traceability.md` §5; `main` до Епіку 7 = `7e0c115`, PR #40–#43 змерджено, PR #44 (`epic7/e2e`) відкрито). Початковий стан до роботи: US-39 і US-40 частково (рішення модератора лише через Telegram, `POST /api/tasks` уже завжди `pending_moderation`), US-41 не почато, US-42 зроблено без назв `US-42 sc.N`. Якщо §1 і `traceability.md` розходяться, правий `traceability.md`.
 
 ---
 
@@ -15,14 +15,17 @@
 
 ---
 
-## 1. Що вже зроблено, а що ні (стан на 20.11.2026)
+## 1. Фінальний стан Епіку 7 (звірено 20.11.2026)
 
-| Історія | Стан | Що вже є | Що лишилося |
+| Історія | Стан у `traceability.md` §5 | Що зроблено | Що лишилось |
 |---|---|---|---|
-| US-39 ручна перевірка студентських квитків | **частково** | Завантаження документа (US-08), `VerificationRequest` зі статусами, бейдж із `studentVerifiedAt` (US-09). Рішення модератора існує **лише через Telegram** (`POST /api/webhooks/telegram`, OQ-21): approve/reject однією транзакцією з аудитом, тести `apps/api/tests/verification/telegram.test.ts` (sc.1, sc.2 через Telegram). Політика `assertModerator` і `requireModerator` в `apps/api/src/modules/admin` (зроблено для `/mod/withdrawals`). | `GET /api/mod/verifications`, `POST …/:id/approve`, `POST …/:id/reject` (причина обов'язкова, `REASON_REQUIRED`). Сповіщення `verification_rejected` у центрі сповіщень (зараз лише email, і з фіксованою причиною). Доступ модератора до файлу документа (`GET /api/files/:fileId`, «M comes with US-39» в `delivery/policy.ts`). Сторінка `/mod/verifications` (зараз заглушка `PageStub`). Тест sc.3 (студент → 403). Рядок у traceability §5 |
-| US-40 перевірка завдань перед публікацією | **частково** | `POST /api/tasks` завжди створює `pending_moderation` (INV-05), підроблений `status` вирізається: тести `create-task.test.ts` (US-40 sc.3), `packages/shared/tests/tasks.test.ts`. Фільтр стрічки INV-06 (US-14 на засіяних рядках). `moderationRejectSchema` у `@ctoc/shared`. | `GET /api/mod/tasks`, `POST …/:id/publish` (**знімок комісії**: `commission_bp`, `commission_kopecks`, `net_kopecks`, `published_at`, OQ-22), `POST …/:id/reject` (причина). Сторінка `/mod/tasks`. Тести sc.1, sc.2 через справжні переходи, повторний прогін US-14 і US-15 sc.1 через publish. Виправити `data-model.md` §2: CHECK `commission_bp IS NOT NULL` для опублікованих у БД не існує (рішення 7, OQ-43 b; рядок US-15 у §5). Сповіщення замовнику `task_published` / `task_rejected` (US-49, Епік 8: тригер тут) |
-| US-41 без агенцій серед виконавців | **не почато як історія** | Відгук лише для верифікованого студента (US-18 sc.3, 403 `STUDENT_NOT_VERIFIED`). Реєстрація студента лише з університетським доменом (US-06). | Тести `US-41 sc.1` (наскрізно: approve через mod-ендпоінт → може відгукнутися, не approve → 403), `sc.2` (відхилення «агенції» через шлях US-39 sc.2), `sc.3` ⚠ W-12: автоматизована частина «технічних правил» + задокументований пункт рев'ю. Рядок §5 |
-| US-42 без власної ціни | **майже зроблено, але не названо** | Сервер вирізає `priceKopecks` із тіла відгуку, 201, ціна задачі не змінюється (`apply.test.ts`, тест названо `US-13 sc.2`; `validate-body.test.ts`; `packages/shared/tests/tasks.test.ts` US-42 sc.2). Форма відгуку без поля ціни (US-13 sc.1, sc.3 у UI). | Тести з назвами `US-42 sc.1…3` (sc.1 і sc.3 на рівні UI: форма відгуку, стрічка і картка без поля ціни, ставки, «торгу»). Рядок §5. Коду продукту, найімовірніше, не треба |
+| US-39 ручна перевірка студентських квитків | **done** | `GET /api/mod/verifications`, `POST …/:id/approve` і `/reject` (`api.md` §4.8b); одна функція рішення на web і Telegram (`verification/service.ts`, умовний `updateMany` `WHERE id = requestId AND userId AND status = 'pending'`); бейдж, аудит і сповіщення `verification_approved` / `verification_rejected` в одній транзакції, email після коміту; модератор завантажує лише `student_document` (OQ-43 a); сторінка `/mod/verifications`. Тести: `apps/api/tests/admin/verifications.test.ts` (sc.1–3, гонки, застарілий `:id`, відкат), `telegram.test.ts`, `apps/web/tests/mod-verifications.test.tsx`; e2e тести 1 і 4. | Нічого за сценаріями. Відкрито лише OQ-21 (підтвердити з власником продукту рішення про приватність документів у Telegram) |
+| US-40 перевірка завдань перед публікацією | **done** | `GET /api/mod/tasks`, `POST …/:id/publish` (знімок комісії `commission_bp`, `commission_kopecks`, `net_kopecks`, `published_at` одним умовним `updateMany`), `POST …/:id/reject` (причина); сповіщення `task_published` / `task_rejected` в тій самій транзакції (тригер US-49); сторінка `/mod/tasks`. Тести: `apps/api/tests/admin/mod-tasks.test.ts` (sc.1–3, доступ, гонки publish/reject і publish/delete, відкат), `apps/web/tests/mod-tasks.test.tsx`; e2e тести 2 і 3. | Unpublish `published → rejected` (G-17) не збудовано за рішенням (OQ-43 c). Відкрито OQ-43 e (скасування власником після публікації лишає знімок) |
+| US-41 без агенцій серед виконавців | **partial** (sc.3 ⚠ W-12) | Лише тести й документи, без коду продукту: `apps/api/tests/admin/us-41-no-agencies.test.ts` (sc.1 і sc.2 через справжні `approve` / `reject`, sc.3 лише технічні правила: замовник 403 `ROLE_FORBIDDEN`, `role: "moderator"` при реєстрації 400 `VALIDATION_FAILED`, неверифікований студент 403 `STUDENT_NOT_VERIFIED`). | Розпізнавання агенції за документом: ручний пункт рев'ю модератора (OQ-15), кодом не перевіряється (W-12) |
+| US-42 без власної ціни | **done** | Лише тести, без коду продукту: `apply.test.ts` (sc.1, sc.2), `validate-body.test.ts`, `shared/tests/tasks.test.ts` (sc.2), `apps/web/tests/apply.test.tsx` (sc.1), `task-details.test.tsx` (sc.3), спільний хелпер `apps/web/tests/no-bid-controls.ts`. sc.2 спільний із US-13 sc.2 (W-05: strip, 201). | Нічого |
+| US-14 лише перевірені завдання в стрічці | **partial** | sc.1–3 проходять через справжній publish і reject US-40: `apps/api/tests/tasks/moderation-visibility.test.ts`, `mod-tasks.test.ts` | `GET /api/tasks/:id` для власника й модератора непублікованої задачі лишається за US-22 і US-50. Сценарії US-14 покриті; `partial` через цю залежність |
+| US-15 чиста сума в картці | **done** | sc.1 через справжній publish (OQ-22 закрито); sc.2 за W-04 (відмова при створенні, 400 `PRICE_BELOW_MIN`, CHECK у БД, `commissionOf`); sc.3 перевіряє розмітку | Макет 390 px перевіряється вручну, не тестом (e2e `finance-mobile.spec.ts` перевіряє 390 px лише для `/me/finance`) |
+| US-18 відгук на завдання (Епік 5, не змінювалась) | **done** | Через US-41 його 403 `STUDENT_NOT_VERIFIED` (sc.3) перевірено наскрізно: студента схвалює справжній `approve`, відхиленого `reject` | Нічого |
 
 **Чого в Епіку 7 немає (не будувати):** `POST /api/mod/users/:id/revoke-student` (A-18), `POST /api/mod/tasks/:id/resolve` (A-09, OQ-08), `/mod/settings` і `PUT /api/mod/settings` (US-03, Епік 1), `/api/mod/university-domains` (A-17).
 
@@ -57,11 +60,11 @@
 
 | Крок | Гілка | Історія | Що | Готово, коли |
 |---|---|---|---|---|
-| 1 | `epic7/us-39` | US-39 | Модерація студентських квитків: `GET/POST /api/mod/verifications*`, спільна функція рішення з Telegram, сповіщення `verification_rejected`, доступ модератора до `student_document`, сторінка `/mod/verifications` | 3 сценарії US-39 мають тести `US-39 sc.N`, гонка двох рішень, відкат, Telegram-тести зелені, рядок US-39 у §5 → `done` |
-| 2 | `epic7/us-41` | US-41 | Лише тести й документи поверх змердженого US-39 і наявного US-18: `US-41 sc.1`, `sc.2`, `sc.3` (W-12), оновлення §5 і §4 W-12 | 3 сценарії, `/check-story US-41` без «not covered», крім sc.3 ⚠ [DESIGN] |
-| 3 | `epic7/us-40` | US-40 | Модерація завдань: API зі знімком комісії, виправлення `data-model.md` §2 (без міграції, OQ-43 b), сповіщення US-49, сторінка `/mod/tasks` | 3 сценарії US-40, повторно через publish: US-14 sc.1–3, US-15 sc.1; гонки publish/reject і publish/delete; US-15 у §5 → `done`, US-14 → `partial` (черга `/mod/tasks` є, читання неопублікованої задачі модератором через `GET /api/tasks/:id` лишається за US-22) |
-| 4 | `epic7/us-42` | US-42 | Лише тести й документи: назви `US-42 sc.N`, UI-перевірка відсутності елементів аукціону | 3 сценарії, `/check-story US-42` без «not covered» |
-| 5 | `epic7/e2e` | усі чотири | `e2e/support/finance-seed.ts`: сесія модератора через наявний `userWithSession('moderator', …)`, а студента верифікує і задачу публікує модератор **через API**, а не прямим записом у БД; новий `e2e/moderation.spec.ts`; фінальна перевірка епіка | `pnpm test:e2e` зелений, `/check-story` по 4 історіях, `architecture-reviewer` без blocker |
+| 1 | `epic7/us-39` | US-39 | Модерація студентських квитків: `GET/POST /api/mod/verifications*`, спільна функція рішення з Telegram, сповіщення `verification_rejected`, доступ модератора до `student_document`, сторінка `/mod/verifications` | 3 сценарії US-39 мають тести `US-39 sc.N`, гонка двох рішень, відкат, Telegram-тести зелені, рядок US-39 у §5 → `done`. **Виконано, PR #40** |
+| 2 | `epic7/us-41` | US-41 | Лише тести й документи поверх змердженого US-39 і наявного US-18: `US-41 sc.1`, `sc.2`, `sc.3` (W-12), оновлення §5 і §4 W-12 | 3 сценарії, `/check-story US-41` без «not covered», крім sc.3 ⚠ [DESIGN]. **Виконано, PR #41** (рядок §5 лишається `partial`, W-12) |
+| 3 | `epic7/us-40` | US-40 | Модерація завдань: API зі знімком комісії, виправлення `data-model.md` §2 (без міграції, OQ-43 b), сповіщення US-49, сторінка `/mod/tasks` | 3 сценарії US-40, повторно через publish: US-14 sc.1–3, US-15 sc.1; гонки publish/reject і publish/delete; US-15 у §5 → `done`, US-14 → `partial` (черга `/mod/tasks` є, читання неопублікованої задачі модератором через `GET /api/tasks/:id` лишається за US-22). **Виконано, PR #42** |
+| 4 | `epic7/us-42` | US-42 | Лише тести й документи: назви `US-42 sc.N`, UI-перевірка відсутності елементів аукціону | 3 сценарії, `/check-story US-42` без «not covered». **Виконано, PR #43** |
+| 5 | `epic7/e2e` | усі чотири | `e2e/support/finance-seed.ts`: сесія модератора через наявний `userWithSession('moderator', …)`, а студента верифікує і задачу публікує модератор **через API**, а не прямим записом у БД; новий `e2e/moderation.spec.ts`; фінальна перевірка епіка | `pnpm test:e2e` зелений, `/check-story` по 4 історіях, `architecture-reviewer` без blocker. **Виконано, PR #44 (відкритий)**. Сід акаунтів і сесій напряму в БД (`userWithSession`, через ліміт реєстрації), решта через API; назви e2e `Journey …`; оновлено `testing.md` §2 і §5 |
 
 ### Файли по кроках
 
@@ -79,7 +82,7 @@
 - Документи: `api.md` §1 (рядки, коди), §4.8b (новий: тіла черги і рішень), рядок `/api/files/:fileId`; `domain-model.md` §1 (сповіщення), §3.2, якщо змінився перехід; `integrations.md` (Telegram більше не єдиний шлях); `overview.md` §7.2 OQ-21 (екрани модератора тепер є), OQ-43 (a); `traceability.md` §5 (US-39).
 
 **Крок 2 (US-41)**
-- Нових файлів продукту немає. Тести: `apps/api/tests/applications/us-41-no-agencies.test.ts` (новий; наскрізно через `/api/mod/verifications/*` з кроку 1 і `POST /api/tasks/:id/applications`), за потреби `apps/api/tests/identity/register.test.ts` (`role: "moderator"` у тілі реєстрації → 400 `VALIDATION_FAILED`, якщо такого тесту ще немає).
+- Нових файлів продукту немає. Тести: `apps/api/tests/admin/us-41-no-agencies.test.ts` (новий; фактичний шлях; наскрізно через `/api/mod/verifications/*` з кроку 1 і `POST /api/tasks/:id/applications`), за потреби `apps/api/tests/identity/register.test.ts` (`role: "moderator"` у тілі реєстрації → 400 `VALIDATION_FAILED`, якщо такого тесту ще немає).
 - Документи: `traceability.md` §5 (US-41), §4 W-12 (автоматизована технічна частина і ручний пункт рев'ю), за потреби `overview.md` OQ-15.
 
 **Крок 3 (US-40)**
@@ -91,15 +94,16 @@
 - `apps/api/src/modules/admin/*`: `/mod/tasks*`.
 - `apps/api/tests/helpers/factories.ts`: дефолт `createTask` **не змінювати** (рішення 7). Тести `net-price.test.ts:77`, `feed.test.ts:58`, `task-details.test.ts:51` і `finance.test.ts:263` лишаються як є. `seed/dev-work.ts` і `e2e/support/finance-seed.ts` уже пишуть знімок; `finance-seed.ts` переходить на реальний `POST /api/mod/tasks/:id/publish` у кроці 5.
 - `apps/web/src/features/admin/pages/TasksQueuePage.tsx`, `queries/tasks.ts`, `router.tsx`.
-- Тести: `apps/api/tests/admin/tasks.test.ts`, `apps/api/tests/tasks/moderation-visibility.test.ts` і `net-price.test.ts` (через справжній publish), `apps/web/tests/mod-tasks.test.tsx`, `apps/web/tests/pages.test.tsx` (додати `/mod/tasks` до `IMPLEMENTED_PAGES`, інакше тест заглушок упаде).
+- Тести: `apps/api/tests/admin/mod-tasks.test.ts` (фактична назва), `apps/api/tests/tasks/moderation-visibility.test.ts` і `net-price.test.ts` (через справжній publish), `apps/web/tests/mod-tasks.test.tsx`, `apps/web/tests/pages.test.tsx` (додати `/mod/tasks` до `IMPLEMENTED_PAGES`, інакше тест заглушок упаде).
 - Документи: `api.md` §1, §4 (новий розділ тіл), `data-model.md` §2 (уточнити: знімок для `published` гарантує транзакція `publish`, а не DB CHECK), `domain-model.md` §3.1 (G-17 відкладено), `overview.md` OQ-22 (закрито), OQ-43 (b–d), `traceability.md` §5 (US-40 і US-15 → `done`, US-14 → `partial`: читання неопублікованої задачі модератором через `GET /api/tasks/:id` лишається за US-22; US-49).
 
 **Крок 4 (US-42)**
-- `apps/api/tests/applications/apply.test.ts`, `apps/web/tests/apply.test.tsx`, `apps/web/tests/feed.test.tsx`, `apps/web/tests/task-details.test.tsx`.
+- `apps/api/tests/applications/apply.test.ts`, `apps/web/tests/apply.test.tsx`, `apps/web/tests/task-details.test.tsx` (sc.3 для стрічки й картки), спільний хелпер `apps/web/tests/no-bid-controls.ts`, `packages/shared/tests/tasks.test.ts`, `validate-body.test.ts`.
 - `traceability.md` §5 (US-42).
 
 **Крок 5 (e2e)**
-- `e2e/support/finance-seed.ts` (сесія модератора лишається через `userWithSession('moderator', …)`; на API переходять лише верифікація і publish; коментарі в рядках 7–8 і в `payout-and-experience.spec.ts:8` стануть неправдою, їх виправити), новий `e2e/moderation.spec.ts`.
+- `e2e/support/finance-seed.ts` (акаунти й сесії, зокрема модератор, лишаються прямими записами в БД через `userWithSession`, бо `POST /api/auth/register` обмежений 10 реєстраціями на годину; студента верифікують завантаження документа і схвалення модератором через API, задачу створює замовник і публікує модератор через API, тож знімок комісії реальний; виконавець, escrow і результат `in_review` досі пишуться в БД; параметр `commissionKopecks` прибрано; застарілі коментарі виправлено), новий `e2e/support/moderation-api.ts` (виклики API з сесіями), новий `e2e/moderation.spec.ts`, виклики `seedTasksInReview(request, …)` у `payout-and-experience.spec.ts` і `finance-mobile.spec.ts`.
+- `docs/architecture/testing.md`: §2 (префікс `US-xx sc.N` для тестів `shared`, `web`, `api`; e2e називаються `Journey <name>: …` з коментарем про історії), §5 (акаунти й сесії сідяться в БД через `userWithSession`, подальші дії через реальні API).
 
 ### Правила, обов'язкові для кожного кроку (з `CLAUDE.md` і ADR)
 
@@ -181,7 +185,6 @@ domain-model.md INV-03, INV-04, INV-24, INV-25, §1 Notification, §3.2; ADR-000
 - Якщо щось у вимогах суперечить дизайну, додай OQ в overview.md §7.2 і скажи мені, не вирішуй мовчки.
 - В кінці: pnpm typecheck і pnpm test зелені, покажи вивід. Потім /check-story US-39.
 - Перед комітом запусти агента architecture-reviewer на diff гілки відносно main; blocker-зауваження виправ.
-  Потім commit, git push -u origin epic7/us-39 і gh pr create --base main --fill.
 ```
 
 ### Промпт 7.2: US-41 (без агенцій серед виконавців)
@@ -218,7 +221,6 @@ overview.md OQ-15; apps/api/tests/applications/apply.test.ts і apps/api/tests/v
 - Якщо щось у вимогах суперечить дизайну, додай OQ в overview.md §7.2 і скажи мені, не вирішуй мовчки.
 - В кінці: pnpm typecheck і pnpm test зелені, покажи вивід. Потім /check-story US-41.
 - Перед комітом запусти агента architecture-reviewer на diff гілки відносно main; blocker-зауваження виправ.
-  Потім commit, git push -u origin epic7/us-41 і gh pr create --base main --fill.
 ```
 
 ### Промпт 7.3: US-40 (модерація завдань перед публікацією)
@@ -279,7 +281,6 @@ domain-model.md INV-05, INV-06, INV-08, INV-24, §3.1; data-model.md tasks; ADR-
 Ті самі, що в промпті 7.1. /api/mod/tasks/:id/resolve (A-09) і /mod/settings (US-03) НЕ будувати. Ніякого float, лише splitPrice.
 В кінці pnpm typecheck і pnpm test зелені, вивід мені, потім /check-story US-40, /check-story US-14, /check-story US-15.
 - Перед комітом запусти агента architecture-reviewer на diff гілки відносно main; blocker-зауваження виправ.
-  Потім commit, git push -u origin epic7/us-40 і gh pr create --base main --fill.
 ```
 
 ### Промпт 7.4: US-42 (фіксована ціна, без аукціону)
@@ -298,16 +299,15 @@ validate-body.test.ts:31, packages/shared/tests/tasks.test.ts:98. Форма в�
 2. Онови traceability.md §5 рядок US-42 (і згадку в US-13, що sc.2 спільний).
 
 # ТЕСТИ
-- US-42 sc.1 [UI]: на /tasks/:id форма/кнопки «Відгукнутися» і «Відгукнутися із запискою» (W-26) не мають жодного поля ціни, бюджету
-  чи числового input; [API] відгук створено, задача має ту саму priceKopecks.
+- US-42 sc.1 [UI]: на /tasks/:id форма/кнопки «Відгукнутися» і «Відгукнутися із запискою» (W-26) не мають жодного числового поля
+  (заборонені лише `spinbutton` та `input[type="number"]`; `textarea` для супровідної записки дозволена) і поля, названого ціною чи бюджетом; [API] відгук створено, задача має ту саму priceKopecks.
 - US-42 sc.2 [API]: тіло з priceKopecks: 100 (і budget, bid) → 201, у відповіді й у БД ціни немає, ціна задачі незмінна. // W-05, decided: strip.
-- US-42 sc.3 [UI]: стрічка /feed і картка /tasks/:id не містять textbox/spinbutton для ціни та текстів «ставк», «торг», «запропонувати ціну»,
-  «аукціон» (регістронезалежно, getByRole/queryByText).
+- US-42 sc.3 [UI]: стрічка /feed і картка /tasks/:id не містять `spinbutton`, `input[type="number"]` і поля, названого ціною, а також текстів «ставк», «торг», «запропонувати ціну»,
+  «аукціон» (регістронезалежно, getByRole/queryByText). Критерій числових полів: заборонені лише `spinbutton` та `input[type="number"]`, `textarea` записки дозволена (`allowNote` у `expectNoBidControls`, `apps/web/tests/no-bid-controls.ts`; на стрічці й картці без відкритої записки текстових полів немає взагалі).
 
 # ОБМЕЖЕННЯ
 Ті самі, що в промпті 7.1. Не перемикай схеми в strict mode (це рішення W-05). В кінці pnpm typecheck, pnpm test, /check-story US-42.
 - Перед комітом запусти агента architecture-reviewer на diff гілки відносно main; blocker-зауваження виправ.
-  Потім commit, git push -u origin epic7/us-42 і gh pr create --base main --fill.
 ```
 
 ### Промпт 7.5: e2e і фінальна перевірка епіка
@@ -319,9 +319,12 @@ validate-body.test.ts:31, packages/shared/tests/tasks.test.ts:98. Форма в�
 Гілка epic7/e2e.
 1. e2e/support/finance-seed.ts зараз пише verified-студента і published-задачу прямо в БД, бо US-39 і US-40 не мали API
    (коментарі в рядках 7–8 і в e2e/payout-and-experience.spec.ts:8). Тепер переведи ці два кроки на справжні виклики:
-   сесію модератора створює наявний e2e-хелпер userWithSession('moderator', …) у finance-seed.ts (seedModerator), а не pnpm db:seed;
+   акаунти й сесії (студент, замовник, модератор) створює наявний e2e-хелпер userWithSession(role, …) у finance-seed.ts напряму в БД
+   (seedModerator для модератора, не pnpm db:seed), бо POST /api/auth/register обмежений 10 реєстраціями на годину;
    студент спершу завантажує документ через POST /api/me/verification (multipart, зі своєю сесією), а потім модератор через API
-   (зі своєю сесією) схвалює саме цей запит і публікує задачу. Виправ застарілі коментарі.
+   (зі своєю сесією) схвалює саме цей запит, а замовник створює задачу і модератор публікує її через API (знімок комісії тепер реальний,
+   тож параметр commissionKopecks із seedTasksInReview прибрати). Виконавець, escrow і результат in_review лишаються записом у БД.
+   Виправ застарілі коментарі. Допоміжні виклики API винеси в e2e/support/moderation-api.ts.
 2. Новий e2e/moderation.spec.ts (кроки 3 і 5 User Journey, overview.md §5). Окремі test(...)-блоки в одному test.describe,
    у кожному лише ОДИН основний крок у браузері, усе до нього — seed через API (скіл /e2e-tests, testing.md §5):
    - test 1 (US-39): seed — студент завантажив квиток через API; браузер — модератор на /mod/verifications натискає «Схвалити»;
@@ -332,9 +335,11 @@ validate-body.test.ts:31, packages/shared/tests/tasks.test.ts:98. Форма в�
      перевірка — у стрічці її немає, у замовника сповіщення з причиною.
    - test 4 (US-39 sc.3): браузер — студент відкриває /mod/verifications; перевірка — елемент role="alert" з текстом «Доступ заборонено»
      (відповідь 403 ROLE_FORBIDDEN). Окремої «сторінки відмови» і route guard'ів у web немає, їх не будувати.
-   Локатори лише getByRole/getByLabel/getByText.
+   Локатори лише getByRole/getByLabel/getByText. Назви e2e-тестів у форматі `Journey moderation: …` (не `US-xx sc.N`), історії й сценарії в коментарі над тестом.
+3. Онови docs/architecture/testing.md: §2 (префікс `US-xx sc.N` лише для тестів shared, web, api; e2e називаються `Journey <name>: …`),
+   §5 (акаунти й сесії сідяться в БД через userWithSession, подальші дії через реальні API).
 
-Після цього:
+Після цього (результат: усе зелене; нову e2e-перевірку 4 тестів проходить стабільно):
 1. /check-story для US-39, US-40, US-41, US-42 (і US-14, US-15). Жодного «not covered», крім US-41 sc.3 ⚠ W-12 [DESIGN].
 2. Агент architecture-reviewer на diff усіх гілок Епіку 7 відносно main.
 3. pnpm typecheck, pnpm test, pnpm test:e2e: покажи вивід.
@@ -365,15 +370,27 @@ If a category is clean, say so explicitly.
 
 ---
 
-## 5. Чек-лист «Епік 7 зроблено ідеально»
+## 5. Чек-лист «Епік 7 зроблено ідеально» (стан на 20.11.2026)
 
-- [ ] 12 сценаріїв (4 історії × 3) мають тести з назвою `US-xx sc.N`; US-41 sc.3 лишається ⚠ W-12 з автоматизованою технічною частиною
-- [ ] Гонки й відкат для кожного рішення модератора (approve, reject документа; publish, reject задачі; publish проти delete власника)
-- [ ] Telegram і web-панель використовують одну функцію рішення; тести Telegram зелені
-- [ ] Знімок комісії пишеться при публікації (OQ-22 закрито); US-14 і US-15 sc.1 проходять через справжній publish
-- [ ] `data-model.md` §2 виправлено (CHECK на `commission_bp` у БД не додається, OQ-43 b), міграцій для `tasks` немає
-- [ ] `api.md`, `domain-model.md`, `data-model.md`, `overview.md` §7.2, `traceability.md` §4 і §5 оновлені в тих самих PR
-- [ ] `docs-sync.test.ts` і `routes-config-docs-sync.test.ts` зелені
-- [ ] `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` зелені
-- [ ] `/check-story` по всіх чотирьох без «not covered», `architecture-reviewer` без blocker
-- [ ] 5 PR у `main` (`epic7/us-39`, `epic7/us-41`, `epic7/us-40`, `epic7/us-42`, `epic7/e2e`), кожен з описом, які сценарії він закриває
+- [x] 12 сценаріїв (4 історії × 3) мають тести з назвою `US-xx sc.N`; US-41 sc.3 лишається ⚠ W-12 з автоматизованою технічною частиною (`/check-story` по US-39, US-40, US-41, US-42, US-14, US-15: покрито 22 з 25 рядків, 3 частково: US-41 C1, US-41 sc.3, US-15 sc.3)
+- [x] Гонки й відкат для кожного рішення модератора (approve, reject документа; publish, reject задачі; publish проти delete власника)
+- [x] Telegram і web-панель використовують одну функцію рішення; тести Telegram зелені
+- [x] Знімок комісії пишеться при публікації (OQ-22 закрито); US-14 і US-15 sc.1 проходять через справжній publish
+- [x] `data-model.md` §2 виправлено (CHECK на `commission_bp` у БД не додається, OQ-43 b), міграцій для `tasks` немає
+- [x] `api.md`, `domain-model.md`, `data-model.md`, `overview.md` §7.2, `traceability.md` §4 і §5, `testing.md` §2 і §5 оновлені в тих самих PR
+- [x] `docs-sync.test.ts` і `routes-config-docs-sync.test.ts` зелені
+- [x] `pnpm typecheck`, `pnpm test` (shared 107, web 313, api 666), `pnpm test:e2e` (7 passed) зелені
+- [x] `architecture-reviewer` без blocker. Одне зауваження «варто виправити»: `admin/routes.ts` імпортує серіалізатори `tasks` і `verification` (ADR-0002 §4); свідомо винесено за межі Епіку 7 як косметичне покращення
+- [ ] 5 PR у `main`: `epic7/us-39` (#40), `epic7/us-41` (#41), `epic7/us-40` (#42), `epic7/us-42` (#43) змерджено; `epic7/e2e` (#44) відкрито, чекає мерджу
+
+### Відкриті питання на кінець Епіку 7
+
+| Питання | Поточний статус | Чому |
+|---|---|---|
+| OQ-21 (Telegram для модераторів) | **відкрито**, web-екрани збудовано (основний шлях), Telegram додатковий | Лишилось підтвердити з власником продукту рішення про приватність: документи студентів надсилаються третій стороні |
+| OQ-43 a (файли для модератора) | **закрито** | Модератор завантажує лише `student_document`, інші файли 403 `FILE_FORBIDDEN` |
+| OQ-43 b (CHECK знімка комісії) | **закрито**, варіант B | Без міграції; `data-model.md` §2 каже, що CHECK у БД немає, знімок гарантує транзакція `publish`. Рев'юер просив підтвердити виняток з ADR-0004 |
+| OQ-43 c (unpublish G-17, `TASK_HAS_EXECUTOR`) | **закрито**, не збудовано | `publish` і `reject` застосовні лише з `pending_moderation` (INV-24); `TASK_HAS_EXECUTOR` недосяжний у MVP |
+| OQ-43 d (минулий дедлайн) | **закрито** | У черзі позначається «дедлайн минув», публікація дозволена, у стрічку задача не потрапляє (INV-06) |
+| OQ-43 e (скасування після публікації) | **відкрито** | Скасована після публікації задача лишає знімок; рішення за власником продукту (див. `overview.md` §7.2) |
+| W-12 (US-41 sc.3) | **відкрито за дизайном** | Кодом не перевіряється, автоматизовано лише технічні правила; розпізнавання агенції лишається ручним пунктом рев'ю (OQ-15) |
