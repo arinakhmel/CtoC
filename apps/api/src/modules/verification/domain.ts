@@ -17,3 +17,11 @@ export function parseDecision(data: string | undefined): { action: 'verify' | 'r
   const match = /^(verify|reject):([0-9a-fA-F-]{36})$/.exec(data ?? '');
   return match ? { action: match[1] as 'verify' | 'reject', userId: match[2]! } : null;
 }
+
+/** The states of a moderator decision (INV-04, INV-24): only a `pending` request is decided, into one of the other two. */
+export const VERIFICATION_PENDING = 'pending';
+export const VERIFICATION_APPROVED = 'approved';
+export const VERIFICATION_REJECTED = 'rejected';
+
+/** The reason stored when a moderator rejects through Telegram, where there is no text field (OQ-21). */
+export const TELEGRAM_REJECT_REASON = 'Відхилено модератором';

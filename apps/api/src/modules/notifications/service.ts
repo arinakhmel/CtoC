@@ -1,9 +1,26 @@
 import type { NotificationsQuery } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
-import { executorSelectedPayload, resultAcceptedPayload, resultReturnedPayload, resultSubmittedPayload } from './domain';
+import { executorSelectedPayload, resultAcceptedPayload, resultReturnedPayload, resultSubmittedPayload, verificationRejectedPayload } from './domain';
 import { assertCanUseNotifications } from './policy';
 import { insertNotification, listNotificationsOfUser, markNotificationRead, notificationExistsForUser } from './repo';
+
+/**
+ * US-39 (A-15). The student is told in the transaction of the decision that the document was approved, so the text is true
+ * when it is read: the badge is set by the same transaction (INV-03, INV-23).
+ */
+export async function notifyVerificationApproved(tx: Prisma.TransactionClient, studentId: string): Promise<void> {
+  await insertNotification(tx, { userId: studentId, type: 'verification_approved', payloadJson: JSON.stringify({}) });
+}
+
+/** US-39 sc.2. Same rule: on the transaction of the rejection, with the reason, so a rollback leaves no notification. */
+export async function notifyVerificationRejected(tx: Prisma.TransactionClient, studentId: string, reason: string): Promise<void> {
+  await insertNotification(tx, {
+    userId: studentId,
+    type: 'verification_rejected',
+    payloadJson: JSON.stringify(verificationRejectedPayload(reason)),
+  });
+}
 
 /**
  * US-21 sc.1. Called by the assign transaction (US-25) with its own `tx`, so the notification is created in the same

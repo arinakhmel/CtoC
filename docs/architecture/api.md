@@ -87,7 +87,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | POST | `/api/tasks/:id/result/submit` | US-28, US-48, US-29, US-32/S1 | Ex | 200 (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `NOT_EXECUTOR` · 404 `NOT_FOUND` · 409 `NO_RESULT_FILES`, `ALREADY_IN_REVIEW`, `INVALID_TRANSITION` |
 | POST | `/api/tasks/:id/accept` | US-31, US-30, US-34, US-37 | Own | 200 (body: §4.2) | 401 `AUTH_REQUIRED` · 403 `NOT_TASK_OWNER`, `ORIGIN_MISMATCH` · 404 `NOT_FOUND` · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` · 500 `INTERNAL_ERROR` (a broken invariant, nothing changes) |
 | POST | `/api/tasks/:id/return` | US-32, US-33, US-48/S3 | Own | 200 (body: §4.2a) | 400 `COMMENT_REQUIRED`, `COMMENT_TOO_LONG`, `VALIDATION_FAILED` (a comment that is not a string) · 401 `AUTH_REQUIRED` · 403 `NOT_TASK_OWNER`, `ORIGIN_MISMATCH` · 404 `NOT_FOUND` · 409 `TASK_ALREADY_DONE`, `TASK_NOT_IN_REVIEW` · 500 `INTERNAL_ERROR` (a broken invariant, nothing changes) |
-| GET | `/api/files/:fileId` | US-27, US-31, US-39 | File owner · Own (US-31: files of a version that is not a draft) · M (a moderator comes with US-39) | 200, `attachment` (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `FILE_FORBIDDEN` · 404 `NOT_FOUND` |
+| GET | `/api/files/:fileId` | US-27, US-31, US-39 | File owner · Own (US-31: files of a version that is not a draft) · M (US-39: only files of kind `student_document`, OQ-43 a) | 200, `attachment` (body: §4.14) | 401 `AUTH_REQUIRED` · 403 `FILE_FORBIDDEN` · 404 `NOT_FOUND` |
 
 ### Chat and notifications
 
@@ -114,9 +114,9 @@ All return 401 without a session and **403 `ROLE_FORBIDDEN`** for non-moderators
 
 | Method | Path | Stories | Success | Errors |
 |---|---|---|---|---|
-| GET | `/api/mod/verifications?status=pending` | US-39 | 200 | |
-| POST | `/api/mod/verifications/:id/approve` | US-39/S1, US-09 | 200 | 409 `ALREADY_DECIDED` |
-| POST | `/api/mod/verifications/:id/reject` | US-39/S2, US-41/S2 | 200 | 400 `REASON_REQUIRED` · 409 `ALREADY_DECIDED` |
+| GET | `/api/mod/verifications?status=pending` | US-39 | 200 (body: §4.8b) | 400 `VALIDATION_FAILED` (bad `status`) |
+| POST | `/api/mod/verifications/:id/approve` | US-39/S1, US-09 | 200 (body: §4.8b) | 404 `NOT_FOUND` · 409 `ALREADY_DECIDED` |
+| POST | `/api/mod/verifications/:id/reject` | US-39/S2, US-41/S2 | 200 (body: §4.8b) | 404 `NOT_FOUND` · 400 `REASON_REQUIRED` · 409 `ALREADY_DECIDED` |
 | POST | `/api/mod/users/:id/revoke-student` | A-18 | 200 | 409 `INVALID_TRANSITION` |
 | GET | `/api/mod/tasks?status=pending_moderation` | US-40 | 200 | |
 | POST | `/api/mod/tasks/:id/publish` | US-40/S1 | 200 | 409 `ALREADY_DECIDED` |
@@ -616,6 +616,24 @@ Optional. Active only when `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` and `TELEGRA
 - **After the commit** (a failure here never undoes the decision and the answer stays 200, so Telegram does not retry): the caption is edited to `✅ Approved by @name` or `❌ Rejected by @name` and the buttons are removed, and the student gets an email through the `Mailer`.
 - Body: the Telegram `Update` (`telegramUpdateSchema` in `@ctoc/shared`). An update that is not a button click is acknowledged with 200 and ignored.
 
+### 4.8b `GET /api/mod/verifications` and `POST /api/mod/verifications/:id/approve` | `/reject` (US-39, web screens)
+
+The moderator's web queue; Telegram (§4.8a) stays an additional way to the same decision (OQ-21). Access: a moderator only (INV-25). The role is checked before the query or the body, so a student or a customer is 403 `ROLE_FORBIDDEN` even with an invalid body, and no session is 401 `AUTH_REQUIRED`.
+
+- `GET /api/mod/verifications?status=pending|approved|rejected` (default `pending`; anything else is 400 `VALIDATION_FAILED`): oldest first, at most 100.
+
+```json
+{ "items": [ { "id": "…", "student": { "id": "…", "displayName": "Олена Коваль", "email": "olena@lpnu.ua" },
+               "file": { "id": "…", "originalName": "квиток.pdf", "mime": "application/pdf", "sizeBytes": 482113 },
+               "status": "pending", "reason": null, "createdAt": "2026-11-10T10:00:00.000Z", "decidedAt": null } ] }
+```
+
+- `POST …/:id/approve` (empty body) and `POST …/:id/reject` `{ "reason": "…" }` (the shared `moderationRejectSchema`, 1 to 500 characters, 400 `REASON_REQUIRED` when empty or spaces only). `:id` is the id of the **request** (`VerificationRequest.id`), the document the moderator saw; unknown id is 404 `NOT_FOUND`. The answer is `{ "verification": { … } }` in the shape of a list item.
+- One decision, two entrances: this and the Telegram webhook run the same function. One transaction: the conditional update `pending` → `approved` | `rejected` (here `WHERE id = :id AND userId AND status = 'pending'`, Telegram knows only the user), the badge on approve (INV-03), an audit event `verification.approved` | `verification.rejected` (`{ via: "web" }`, actor = the moderator) and a notification `verification_approved` | `verification_rejected` (`{ reason }`) to the student (A-15, US-39/S2). `decidedBy` is the moderator's id here and stays empty for Telegram.
+- The first decision wins: a second one, two at once, or a decision on a request that is no longer `pending` (the student uploaded a new document in between) is 409 `ALREADY_DECIDED` with no change (INV-04, INV-24). A decision made here is also «Already decided» for a later Telegram click, and the other way round.
+- After the commit the student gets an email through the `Mailer`; a failure there never undoes the decision.
+- `GET /api/files/:fileId` lets a moderator download only a file of kind `student_document` (OQ-43 a). Any other file is 403 `FILE_FORBIDDEN`.
+
 ### 4.9 `GET /api/profiles/:userId` (US-09)
 
 Public, no session needed. `Cache-Control: no-store`, so a badge granted by a moderator shows on the next request.
@@ -736,7 +754,7 @@ The first upload opens a version in `draft` (`version` = last + 1) and the next 
                            "sizeBytes": 482113, "createdAt": "2026-11-18T10:02:11Z" } ] } }
 ```
 
-`GET /api/files/:fileId` is always a download: `Content-Disposition: attachment` with the original name, `Content-Type: application/octet-stream` whatever the uploader claimed, `X-Content-Type-Options: nosniff`, `Cache-Control: private, no-store`. The owner of the file (the executor who uploaded it) may download it. Since US-31 the customer who owns the task may too, but only a file of a version that is **not a draft** (sent for review, accepted or returned): a draft is still the executor's alone, so its file is 403 `FILE_FORBIDDEN` for the customer. An unknown or deleted file is 404, anyone else's file 403 `FILE_FORBIDDEN`. A moderator comes with US-39.
+`GET /api/files/:fileId` is always a download: `Content-Disposition: attachment` with the original name, `Content-Type: application/octet-stream` whatever the uploader claimed, `X-Content-Type-Options: nosniff`, `Cache-Control: private, no-store`. The owner of the file (the executor who uploaded it) may download it. Since US-31 the customer who owns the task may too, but only a file of a version that is **not a draft** (sent for review, accepted or returned): a draft is still the executor's alone, so its file is 403 `FILE_FORBIDDEN` for the customer. An unknown or deleted file is 404, anyone else's file 403 `FILE_FORBIDDEN`. A moderator downloads only a file of kind `student_document` (US-39, OQ-43 a); any other file is 403 `FILE_FORBIDDEN`.
 
 `GET /api/tasks/:id/result` is read by the executor, who sees the current version, a draft included, and by the customer who owns the task, who sees the latest version that is not a draft and gets `{ "result": null }` while there is none (US-31). Anyone else is 403 `NOT_EXECUTOR` (OQ-35 b). While the task is in revision both also get `lastReturn`, the latest comment of the customer, which stays after the student started a new draft (§4.2a, US-33); at any other time it is `null`.
 

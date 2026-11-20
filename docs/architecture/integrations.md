@@ -9,7 +9,7 @@ Everything the system or the team depends on outside our own code. For each: wha
 | Dependency | Type | Needed at runtime? | If unavailable |
 |---|---|---|---|
 | Email (SMTP provider) | Optional API-like (SMTP) | Only when hosted | Dev outbox page, seeded confirmed accounts |
-| Telegram Bot API | Optional HTTPS API client, only when configured | No | Moderators decide in the web screens (US-39) |
+| Telegram Bot API | Optional HTTPS API client, only when configured | No | Moderators decide in the web screens `/mod/verifications` (US-39) |
 | Payment provider | None in the MVP (simulated port) | No | Not applicable |
 | Database | Local file, no service | Yes | Reseed |
 | File storage | Local disk, no service | Yes | Reseed, re-upload |
@@ -31,11 +31,11 @@ Everything the system or the team depends on outside our own code. For each: wha
 
 ## Telegram Bot API (optional, OQ-21)
 
-- **What we take:** a group chat where moderators see a new student document (email, id, photo or PDF) and press «✅ Approve» or «❌ Reject». A webhook (`POST /api/webhooks/telegram`, `api.md` §4.8a) receives the click.
+- **What we take:** an additional way, not the only one: the same decision is also made in the web queue `/mod/verifications` (`api.md` §4.8b), and both run one function, so whichever comes first wins. A group chat where moderators see a new student document (email, id, photo or PDF) and press «✅ Approve» or «❌ Reject». A webhook (`POST /api/webhooks/telegram`, `api.md` §4.8a) receives the click.
 - **Integration type:** plain `fetch` calls to `api.telegram.org` (`sendPhoto`, `sendDocument`, `editMessageCaption`, `answerCallbackQuery`), no library and no port. Variables: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`. All three or nothing is sent.
 - **Security:** the webhook accepts only requests with the secret header and only clicks from the configured chat. The bot token never appears in logs or errors.
 - **Privacy:** the student's email and document leave our server and are stored by Telegram. Students must be told.
-- **If unavailable:** the upload still succeeds and the request stays `pending`. The decision can be made in the web screens (US-39) once they exist.
+- **If unavailable:** the upload still succeeds and the request stays `pending`. The moderator decides in the web screens (US-39).
 
 ## Payment provider
 

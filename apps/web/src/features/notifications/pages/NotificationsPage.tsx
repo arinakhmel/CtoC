@@ -38,6 +38,8 @@ const linkOf = (notification: AppNotification): string | null => {
     const parsed = resultAcceptedPayloadSchema.safeParse(notification.payload);
     return parsed.success ? `/work/${parsed.data.taskId}` : null;
   }
+  // US-39: the student reads the result of the document check on the verification page (the reason is already in the text).
+  if (notification.type === 'verification_rejected' || notification.type === 'verification_approved') return '/me/verification';
   return null;
 };
 
@@ -78,7 +80,9 @@ export function NotificationsPage({ page }: { page: PageConfig }) {
                 <p>
                   <time dateTime={notification.createdAt}>{formatDeadline(notification.createdAt)}</time>
                 </p>
-                {linkOf(notification) && <Link to={linkOf(notification)!}>Відкрити завдання</Link>}
+                {linkOf(notification) && (
+                  <Link to={linkOf(notification)!}>{notification.type.startsWith('verification_') ? 'Відкрити верифікацію' : 'Відкрити завдання'}</Link>
+                )}
                 {!notification.read && (
                   <button type="button" disabled={markRead.isPending} onClick={() => markRead.mutate(notification.id)}>
                     Позначити прочитаним

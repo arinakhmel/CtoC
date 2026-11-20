@@ -140,7 +140,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/mod/verifications",
-    title: "Student document queue",
+    title: "Перевірка студентських документів",
     access: "M",
     stories: ["US-39", "US-41"],
   },

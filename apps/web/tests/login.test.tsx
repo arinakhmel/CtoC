@@ -48,7 +48,7 @@ describe('/login form (US-45)', () => {
   it.each([
     ['student', 'Task feed'],
     ['customer', 'My tasks'],
-    ['moderator', 'Student document queue'],
+    ['moderator', 'Перевірка студентських документів'],
   ])('US-45 sc.1 a %s is sent to the start page for their role', async (role, heading) => {
     loginResponse = () => sessionUser(role);
 

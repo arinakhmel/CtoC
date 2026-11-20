@@ -26,6 +26,8 @@ export const LIMITS = {
   myWorkMax: 100,
   /** US-36: the student's withdrawal list and the moderator's queue, both without paging (api.md §4.1c, §4.1d). */
   withdrawalsMax: 100,
+  /** US-39: the most documents `GET /api/mod/verifications` returns (api.md §4.8b). */
+  verificationQueueMax: 100,
   /** US-37: the experience records in a public profile, newest first, without paging (api.md §4.9). */
   experienceMax: 100,
   sandboxTopUp: { min: 100, max: PRICE_MAX_KOPECKS },

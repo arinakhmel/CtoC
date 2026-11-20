@@ -1,6 +1,9 @@
 import type { User } from '@prisma/client';
 import { ApiError } from '../../errors';
 
+/** `File.kind` of a document a student sent for verification (`FILE_KINDS` in @ctoc/shared). */
+const STUDENT_DOCUMENT = 'student_document';
+
 /** Access "Ex" of api.md (INV-14): only the executor of the task works with its result. An existing task of someone else is 403. */
 export function assertIsExecutor(task: { executorId: string | null }, user: User): void {
   if (task.executorId === null || task.executorId !== user.id) throw new ApiError('NOT_EXECUTOR');
@@ -24,9 +27,10 @@ export function assertCanReadResult(task: { customerId: string; executorId: stri
 /**
  * `GET /api/files/:fileId` (NFR-07). The owner of the file (the executor who uploaded it) downloads it. The customer who owns the
  * task downloads it too, but only once its version was sent for review (US-31): a file of a draft is still the executor's alone.
- * The moderator joins with US-39.
+ * A moderator downloads only a student document (US-39, OQ-43 a: least privilege, ADR-0006); a result file is never theirs.
  */
-export function assertCanDownload(file: { ownerId: string }, user: User, isFileOfOwnedTaskUnderReview: boolean): void {
+export function assertCanDownload(file: { ownerId: string; kind: string }, user: User, isFileOfOwnedTaskUnderReview: boolean): void {
   if (file.ownerId === user.id || isFileOfOwnedTaskUnderReview) return;
+  if (user.role === 'moderator' && file.kind === STUDENT_DOCUMENT) return;
   throw new ApiError('FILE_FORBIDDEN');
 }
