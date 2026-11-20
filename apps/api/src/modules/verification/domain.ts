@@ -12,10 +12,13 @@ export function detectDocumentMime(bytes: Buffer): 'image/jpeg' | 'image/png' | 
   return null;
 }
 
-/** The callback_data of the Telegram buttons: `verify:<userId>` or `reject:<userId>`. Anything else is ignored. */
-export function parseDecision(data: string | undefined): { action: 'verify' | 'reject'; userId: string } | null {
+/**
+ * The callback_data of the Telegram buttons: `verify:<requestId>` or `reject:<requestId>` (the id of the document the moderator saw, so
+ * a button of an old document can never decide a newer one). Anything else is ignored.
+ */
+export function parseDecision(data: string | undefined): { action: 'verify' | 'reject'; requestId: string } | null {
   const match = /^(verify|reject):([0-9a-fA-F-]{36})$/.exec(data ?? '');
-  return match ? { action: match[1] as 'verify' | 'reject', userId: match[2]! } : null;
+  return match ? { action: match[1] as 'verify' | 'reject', requestId: match[2]! } : null;
 }
 
 /** The states of a moderator decision (INV-04, INV-24): only a `pending` request is decided, into one of the other two. */

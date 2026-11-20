@@ -79,12 +79,12 @@ export async function submitDocument(user: User, upload: UploadedDocument) {
     throw error;
   }
 
-  await notifyModerators(user, upload, mime!);
+  await notifyModerators(user, request.id, upload, mime!);
   return request;
 }
 
 /** A failed send never fails the upload: the request stays pending and the error is logged. */
-async function notifyModerators(user: User, upload: UploadedDocument, mime: string): Promise<void> {
+async function notifyModerators(user: User, requestId: string, upload: UploadedDocument, mime: string): Promise<void> {
   const config = telegramConfig();
   if (!config) return;
   try {
@@ -93,7 +93,7 @@ async function notifyModerators(user: User, upload: UploadedDocument, mime: stri
       mime,
       fileName: upload.originalName,
       caption: `Student verification request\nEmail: ${user.email}\nID: ${user.id}`,
-      userId: user.id,
+      requestId,
     });
   } catch (error) {
     console.error('Verification request was not sent to Telegram', error instanceof Error ? error.message : error);
@@ -188,9 +188,12 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     return;
   }
 
+  // The button names the document the moderator saw. An unknown id or one that is no longer pending decides nothing (INV-04, INV-24).
+  const request = await findRequestById(decision.requestId);
   const approve = decision.action === 'verify';
-  const decided = await decideVerification({
-    userId: decision.userId,
+  const decided = request === null ? null : await decideVerification({
+    userId: request.userId,
+    requestId: request.id,
     approve,
     reason: approve ? null : TELEGRAM_REJECT_REASON,
     audit: { via: 'telegram', moderator: moderatorName(click.from), telegramUserId: click.from.id },
@@ -204,7 +207,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
 
   const who = moderatorName(click.from);
   const status = approve ? `✅ Approved by ${who}` : `❌ Rejected by ${who}`;
-  const caption = `${click.message.caption ?? `ID: ${decision.userId}`}\n\n${status}`;
+  const caption = `${click.message.caption ?? `ID: ${request?.userId ?? decision.requestId}`}\n\n${status}`;
   await editCaption(config, click.message.chat.id, click.message.message_id, caption).catch(logFailure('editMessageCaption'));
   await toast(approve ? 'Approved' : 'Rejected');
   await sendResultEmail(email, approve, approve ? null : TELEGRAM_REJECT_REASON);

@@ -1,7 +1,7 @@
 import { LIMITS, MESSAGES_UK, VERIFICATION_STATUS_LABELS_UK } from '@ctoc/shared';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ApiClientError } from '../../../lib/api';
+import { API_BASE_URL, ApiClientError } from '../../../lib/api';
 import { formatDate } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { useDecideVerification, useVerificationQueue, type ModVerification } from '../queries/verifications';
@@ -26,7 +26,7 @@ function VerificationItem({ item, decide }: { item: ModVerification; decide: Ret
       </p>
       <p>Статус: {VERIFICATION_STATUS_LABELS_UK[item.status]}</p>
       <p>
-        <a href={`/api/files/${item.file.id}`} target="_blank" rel="noreferrer">
+        <a href={`${API_BASE_URL}/files/${encodeURIComponent(item.file.id)}`} target="_blank" rel="noreferrer">
           Переглянути документ
         </a>{' '}
         ({item.file.originalName})

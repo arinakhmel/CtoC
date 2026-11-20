@@ -39,11 +39,12 @@ async function call(config: TelegramConfig, method: string, body: FormData | Rec
   }
 }
 
-const decisionButtons = (userId: string) => ({
+/** callback_data is limited to 64 bytes: `verify:` and a 36-character id is 43, so only the id of the request fits (not the user id too). */
+const decisionButtons = (requestId: string) => ({
   inline_keyboard: [
     [
-      { text: '✅ Approve', callback_data: `verify:${userId}` },
-      { text: '❌ Reject', callback_data: `reject:${userId}` },
+      { text: '✅ Approve', callback_data: `verify:${requestId}` },
+      { text: '❌ Reject', callback_data: `reject:${requestId}` },
     ],
   ],
 });
@@ -51,13 +52,13 @@ const decisionButtons = (userId: string) => ({
 /** Photos go through `sendPhoto`. A PDF cannot, so it goes through `sendDocument`. Both carry the two buttons. */
 export function sendReviewRequest(
   config: TelegramConfig,
-  doc: { bytes: Buffer; mime: string; fileName: string; caption: string; userId: string },
+  doc: { bytes: Buffer; mime: string; fileName: string; caption: string; requestId: string },
 ): Promise<void> {
   const isImage = doc.mime.startsWith('image/');
   const form = new FormData();
   form.set('chat_id', config.chatId);
   form.set('caption', doc.caption);
-  form.set('reply_markup', JSON.stringify(decisionButtons(doc.userId)));
+  form.set('reply_markup', JSON.stringify(decisionButtons(doc.requestId)));
   form.set(isImage ? 'photo' : 'document', new Blob([new Uint8Array(doc.bytes)], { type: doc.mime }), doc.fileName);
   return call(config, isImage ? 'sendPhoto' : 'sendDocument', form);
 }

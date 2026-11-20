@@ -1,8 +1,9 @@
 import type { User } from '@prisma/client';
+import { FILE_KINDS } from '@ctoc/shared';
 import { ApiError } from '../../errors';
 
-/** `File.kind` of a document a student sent for verification (`FILE_KINDS` in @ctoc/shared). */
-const STUDENT_DOCUMENT = 'student_document';
+/** `File.kind` of a document a student sent for verification: the first of `FILE_KINDS` in @ctoc/shared. */
+const STUDENT_DOCUMENT = FILE_KINDS[0];
 
 /** Access "Ex" of api.md (INV-14): only the executor of the task works with its result. An existing task of someone else is 403. */
 export function assertIsExecutor(task: { executorId: string | null }, user: User): void {

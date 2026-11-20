@@ -269,7 +269,7 @@ describe('Races and rollback (ADR-0007, INV-04, INV-24)', () => {
     const res = await api()
       .post('/api/webhooks/telegram')
       .set('X-Telegram-Bot-Api-Secret-Token', 's3cret')
-      .send({ callback_query: { id: 'c1', from: { id: 1, username: 'm' }, data: `verify:${student.user.id}`, message: { message_id: 1, chat: { id: -1001 }, caption: 'x' } } });
+      .send({ callback_query: { id: 'c1', from: { id: 1, username: 'm' }, data: `verify:${request.id}`, message: { message_id: 1, chat: { id: -1001 }, caption: 'x' } } });
 
     expect(res.status).toBe(200);
     expect(answers).toEqual(['Already decided']);
