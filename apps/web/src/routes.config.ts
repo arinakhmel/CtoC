@@ -32,7 +32,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/terms",
-    title: "Terms and current commission",
+    title: "Умови та поточна комісія",
     access: "P",
     stories: ["US-03"],
   },
@@ -158,7 +158,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/mod/settings",
-    title: "Commission, price limits, university domains",
+    title: "Комісія платформи",
     access: "M",
     stories: ["US-03"],
   },

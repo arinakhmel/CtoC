@@ -13,5 +13,6 @@ export * from './schemas/notification';
 export * from './schemas/delivery';
 export * from './schemas/payments';
 export * from './schemas/telegram';
+export * from './schemas/settings';
 export * from './schemas/verification';
 export * from './messages.uk';

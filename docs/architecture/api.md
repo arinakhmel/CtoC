@@ -46,7 +46,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | PUT | `/api/me/skills` | US-10 | S- | 200 (body: §4.10) | 400 `SKILL_EMPTY`, `SKILLS_LIMIT`, `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | GET | `/api/skills?query=` | US-10 | A | 200 (body: §4.10) | 401 `AUTH_REQUIRED` |
 | GET | `/api/profiles/:userId` | US-09, US-24, US-37, US-38 | P (A-16) | 200 (body: §4.9), `no-store` | 404 `NOT_FOUND` |
-| GET | `/api/public/settings` | US-03, US-15 | P | 200, `Cache-Control: no-store` | |
+| GET | `/api/public/settings` | US-03, US-15 | P | 200 (body: §4.1e), `Cache-Control: no-store` | 500 `INTERNAL_ERROR` (a stored rate outside the range) |
 
 ### Verification
 
@@ -124,7 +124,7 @@ All return 401 without a session and **403 `ROLE_FORBIDDEN`** for non-moderators
 | POST | `/api/mod/tasks/:id/resolve` (`release` \| `refund`) | A-09 (OQ-08) | 200 | 409 `INVALID_TRANSITION` |
 | GET | `/api/mod/withdrawals?status=requested` | US-36, A-10 (OQ-10) | 200 (body: §4.1d) | 400 `VALIDATION_FAILED` (bad `status`) |
 | POST | `/api/mod/withdrawals/:id/mark-paid` and `/reject` | US-36, A-10 (OQ-10) | 200 (body: §4.1d) | 400 `REASON_REQUIRED` (reject) · 404 `NOT_FOUND` · 409 `ALREADY_DECIDED` |
-| GET, PUT | `/api/mod/settings` | US-03/S3, US-17 | 200 | 400 `VALIDATION_FAILED` |
+| GET, PUT | `/api/mod/settings` | US-03/S3 | 200 (body: §4.1e), `Cache-Control: no-store` | 400 `VALIDATION_FAILED` (PUT) · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `ORIGIN_MISMATCH` (PUT) |
 | GET, POST, DELETE | `/api/mod/university-domains` | A-17 | 200, 201, 204 | 409 `DOMAIN_EXISTS` |
 
 ### Development only
@@ -322,6 +322,14 @@ No story covers who pays a request out (OQ-10). The MVP decision A-10: a moderat
 - `POST /api/mod/withdrawals/:id/reject` `{ "reason": "…" }` (1 to 500 characters, 400 `REASON_REQUIRED` when empty): one transaction, the conditional update `requested` → `rejected` with the reason, the card number cleared, the amount credited back to the student's balance with a positive `withdrawal_reversal` entry (INV-20), and an audit event `withdrawal.rejected`.
 - Both decide only a request that is still `requested`: the first decision wins and a second, or two at once, is 409 `ALREADY_DECIDED` with no change (INV-24). An unknown id is 404 `NOT_FOUND`. The answer is `{ "withdrawal": { … } }` in the shape of the list.
 - The student gets no notification yet: `withdrawal_processed` is proposed with no story (A-15). The status is seen in `GET /api/me/withdrawals`.
+
+### 4.1e Commission setting: `GET /api/public/settings`, `GET` and `PUT /api/mod/settings` (US-03)
+
+The one setting built in the MVP is the commission rate. The body of all three answers is the same: `{ "commissionBp": 1000 }`, an integer in basis points (1000 = 10 %). Before anyone sets it the answer is `LIMITS.commissionBp.default` (1000). The page shows it as digits (`10%`, `12,5%`).
+
+- `GET /api/public/settings`: no session needed, `Cache-Control: no-store`, so a rate changed by the moderator shows on the next load of `/terms` with no stale cache (US-03 sc.3). The body has only the rate: no who and when. A stored value that is not an integer in `LIMITS.commissionBp.min..max` (0..5000) is never sent or used: 500 `INTERNAL_ERROR`, logged (the same rule as the publish of US-40, INV-08).
+- `GET /api/mod/settings`: the same body for the moderator's form. Moderators only (INV-25): 401 without a session, 403 `ROLE_FORBIDDEN` for anyone else. The role is checked before anything else.
+- `PUT /api/mod/settings` `{ "commissionBp": 1500 }`: the rate must be an integer in 0..5000, otherwise 400 `VALIDATION_FAILED` and nothing changes. **Only `commissionBp` is writable** (OQ-47): any other key is dropped by the schema, so the price limits cannot be set here. One transaction: the upsert of the row `commission_bp` (`updated_by` is the moderator) and an audit event `settings.update` with `{ from, to }`. The last change wins. The new rate is for tasks published afterwards; a published task keeps its snapshot (INV-08). A PUT from another origin is 403 `ORIGIN_MISMATCH` (ADR-0006).
 
 ### 4.2 `POST /api/tasks/:id/accept` (accept result)
 
