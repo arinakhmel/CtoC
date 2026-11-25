@@ -65,6 +65,13 @@ describe('US-44 display name', () => {
   it('US-44 checklist: a name over 60 characters is rejected', () => {
     expect(fieldsOf(registerSchema, { ...base, displayName: 'о'.repeat(61) })).toEqual(['displayName']);
   });
+
+  it('US-44 checklist: the length is counted in characters, so an emoji counts as one (like the database)', () => {
+    expect(registerSchema.safeParse({ ...base, displayName: '🙂'.repeat(60) }).success).toBe(true);
+    expect(fieldsOf(registerSchema, { ...base, displayName: '🙂'.repeat(61) })).toEqual(['displayName']);
+    expect(registerSchema.safeParse({ ...base, displayName: 'Anna 🙂 Коваль' }).success).toBe(true);
+    expect(fieldsOf(registerSchema, { ...base, displayName: '🙂' })).toEqual(['displayName']);
+  });
 });
 
 describe('US-45 login', () => {
