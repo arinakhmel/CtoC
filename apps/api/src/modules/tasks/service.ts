@@ -4,7 +4,7 @@ import { ApiError } from '../../errors';
 import { notifyTaskPublished, notifyTaskRejected } from '../notifications/service';
 import { prisma } from '../../platform/db';
 import { acceptRefusal, assignRefusal, chatStateOf, deleteRefusal, newTaskData, resultRefusal, returnRefusal, REVISION, submitRefusal } from './domain';
-import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed, assertTaskOwner } from './policy';
+import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyTasks, assertCanListMyWork, assertCanReadFeed, assertTaskOwner } from './policy';
 import {
   assignTaskTx,
   cancelTaskWithoutExecutor,
@@ -27,6 +27,7 @@ import {
   findCommissionBpSetting,
   rejectTaskTx,
   listFeed,
+  listTasksOfCustomer,
   listTasksOfExecutor,
   lockChatTask,
   lockDeliveryTask,
@@ -113,12 +114,20 @@ export async function getMyWork(user: User) {
  */
 export const listPaidTasks = (executorId: string) => listDoneTasksOfExecutor(executorId, LIMITS.myWorkMax);
 
+/** US-50 sc.1. «Мої завдання»: every task of the caller in any state, newest first, at most `LIMITS.myTasksMax`. Only the caller's rows. */
+export async function getMyTasks(user: User) {
+  assertCanListMyTasks(user);
+  return listTasksOfCustomer(user.id, LIMITS.myTasksMax);
+}
+
 /**
  * US-22 sc.2 (INV-13, A-08). The owner cancels a task that has no executor. Unknown id is 404, someone else's task is
  * 403 NOT_TASK_OWNER, a task with an executor is 409 TASK_HAS_EXECUTOR so the student does not lose the terms, and a task
  * in a state that cannot be cancelled is 409 INVALID_TRANSITION. The change is one conditional update (ADR-0007).
+ * `alsoInTransaction` (US-50 sc.3) runs on the same `tx` after the task is cancelled, so what else must change with the cancel
+ * (the applications of the task become `rejected`, A-14) commits or rolls back with it. The applications service passes it.
  */
-export async function deleteTask(user: User, id: string): Promise<void> {
+export async function deleteTask(user: User, id: string, alsoInTransaction?: (tx: Prisma.TransactionClient) => Promise<void>): Promise<void> {
   assertCanDeleteTask(user);
   const task = await findTaskForDelete(id);
   if (!task) throw new ApiError('NOT_FOUND');
@@ -130,6 +139,7 @@ export async function deleteTask(user: User, id: string): Promise<void> {
       const now = await findTaskState(tx, id);
       throw new ApiError(deleteRefusal(now ?? task));
     }
+    await alsoInTransaction?.(tx);
   });
 }
 

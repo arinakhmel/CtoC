@@ -142,7 +142,8 @@ describe('Candidate list of a task: US-24', () => {
     expect(res.body.applications).toEqual([]);
   });
 
-  it("US-24 another customer's task is 403 NOT_TASK_OWNER and shows nothing", async () => {
+  // US-50 sc.2 (ADR-0006): the management page does not say that another customer's task exists, so it is the same 404 as an unknown id.
+  it("US-24 another customer's task is 404 NOT_FOUND and shows nothing", async () => {
     const task = await createTask(owner.user.id);
     const student = await loginAs('student');
     await createApplication(task.id, student.user.id);
@@ -150,8 +151,8 @@ describe('Candidate list of a task: US-24', () => {
 
     const res = await list(task.id, other.cookie);
 
-    expect(res.status).toBe(403);
-    expect(res.body.error.code).toBe('NOT_TASK_OWNER');
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
     expect(JSON.stringify(res.body)).not.toContain(student.user.id);
   });
 

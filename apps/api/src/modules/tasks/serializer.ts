@@ -42,6 +42,18 @@ export const serializeWorkTask = (task: FeedTaskRow & Pick<Task, 'status' | 'ass
   assignedAt: task.assignedAt?.toISOString() ?? null,
 });
 
+export type MyTaskRow = Pick<Task, 'id' | 'title' | 'priceKopecks' | 'deadlineAt' | 'status'> & { _count: { applications: number } };
+
+/** api.md §4.13b (US-50). The customer's own task in the list: status, price, deadline and the number of applications. */
+export const serializeMyTask = (task: MyTaskRow) => ({
+  id: task.id,
+  title: task.title,
+  priceKopecks: task.priceKopecks,
+  deadlineAt: task.deadlineAt.toISOString(),
+  status: task.status,
+  applicationsCount: task._count.applications,
+});
+
 export type ModTaskRow = Pick<Task, 'id' | 'title' | 'description' | 'priceKopecks' | 'deadlineAt' | 'status' | 'moderationReason' | 'createdAt'> & {
   customer: { id: string; displayName: string };
 };

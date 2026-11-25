@@ -63,7 +63,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S- (any student with a confirmed email) | 200 (body: §4.12) | 400 `VALIDATION_FAILED` (bad `limit` or `cursor`) · 401 `AUTH_REQUIRED` · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
 | GET | `/api/tasks/:id` | US-13, US-15, US-22 | S- (published) · Ex (own assigned task) · Own · M | 200 (body: §4.13, executor: §4.13a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` · 404 `NOT_FOUND` |
 | POST | `/api/tasks` | US-16, US-17, US-40/S3 | C (confirmed) | 201, always `pending_moderation` | 400 `VALIDATION_FAILED`, `TITLE_TOO_SHORT`, `PRICE_BELOW_MIN`, `PRICE_ABOVE_MAX`, `DEADLINE_IN_PAST` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
-| GET | `/api/my/tasks` | US-50 | C | 200 (each task with `applicationsCount`) | |
+| GET | `/api/my/tasks` | US-50 | C | 200 (body: §4.13b, each task with `applicationsCount`) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN` |
 | DELETE | `/api/tasks/:id` | US-22/S2, US-50, A-08 | Own | 204 | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` · 409 `TASK_HAS_EXECUTOR`, `INVALID_TRANSITION` |
 
 ### Applications and executor selection
@@ -72,7 +72,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 |---|---|---|---|---|---|
 | POST | `/api/tasks/:id/applications` | US-18, US-19, US-42 | S+ | 201 | 400 `NOTE_TOO_LONG` · 403 `STUDENT_NOT_VERIFIED` · 404 `NOT_FOUND` (not in the feed: not published, assigned, expired or unknown) · 409 `ALREADY_APPLIED`, `TASK_NOT_OPEN` (race only) |
 | GET | `/api/me/applications` | US-20 | S- | 200 (body: §4.3a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
-| GET | `/api/tasks/:id/applications` | US-24, US-25 | Own | 200 (body: §4.3d) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` |
+| GET | `/api/tasks/:id/applications` | US-24, US-25 | Own | 200 (body: §4.3d) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` · 404 `NOT_FOUND` (an unknown task and another customer's task, US-50) |
 | POST | `/api/tasks/:id/applications/:appId/reject` | US-20/S3 | Own | *Planned, not implemented yet (W-20).* 200 | 403 · 409 `APPLICATION_NOT_PENDING` |
 | POST | `/api/tasks/:id/assign` | US-25, US-26, US-21 | Own | 200 (body: §4.1) | 400 `VALIDATION_FAILED` (no `applicationId`, or a bad `Idempotency-Key`) · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` (task, or an application that is not this task's) · 409 `TASK_ALREADY_ASSIGNED`, `TASK_NOT_OPEN`, `APPLICATION_NOT_PENDING` · 422 `INSUFFICIENT_FUNDS` |
 
@@ -487,7 +487,7 @@ The types that exist, with the text of each (the text is built by the server fro
 
 ### 4.3d `GET /api/tasks/:id/applications` (the owner's candidate list, US-24)
 
-Access "Own": the customer who owns the task. A student is 403 `ROLE_FORBIDDEN`, another customer 403 `NOT_TASK_OWNER`, an unknown task 404. The list is oldest first, at most 100. It is read-only. The task header (`task`) is there because the owner has no other endpoint for the task yet (OQ-31). It carries `deadlineAt` (the page turns the select off after it) and `hasExecutor` (a cancelled task that never had one shows no chat).
+Access "Own": the customer who owns the task. A student is 403 `ROLE_FORBIDDEN`. An unknown task and another customer's task are both 404 `NOT_FOUND` (US-50 sc.2, ADR-0006: the management page does not say that a task exists; it is the same body for both). The other owner actions (assign, accept, return, delete, chat) keep 403 `NOT_TASK_OWNER` until the product owner decides OQ-31(e) for all of them. The list is oldest first, at most 100. It is read-only. The task header (`task`) is there because the owner has no other endpoint for the task yet (OQ-31). It carries `deadlineAt` (the page turns the select off after it) and `hasExecutor` (a cancelled task that never had one shows no chat).
 
 The answer has `truncated`: `true` when the task has more than 100 applicants and the list was cut, so the page can say so. Each applicant is the application (§4.3) plus the public profile of the student (§4.9): `verified` is `studentVerifiedAt IS NOT NULL` as it is now (INV-03), so a student whose verification was revoked after applying shows `false` (US-24/S2, W-01). No email, role or hash, and no price.
 
@@ -725,6 +725,22 @@ GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
 - Access: the same as the feed (any student with a confirmed email), checked first: 401 `AUTH_REQUIRED`, 403 `ROLE_FORBIDDEN`, 403 `EMAIL_NOT_CONFIRMED`.
 - Visibility for a student is the feed rule (INV-06). A task that is pending, rejected, cancelled, taken or expired is 404 `NOT_FOUND`, so its existence is not leaked (US-14/S2).
 - The executor of the task reads it in any state (§4.13a, US-22). Reading a task that is not published, by its owner or by a moderator, stays with US-22 and US-50; US-40 built the moderator's queue (§4.14a) and does not extend this section.
+
+### 4.13b `GET /api/my/tasks` and the delete of an own task (US-50)
+
+Access "C": a customer. A student is 403 `ROLE_FORBIDDEN`, no session 401. Every task of the caller in any state, newest first, at most 100 (no paging). Only the caller's own rows are read, so another customer's task is never in the list (sc.2).
+
+```json
+200 OK
+{ "tasks": [
+  { "id": "7d0c…", "title": "Парсер сайту", "priceKopecks": 50000, "deadlineAt": "2026-12-01T12:00:00Z",
+    "status": "published", "applicationsCount": 2 }
+] }
+```
+
+`status` is the internal value (`pending_moderation`, `published`, `rejected`, `in_progress`, `in_review`, `revision`, `done`, `cancelled`); the page shows the Ukrainian labels. `applicationsCount` is the number of applications of the task in any status; the page shows it beside a published task only.
+
+`DELETE /api/tasks/:id` (US-22/S2, US-50/S3, A-08, A-14): 204. The owner may delete a task only before an executor is chosen, while it is `pending_moderation` or `published`. In ONE transaction the task becomes `cancelled` (`cancelled_at` is set, it leaves the feed) and every `sent` application of it becomes `rejected` with `decided_at`. A failure at either step rolls back both. A task with an executor is 409 `TASK_HAS_EXECUTOR` and nothing changes, a task in another state 409 `INVALID_TRANSITION`, another customer's task 403 `NOT_TASK_OWNER`. Students are not notified of the rejection (no story asks for it).
 
 ### 4.13a The executor's view of a task (US-22)
 
