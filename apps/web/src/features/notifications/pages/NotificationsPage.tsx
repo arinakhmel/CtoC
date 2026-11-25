@@ -1,5 +1,6 @@
 import {
   MESSAGES_UK,
+  applicationReceivedPayloadSchema,
   executorSelectedPayloadSchema,
   taskPublishedPayloadSchema,
   taskRejectedPayloadSchema,
@@ -25,6 +26,11 @@ const linkOf = (notification: AppNotification): string | null => {
   if (notification.type === 'executor_selected') {
     const parsed = executorSelectedPayloadSchema.safeParse(notification.payload);
     return parsed.success ? `/work/${parsed.data.taskId}` : null;
+  }
+  if (notification.type === 'application_received') {
+    // US-47: «Новий відгук на завдання…» goes to the customer's card, where the candidates are listed (US-24).
+    const parsed = applicationReceivedPayloadSchema.safeParse(notification.payload);
+    return parsed.success ? `/c/tasks/${parsed.data.taskId}` : null;
   }
   if (notification.type === 'result_submitted') {
     const parsed = resultSubmittedPayloadSchema.safeParse(notification.payload);

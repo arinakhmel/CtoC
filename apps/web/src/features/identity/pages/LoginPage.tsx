@@ -2,10 +2,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, MESSAGES_UK, type LoginInput } from '@ctoc/shared';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
+import { markLoggedIn } from '../../../lib/queryClient';
 import type { PageConfig } from '../../../routes.config';
 import { login, type SessionUser } from '../queries/login';
+import { ME_KEY } from '../queries/session';
 import { ResendForm } from './ConfirmEmailPage';
 
 /** Start page by role (US-45 checklist): student → feed, customer → «Мої завдання», moderator → verification queue. */
@@ -21,6 +24,9 @@ const messageFor = (code: string | undefined): string | undefined =>
 /** /login: US-45. An unconfirmed user may log in but can only resend the confirmation email. */
 export function LoginPage({ page }: { page: PageConfig }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  // US-46/S3: the visitor was sent here from a protected page, or the session expired during an action.
+  const sessionEnded = (useLocation().state as { notice?: string } | null)?.notice === 'AUTH_REQUIRED';
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const {
@@ -33,6 +39,8 @@ export function LoginPage({ page }: { page: PageConfig }) {
     setFormError(null);
     try {
       const { user } = await login(email, password);
+      markLoggedIn(queryClient);
+      await queryClient.invalidateQueries({ queryKey: ME_KEY }); // the header now shows «Вийти»
       if (!user.emailConfirmed) {
         setUnconfirmedEmail(email);
         return;
@@ -63,6 +71,7 @@ export function LoginPage({ page }: { page: PageConfig }) {
   return (
     <article aria-labelledby="page-title">
       <h1 id="page-title">{page.title}</h1>
+      {sessionEnded && <p role="status">{MESSAGES_UK.AUTH_REQUIRED}</p>}
       <form onSubmit={onSubmit} noValidate aria-label="Вхід">
         <p>
           <label htmlFor="login-email">Електронна пошта</label>

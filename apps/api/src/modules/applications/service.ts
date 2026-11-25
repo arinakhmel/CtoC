@@ -4,9 +4,11 @@ import { Prisma, type User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { getPublicProfiles } from '../identity/service';
-import { notifyExecutorSelected } from '../notifications/service';
+import { notifyApplicationReceived, notifyExecutorSelected } from '../notifications/service';
 import { getEscrowByKey, holdEscrow } from '../payments/service';
-import { assertTaskOpen, assignTask, deleteTask, getTask, getTaskOwnerView } from '../tasks/service';
+import { assertTaskOpen, assignTask, deleteTask, getTask,
+  getTaskOwnerAndTitle, getTaskOwnerView } from
+  '../tasks/service';
 import { IN_PROGRESS } from '../tasks/domain';
 import { newApplicationData } from './domain';
 import { assertCanApply, assertCanAssign, assertCanListCandidates, assertCanReadMyApplications, assertOwnsTask } from './policy';
@@ -30,6 +32,7 @@ import {
  * 2. The task must be in the feed, otherwise 404 NOT_FOUND, so an unpublished task is not leaked (US-14 sc.2).
  * 3. One transaction: the task is still open (409 TASK_NOT_OPEN if it was taken meanwhile), then the insert.
  *    A second application hits the unique (task, student) index, INV-09: 409 ALREADY_APPLIED (sc.2).
+ *    US-47: in the same transaction the owner of the task gets the notification `application_received`.
  */
 export async function createApplication(user: User, taskId: string, input: CreateApplicationInput) {
   assertCanApply(user);
@@ -38,7 +41,11 @@ export async function createApplication(user: User, taskId: string, input: Creat
   try {
     return await prisma.$transaction(async (tx) => {
       await assertTaskOpen(tx, taskId);
-      return insertApplication(tx, newApplicationData(taskId, user.id, input));
+      const application = await insertApplication(tx, newApplicationData(taskId, user.id, input));
+      // US-47: the owner is told in the same transaction. A duplicate (INV-09) throws above and leaves no notification (sc.2).
+      const task = await getTaskOwnerAndTitle(tx, taskId);
+      await notifyApplicationReceived(tx, task.customerId, task);
+      return application;
     });
   } catch (error) {
     // P2002 is a unique violation. The only unique index on applications is (task, student), INV-09. If another one is added,

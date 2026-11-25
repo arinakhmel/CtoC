@@ -135,6 +135,10 @@ export const lockChatTask = (tx: Prisma.TransactionClient, id: string, userId: s
     WHERE "id" = ${id} AND "status" IN (${Prisma.join([...CHAT_OPEN_STATUSES])}) AND ("customer_id" = ${userId} OR "executor_id" = ${userId})`;
 
 /** US-24. The owner's row of a task, to check ownership and to head the candidate list. */
+/** US-47. On the transaction client: who owns the task and what it is called, for the notification written in the same transaction. */
+export const findTaskOwnerAndTitle = (tx: Prisma.TransactionClient, id: string) =>
+  tx.task.findUniqueOrThrow({ where: { id }, select: { id: true, customerId: true, title: true } });
+
 export const findTaskOwnerView = (id: string) =>
   prisma.task.findUnique({ where: { id }, select: { id: true, customerId: true, title: true, status: true, priceKopecks: true, executorId: true, deadlineAt: true } });
 

@@ -58,6 +58,13 @@ export const taskPublishedPayloadSchema = z.object({
 });
 export type TaskPublishedPayload = z.infer<typeof taskPublishedPayloadSchema>;
 
+/** US-47: the payload of an `application_received` notification, which the owner of the task gets. */
+export const applicationReceivedPayloadSchema = z.object({
+  taskId: z.string().min(1),
+  taskTitle: z.string().min(1),
+});
+export type ApplicationReceivedPayload = z.infer<typeof applicationReceivedPayloadSchema>;
+
 /** US-40/S2, US-49: the payload of a `task_rejected` notification. The reason of the moderator is part of the text the customer reads. */
 export const taskRejectedPayloadSchema = z.object({
   taskId: z.string().min(1),

@@ -46,7 +46,7 @@ async function submit(email = 'user@university.edu.ua', password = 'secret-pass'
 
 describe('/login form (US-45)', () => {
   it.each([
-    ['student', 'Task feed'],
+    ['student', 'Стрічка завдань'],
     ['customer', 'Мої завдання'],
     ['moderator', 'Перевірка студентських документів'],
   ])('US-45 sc.1 a %s is sent to the start page for their role', async (role, heading) => {

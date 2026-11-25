@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applicationReceivedPayloadSchema,
   executorSelectedPayloadSchema,
   LIMITS,
   notificationsQuerySchema,
@@ -48,5 +49,14 @@ describe('US-33 notification schema', () => {
     expect(resultReturnedPayloadSchema.safeParse({ taskTitle: 'Парсер сайту' }).success).toBe(false);
     // The comment is shown on the task card, not copied into the notification: an extra key is stripped, not kept.
     expect(resultReturnedPayloadSchema.parse({ taskId: 't1', taskTitle: 'Парсер сайту', comment: 'Додайте висновки' })).toEqual({ taskId: 't1', taskTitle: 'Парсер сайту' });
+  });
+});
+
+describe('US-47 notification schema', () => {
+  it('US-47 the application_received payload needs a task id and a title', () => {
+    expect(applicationReceivedPayloadSchema.safeParse({ taskId: 't1', taskTitle: 'Парсер сайту' }).success).toBe(true);
+    expect(applicationReceivedPayloadSchema.safeParse({ taskId: 't1' }).success).toBe(false);
+    expect(applicationReceivedPayloadSchema.safeParse({ taskTitle: 'Парсер сайту' }).success).toBe(false);
+    expect(applicationReceivedPayloadSchema.safeParse({ taskId: '', taskTitle: 'Парсер сайту' }).success).toBe(false);
   });
 });

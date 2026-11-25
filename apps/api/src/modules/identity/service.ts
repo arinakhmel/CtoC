@@ -19,6 +19,7 @@ import {
 import {
   confirmUser,
   deleteExpiredSessions,
+  deleteSessionById,
   consumeToken,
   findTokenByHash,
   findProfilesOf,
@@ -154,6 +155,15 @@ export async function login(email: string, password: string) {
   await deleteExpiredSessions(now);
   await insertSession({ id: hashSessionId(sessionId), userId: user.id, expiresAt: new Date(now.getTime() + SESSION_TTL_MS) });
   return { user, sessionId, maxAgeMs: SESSION_TTL_MS };
+}
+
+/**
+ * US-46. Ends the session of this cookie only (the user's other sessions stay). The delete is one statement and its count
+ * is checked: a session that is already gone (a parallel logout) is AUTH_REQUIRED, like a request with no session.
+ */
+export async function logout(sessionId: string | undefined): Promise<void> {
+  const { count } = await deleteSessionById(hashSessionId(sessionId ?? ''));
+  if (count === 0) throw new ApiError('AUTH_REQUIRED');
 }
 
 /** US-09, US-37, US-38. A missing account and a non-student account are both NOT_FOUND, so the URL reveals nothing. */
