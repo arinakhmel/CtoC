@@ -100,7 +100,7 @@ describe('protected pages without a session (US-46)', () => {
     loggedIn = false;
     open('/terms');
 
-    expect(await screen.findByRole('heading', { level: 1, name: /Terms/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /Умови/ })).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Вхід' })).toBeNull();
   });
 

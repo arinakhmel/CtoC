@@ -21,6 +21,8 @@ import { NewTaskPage } from '../features/tasks/pages/NewTaskPage';
 import { TaskPage } from '../features/tasks/pages/TaskPage';
 import { VerificationPage } from '../features/verification/pages/VerificationPage';
 import { RegisterPage } from '../features/identity/pages/RegisterPage';
+import { SettingsPage } from '../features/settings/pages/SettingsPage';
+import { TermsPage } from '../features/settings/pages/TermsPage';
 import { PageStub } from '../pages/PageStub';
 import { PAGES, type PageConfig } from '../routes.config';
 import { Layout } from './Layout';
@@ -48,6 +50,8 @@ const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
   '/notifications': (page) => <NotificationsPage page={page} />,
   '/c/tasks/new': (page) => <NewTaskPage page={page} />,
   '/c/tasks': (page) => <MyTasksPage page={page} />,
+  '/terms': (page) => <TermsPage page={page} />,
+  '/mod/settings': (page) => <SettingsPage page={page} />,
 };
 const renderPage = (page: PageConfig) => {
   const element = IMPLEMENTED[page.path]?.(page) ?? <PageStub page={page} />;

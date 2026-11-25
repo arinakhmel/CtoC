@@ -7,6 +7,7 @@ import { devRouter } from './dev/routes';
 import { identityRouter } from './identity/routes';
 import { notificationsRouter } from './notifications/routes';
 import { paymentsRouter } from './payments/routes';
+import { settingsRouter } from './settings/routes';
 import { tasksRouter } from './tasks/routes';
 import { verificationRouter } from './verification/routes';
 
@@ -25,6 +26,7 @@ export function createModulesRouter(): Router {
   router.use(chatRouter());
   router.use(paymentsRouter());
   router.use(deliveryRouter());
+  router.use(settingsRouter());
   router.use(adminRouter());
   router.use(devRouter());
   return router;
