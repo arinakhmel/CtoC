@@ -25,9 +25,10 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-async function fillAndSubmit(email: string, password = 'secret-pass') {
+async function fillAndSubmit(email: string, password = 'secret-pass', role: 'student' | 'customer' = 'student') {
   const user = userEvent.setup();
   render(<RouterProvider router={createTestRouter(['/register'])} future={providerFuture} />);
+  if (role === 'customer') await user.click(await screen.findByRole('radio', { name: 'Замовник' }));
   await user.type(await screen.findByLabelText('Електронна пошта'), email);
   await user.type(screen.getByLabelText('Ім’я для відображення'), 'Олена Коваль');
   await user.type(screen.getByLabelText('Пароль'), password);
@@ -77,5 +78,24 @@ describe('/register form (US-06)', () => {
     await fillAndSubmit('user@university.edu.ua');
 
     expect(await screen.findByText('Забагато спроб. Спробуйте пізніше')).toBeInTheDocument();
+  });
+});
+
+describe('/register form, customer (US-43)', () => {
+  it('US-43 sc.1 a customer with a company email is sent as role customer and sees the confirmation notice', async () => {
+    registerResponse = () => json({ user: { id: '2', role: 'customer', displayName: 'Олена Коваль', emailConfirmed: false } }, 201);
+    await fillAndSubmit('owner@company.com', 'secret-pass', 'customer');
+
+    expect(await screen.findByText(/Ми надіслали лист/)).toBeInTheDocument();
+    expect(registerCalls).toHaveLength(1);
+    expect(registerCalls[0]).toMatchObject({ role: 'customer', email: 'owner@company.com' });
+  });
+
+  it('US-43 sc.3 the API code EMAIL_TAKEN shows the message at the email field of a customer', async () => {
+    registerResponse = () => json({ error: { code: 'EMAIL_TAKEN', message: 'x', details: [{ field: 'email', code: 'EMAIL_TAKEN' }] } }, 409);
+    await fillAndSubmit('owner@company.com', 'secret-pass', 'customer');
+
+    expect(await screen.findByText('Ця електронна пошта вже використовується')).toBeInTheDocument();
+    expect(screen.queryByText(/Ми надіслали/)).toBeNull();
   });
 });
