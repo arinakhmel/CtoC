@@ -74,7 +74,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/feed",
-    title: "Task feed",
+    title: "Стрічка завдань",
     access: "S-",
     stories: ["US-12", "US-13", "US-14", "US-15"],
   },
@@ -122,7 +122,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/c/tasks",
-    title: "My tasks with statuses",
+    title: "Мої завдання",
     access: "C",
     stories: ["US-50"],
   },
