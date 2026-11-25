@@ -92,6 +92,10 @@ describe('/register form, display name (US-44)', () => {
 
     expect(await screen.findByLabelText('Ім’я для відображення')).toHaveAttribute('aria-invalid', 'true');
     expect(registerCalls).toHaveLength(0);
+    expect(screen.queryByText(/Ми надіслали/)).toBeNull();
+  });
+});
+
 describe('/register form, customer (US-43)', () => {
   it('US-43 sc.1 a customer with a company email is sent as role customer and sees the confirmation notice', async () => {
     registerResponse = () => json({ user: { id: '2', role: 'customer', displayName: 'Олена Коваль', emailConfirmed: false } }, 201);
