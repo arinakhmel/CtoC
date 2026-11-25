@@ -13,6 +13,7 @@ import {
   findAcceptedTaskFacts,
   findDeliveryTask,
   findFeedCursor,
+  findTaskOwnerAndTitle,
   findTaskOwnerView,
   findOpenTask,
   findTaskForDelete,
@@ -151,6 +152,14 @@ export async function lockTaskForChat(tx: Prisma.TransactionClient, taskId: stri
  * US-24. A task for its owner's candidate list: its owner, title, status and price. An unknown task is 404; whether the
  * caller owns it is the caller's policy. The applications module calls this, not the tasks table (ADR-0002).
  */
+/**
+ * US-47. The owner and the title of a task, on the caller's `tx`, for the notification of a new application. Called after
+ * `assertTaskOpen` has taken the write lock, so the row exists (a task is never deleted, only cancelled).
+ */
+export async function getTaskOwnerAndTitle(tx: Prisma.TransactionClient, id: string) {
+  return findTaskOwnerAndTitle(tx, id);
+}
+
 export async function getTaskOwnerView(id: string) {
   const task = await findTaskOwnerView(id);
   if (!task) throw new ApiError('NOT_FOUND');

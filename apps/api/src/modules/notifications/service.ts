@@ -1,7 +1,7 @@
 import type { NotificationsQuery } from '@ctoc/shared';
 import type { Prisma, User } from '@prisma/client';
 import { ApiError } from '../../errors';
-import { executorSelectedPayload, resultAcceptedPayload, resultReturnedPayload, resultSubmittedPayload, taskPublishedPayload, taskRejectedPayload, verificationRejectedPayload } from './domain';
+import { applicationReceivedPayload, executorSelectedPayload, resultAcceptedPayload, resultReturnedPayload, resultSubmittedPayload, taskPublishedPayload, taskRejectedPayload, verificationRejectedPayload } from './domain';
 import { assertCanUseNotifications } from './policy';
 import { insertNotification, listNotificationsOfUser, markNotificationRead, notificationExistsForUser } from './repo';
 
@@ -36,6 +36,23 @@ export async function notifyExecutorSelected(
     userId: executorId,
     type: 'executor_selected',
     payloadJson: JSON.stringify(executorSelectedPayload(task)),
+  });
+}
+
+/**
+ * US-47 sc.1, sc.2. Called by the apply transaction (US-18) with its own `tx`, so the owner of the task is told in the same
+ * transaction that stores the application (INV-23). A second application of the same student fails on the unique index
+ * (INV-09) before this runs, and the rollback leaves nothing, so a rejected application tells no one (sc.2).
+ */
+export async function notifyApplicationReceived(
+  tx: Prisma.TransactionClient,
+  ownerId: string,
+  task: { id: string; title: string },
+): Promise<void> {
+  await insertNotification(tx, {
+    userId: ownerId,
+    type: 'application_received',
+    payloadJson: JSON.stringify(applicationReceivedPayload(task)),
   });
 }
 

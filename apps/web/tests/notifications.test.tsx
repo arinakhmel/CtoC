@@ -127,6 +127,28 @@ describe('/notifications of the customer: the decision of the moderator on a tas
   });
 });
 
+describe('/notifications of the customer: a new application (US-47)', () => {
+  it('US-47 «Новий відгук на завдання…» is listed as new and links to the candidates on the customer card; a payload of another shape gives no link', async () => {
+    const text = 'Новий відгук на завдання «Парсер сайту»';
+    listResponse = () =>
+      json({
+        notifications: [
+          { id: 'n7', type: 'application_received', text, payload: { taskId: 't7', taskTitle: 'Парсер сайту' }, read: false, createdAt: '2026-11-13T10:00:00.000Z' },
+          { ...note(true), id: 'n6', type: 'application_received', text, payload: { unexpected: true } },
+        ],
+      });
+    open();
+
+    const articles = await screen.findAllByRole('article', { name: text });
+    expect(articles).toHaveLength(2);
+    expect(within(articles[0]!).getByText('Нове:')).toBeInTheDocument();
+    expect(within(articles[1]!).queryByText('Нове:')).toBeNull();
+    const links = screen.getAllByRole('link', { name: 'Відкрити завдання' });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute('href', '/c/tasks/t7');
+  });
+});
+
 describe('/notifications of the customer (US-48)', () => {
   it('US-48 sc.1 «Студент надіслав результат…» is listed as new and links to the customer card of the task', async () => {
     const text = 'Студент надіслав результат за завданням «Парсер сайту» на перевірку';
