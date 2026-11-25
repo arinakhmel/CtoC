@@ -155,13 +155,47 @@ describe('POST /api/auth/register (student)', () => {
   });
 });
 
-describe('POST /api/auth/register (customer, US-43 smoke)', () => {
-  it('US-06 a customer may use any domain without the allow-list', async () => {
-    const res = await api()
-      .post('/api/auth/register')
-      .send({ role: 'customer', email: 'owner@company.com', displayName: 'ФОП Іваненко', password: 'secret-pass' });
+describe('POST /api/auth/register (customer, US-43)', () => {
+  const customer = (overrides: Record<string, unknown> = {}) => ({
+    role: 'customer',
+    email: 'owner@company.com',
+    displayName: 'ФОП Іваненко',
+    password: 'secret-pass',
+    ...overrides,
+  });
+
+  it('US-43 sc.1 a customer with a non-university email gets an unconfirmed account and a confirmation email', async () => {
+    const res = await api().post('/api/auth/register').send(customer());
+
     expect(res.status).toBe(201);
-    expect(res.body.user.role).toBe('customer');
+    expect(res.body).toEqual({
+      user: { id: expect.any(String), role: 'customer', displayName: 'ФОП Іваненко', emailConfirmed: false },
+    });
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: 'owner@company.com' } });
+    expect(user.role).toBe('customer');
+    expect(user.emailConfirmedAt).toBeNull();
+
+    const outbox = await api().get('/api/dev/outbox');
+    expect(outbox.body.emails).toHaveLength(1);
+    expect(outbox.body.emails[0].to).toBe('owner@company.com');
+    const token = new URL(outbox.body.emails[0].link).searchParams.get('token')!;
+    const stored = await prisma.emailToken.findMany({ where: { userId: user.id } });
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({ purpose: 'confirm_email', tokenHash: hashToken(token), usedAt: null });
+  });
+
+  it('US-43 sc.3 a repeated customer email, in any letter case, is EMAIL_TAKEN and nothing new is stored', async () => {
+    expect((await api().post('/api/auth/register').send(customer())).status).toBe(201);
+    clearOutbox();
+
+    const res = await api().post('/api/auth/register').send(customer({ email: 'Owner@Company.com', displayName: 'Інший' }));
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('EMAIL_TAKEN');
+    expect(res.body.error.message).toBe('Ця електронна пошта вже використовується');
+    expect(await prisma.user.count()).toBe(1);
+    expect(await prisma.emailToken.count()).toBe(1);
+    expect(getOutbox()).toHaveLength(0);
   });
 });
 
