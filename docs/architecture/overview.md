@@ -174,7 +174,7 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 | `/u/:userId` | Public student profile: badge, skills, bio, experience | P | US-09, US-10, US-11, US-24, US-37, US-38 |
 | `/me/profile` | Edit skills and bio | S- / S+ | US-10, US-11, US-38/S3 |
 | `/me/verification` | Upload a student document and see its status | S- | US-08, US-39/S2 |
-| `/feed` | Task feed | S- | US-12, US-13, US-14, US-15 |
+| `/feed` | Стрічка завдань | S- | US-12, US-13, US-14, US-15 |
 | `/tasks/:id` | Task details, an apply button and an inline note block (OQ-25). Applying needs S+. A non-verified student is prompted to verify. | S- (apply: S+) | US-13, US-15, US-18, US-19, US-42 |
 | `/me/applications` | Мої відгуки | S- / S+ | US-20 |
 | `/me/work` | "Мої активні завдання" | S+ | US-22, US-29 |
@@ -182,7 +182,7 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 | `/me/finance` | "Фінанси" | S+ | US-34, US-35, US-36 |
 | `/notifications` | Сповіщення | A | US-21, US-30, US-39/S2, US-47, US-48, US-49 |
 | `/c/tasks/new` | Task form | C | US-16, US-17 |
-| `/c/tasks` | My tasks with statuses | C | US-50 |
+| `/c/tasks` | Мої завдання | C | US-50 |
 | `/c/tasks/:id` | Task management: candidates, select and reserve, review result, chat | C (owner) | US-23, US-24, US-25, US-26, US-31, US-32, US-33 |
 | `/c/balance` | Баланс і тестове поповнення | C | US-26 (OQ-09) |
 | `/mod/verifications` | "Перевірка студентських документів" | M | US-39, US-41 |
