@@ -40,7 +40,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | POST | `/api/auth/confirm-email` | US-07/S1, S2 | P | 200 (body: §4.6) | 400 `TOKEN_INVALID`, `TOKEN_EXPIRED` |
 | POST | `/api/auth/resend-confirmation` | US-07/S3 | P (OQ-20) | 202, no body | 400 `VALIDATION_FAILED` · 409 `EMAIL_ALREADY_CONFIRMED` · 429 |
 | POST | `/api/auth/login` | US-45 | P | 200, sets `sid` (body: §4.7) | 400 `VALIDATION_FAILED` · 401 `INVALID_CREDENTIALS` · 429 `RATE_LIMITED` |
-| POST | `/api/auth/logout` | US-46 | A | 204 | |
+| POST | `/api/auth/logout` | US-46 | A | 204 (no body, §4.7) | 401 `AUTH_REQUIRED` · 403 `ORIGIN_MISMATCH` |
 | GET | `/api/me` | US-45 | A | 200 (body: §4.7) | 401 `AUTH_REQUIRED` |
 | PUT | `/api/me/profile` | US-11 | S- | 200 (body: §4.11) | 400 `BIO_TOO_LONG`, `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | PUT | `/api/me/skills` | US-10 | S- | 200 (body: §4.10) | 400 `SKILL_EMPTY`, `SKILLS_LIMIT`, `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
@@ -571,7 +571,7 @@ The response is the customer's own view: no commission fields (they are taken at
 - A token works once. An unknown, used or replaced token gives 400 `TOKEN_INVALID`. A token past its 24 h lifetime that was never used gives 400 `TOKEN_EXPIRED`, and the UI offers a resend.
 - Resend takes `{ "email": "user@knu.edu.ua" }` and answers 202 with no body. It stores a new token, invalidates the older unused ones and sends a new email (the dev outbox shows it). An unknown email also gets 202 and nothing is sent. A confirmed account gets 409 `EMAIL_ALREADY_CONFIRMED`. Limit: 5 requests per hour per IP, then 429 `RATE_LIMITED` (proposal). Public access is open question OQ-20.
 
-### 4.7 `POST /api/auth/login` and `GET /api/me` (US-45)
+### 4.7 `POST /api/auth/login`, `POST /api/auth/logout` and `GET /api/me` (US-45, US-46)
 
 ```json
 { "email": "user@knu.edu.ua", "password": "secret-pass" }
@@ -588,6 +588,8 @@ The response is the customer's own view: no commission fields (they are taken at
 - Only the SHA-256 of the cookie value is stored in `sessions.id`.
 - Limit: 5 failed logins per 15 minutes per IP, then 429 `RATE_LIMITED` even for a correct password. Successful logins are not counted and reset the count (proposal, in memory, single API instance).
 - The start page by role is decided by the web app: student → `/feed`, customer → `/c/tasks`, moderator → `/mod/verifications`.
+- `POST /api/auth/logout` (US-46) answers 204 with no body, deletes the session row of the cookie that made the request and clears the `sid` cookie. Only this session ends, the user's other sessions stay. The delete is one conditional statement and its count is checked: the old cookie is 401 `AUTH_REQUIRED` at once, and a second or parallel logout with it is 401 as well (never 500). A request with the cookie must carry the `Origin` header (403 `ORIGIN_MISMATCH`). The web app then clears its cached data and opens `/`.
+- A missing or expired session on a protected page, or a 401 `AUTH_REQUIRED` during an action: the web app opens `/login` with the message of that code («Увійдіть, щоб продовжити»).
 - Moderators are created by `pnpm db:seed` (`SEED_MODERATOR_EMAIL`, `SEED_MODERATOR_PASSWORD`), never by registration (ADR-0006).
 
 ### 4.8 `POST /api/me/verification` and `GET /api/me/verification` (US-08)

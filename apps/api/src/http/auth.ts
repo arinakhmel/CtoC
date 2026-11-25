@@ -31,6 +31,9 @@ function readCookie(header: string | undefined, name: string): string | undefine
   return undefined;
 }
 
+/** The raw value of the `sid` cookie of a request, if any (US-46 needs it to end exactly this session). */
+export const sessionCookieOf = (req: { headers: { cookie?: string } }): string | undefined => readCookie(req.headers.cookie, SESSION_COOKIE);
+
 /** Reads the `sid` cookie and loads the user of a valid session (ADR-0006). No cookie or a bad one: no user. */
 export const sessionMiddleware: RequestHandler = async (req, _res, next) => {
   const sid = readCookie(req.headers.cookie, SESSION_COOKIE);
