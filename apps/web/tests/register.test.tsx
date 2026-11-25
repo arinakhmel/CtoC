@@ -81,6 +81,17 @@ describe('/register form (US-06)', () => {
   });
 });
 
+describe('/register form, display name (US-44)', () => {
+  it('US-44 sc.2 a name of one character shows a validation error and nothing is sent', async () => {
+    const user = userEvent.setup();
+    render(<RouterProvider router={createTestRouter(['/register'])} future={providerFuture} />);
+    await user.type(await screen.findByLabelText('Електронна пошта'), 'user@university.edu.ua');
+    await user.type(screen.getByLabelText('Ім’я для відображення'), 'О');
+    await user.type(screen.getByLabelText('Пароль'), 'secret-pass');
+    await user.click(screen.getByRole('button', { name: 'Зареєструватися' }));
+
+    expect(await screen.findByLabelText('Ім’я для відображення')).toHaveAttribute('aria-invalid', 'true');
+    expect(registerCalls).toHaveLength(0);
 describe('/register form, customer (US-43)', () => {
   it('US-43 sc.1 a customer with a company email is sent as role customer and sees the confirmation notice', async () => {
     registerResponse = () => json({ user: { id: '2', role: 'customer', displayName: 'Олена Коваль', emailConfirmed: false } }, 201);
