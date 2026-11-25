@@ -11,7 +11,7 @@ import { requireUser } from '../../http/auth';
 import { validateBody } from '../../http/validate';
 import { assertCanApply, assertCanListCandidates, assertCanReadMyApplications } from './policy';
 import { serializeApplication, serializeAssignment, serializeCandidate, serializeMyApplication, serializeOwnerTask } from './serializer';
-import { assignExecutor, createApplication, getCandidates, getMyApplications, resolveOwnedTask, type OwnedTask } from './service';
+import { assignExecutor, createApplication, deleteMyTask, getCandidates, getMyApplications, resolveOwnedTask, type OwnedTask } from './service';
 
 /** The access check as a step of its own, so it runs before the body is validated (403 before 400). */
 const requireApplyAccess: RequestHandler = (req, _res, next) => {
@@ -54,6 +54,12 @@ export function applicationsRouter(): Router {
   router.get('/tasks/:id/applications', requireUser, requireOwnerAccess, async (req, res) => {
     const { task, candidates, truncated } = await getCandidates(req.user!, String(req.params.id));
     res.json({ task: serializeOwnerTask(task), applications: candidates.map(({ row, student }) => serializeCandidate(row, student)), truncated });
+  });
+
+  // US-22 sc.2, US-50 sc.3. Access "Own": a customer with a confirmed email (the same rule as the candidate list).
+  router.delete('/tasks/:id', requireUser, requireOwnerAccess, async (req, res) => {
+    await deleteMyTask(req.user!, String(req.params.id));
+    res.status(204).end();
   });
 
   router.post('/tasks/:id/assign', requireUser, requireOwnedTask, validateBody(assignExecutorSchema), async (req, res) => {

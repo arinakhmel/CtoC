@@ -1,4 +1,5 @@
 import {
+  applicationReceivedPayloadSchema,
   executorSelectedPayloadSchema,
   resultAcceptedPayloadSchema,
   resultReturnedPayloadSchema,
@@ -7,6 +8,7 @@ import {
   taskRejectedPayloadSchema,
   verificationApprovedPayloadSchema,
   verificationRejectedPayloadSchema,
+  type ApplicationReceivedPayload,
   type ExecutorSelectedPayload,
   type VerificationRejectedPayload,
   type ResultAcceptedPayload,
@@ -35,6 +37,14 @@ export const resultReturnedPayload = (task: { id: string; title: string }): Resu
 export const RESULT_ACCEPTED_TEXT = 'Ваш результат прийнято замовником! Оплату нараховано';
 
 export const resultAcceptedPayload = (task: { id: string; title: string }): ResultAcceptedPayload => ({
+  taskId: task.id,
+  taskTitle: task.title,
+});
+
+/** US-47 sc.1 [AC]: «Новий відгук на завдання «[Назва]»». The title replaces the placeholder. */
+export const applicationReceivedText = (taskTitle: string): string => `Новий відгук на завдання «${taskTitle}»`;
+
+export const applicationReceivedPayload = (task: { id: string; title: string }): ApplicationReceivedPayload => ({
   taskId: task.id,
   taskTitle: task.title,
 });
@@ -91,6 +101,10 @@ export function notificationText(type: string, payload: unknown): string {
   if (type === 'executor_selected') {
     const parsed = executorSelectedPayloadSchema.safeParse(payload);
     if (parsed.success) return executorSelectedText(parsed.data.taskTitle);
+  }
+  if (type === 'application_received') {
+    const parsed = applicationReceivedPayloadSchema.safeParse(payload);
+    if (parsed.success) return applicationReceivedText(parsed.data.taskTitle);
   }
   if (type === 'result_submitted') {
     const parsed = resultSubmittedPayloadSchema.safeParse(payload);

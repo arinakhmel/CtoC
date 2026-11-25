@@ -43,6 +43,10 @@ export const rejectOtherApplications = (tx: Prisma.TransactionClient, taskId: st
     data: { status: APPLICATION_REJECTED, decidedAt: now },
   });
 
+/** US-50 sc.3 (A-14). Every `sent` application of a task that was just cancelled becomes `rejected`, on the same transaction. */
+export const rejectSentOfTask = (tx: Prisma.TransactionClient, taskId: string, now: Date) =>
+  tx.application.updateMany({ where: { taskId, status: APPLICATION_SENT }, data: { status: APPLICATION_REJECTED, decidedAt: now } });
+
 /** US-26 sc.3. For a repeated request: which application won and how many were rejected. */
 export const findAcceptedOfTask = (taskId: string) => prisma.application.findFirst({ where: { taskId, status: APPLICATION_ACCEPTED } });
 export const countRejectedOfTask = (taskId: string) => prisma.application.count({ where: { taskId, status: APPLICATION_REJECTED } });

@@ -37,6 +37,9 @@ export const insertSession = (data: { id: string; userId: string; expiresAt: Dat
 export const findValidSession = (idHash: string, now: Date) =>
   prisma.session.findFirst({ where: { id: idHash, expiresAt: { gt: now } }, include: { user: true } });
 
+/** US-46. One conditional statement: the count says whether this session existed (0 for a second, parallel logout). */
+export const deleteSessionById = (idHash: string) => prisma.session.deleteMany({ where: { id: idHash } });
+
 export const deleteExpiredSessions = (now: Date) => prisma.session.deleteMany({ where: { expiresAt: { lte: now } } });
 
 /** Only student accounts have a public profile (A-16). Anything else is the same as a missing account. */

@@ -16,6 +16,7 @@ import { TasksQueuePage } from '../features/admin/pages/TasksQueuePage';
 import { VerificationsQueuePage } from '../features/admin/pages/VerificationsQueuePage';
 import { WithdrawalsQueuePage } from '../features/admin/pages/WithdrawalsQueuePage';
 import { FeedPage } from '../features/tasks/pages/FeedPage';
+import { MyTasksPage } from '../features/tasks/pages/MyTasksPage';
 import { NewTaskPage } from '../features/tasks/pages/NewTaskPage';
 import { TaskPage } from '../features/tasks/pages/TaskPage';
 import { VerificationPage } from '../features/verification/pages/VerificationPage';
@@ -23,6 +24,7 @@ import { RegisterPage } from '../features/identity/pages/RegisterPage';
 import { PageStub } from '../pages/PageStub';
 import { PAGES, type PageConfig } from '../routes.config';
 import { Layout } from './Layout';
+import { RequireAuth } from './RequireAuth';
 
 /** Pages that are built. Every other page in overview.md §4 is still a stub. */
 const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
@@ -45,8 +47,13 @@ const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
   '/work/:taskId': () => <WorkTaskPage />,
   '/notifications': (page) => <NotificationsPage page={page} />,
   '/c/tasks/new': (page) => <NewTaskPage page={page} />,
+  '/c/tasks': (page) => <MyTasksPage page={page} />,
 };
-const renderPage = (page: PageConfig) => IMPLEMENTED[page.path]?.(page) ?? <PageStub page={page} />;
+const renderPage = (page: PageConfig) => {
+  const element = IMPLEMENTED[page.path]?.(page) ?? <PageStub page={page} />;
+  // US-46: every page that is not public (overview.md §4) is behind the session guard.
+  return page.access === 'P' ? element : <RequireAuth>{element}</RequireAuth>;
+};
 
 /** One stub per page in overview.md §4, plus the not-found page. Replace a stub when its story is built. */
 export const routes: RouteObject[] = [

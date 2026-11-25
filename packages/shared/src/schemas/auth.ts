@@ -1,12 +1,15 @@
 import { z } from 'zod';
 import { LIMITS } from '../limits';
 import { emailSchema, studentEmailSchema } from './email';
+import { countCharacters } from './profile';
 
+/** US-44. 2 to 60 characters, counted as code points like the database CHECK `length(display_name)`, so an emoji counts as 1. */
 export const displayNameSchema = z
   .string({ required_error: 'VALIDATION_FAILED', invalid_type_error: 'VALIDATION_FAILED' })
   .trim()
-  .min(LIMITS.displayName.min, 'VALIDATION_FAILED')
-  .max(LIMITS.displayName.max, 'VALIDATION_FAILED');
+  .refine((name) => countCharacters(name) >= LIMITS.displayName.min && countCharacters(name) <= LIMITS.displayName.max, {
+    message: 'VALIDATION_FAILED',
+  });
 
 export const passwordSchema = z
   .string({ required_error: 'VALIDATION_FAILED', invalid_type_error: 'VALIDATION_FAILED' })

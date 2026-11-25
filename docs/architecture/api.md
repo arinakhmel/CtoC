@@ -40,7 +40,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | POST | `/api/auth/confirm-email` | US-07/S1, S2 | P | 200 (body: §4.6) | 400 `TOKEN_INVALID`, `TOKEN_EXPIRED` |
 | POST | `/api/auth/resend-confirmation` | US-07/S3 | P (OQ-20) | 202, no body | 400 `VALIDATION_FAILED` · 409 `EMAIL_ALREADY_CONFIRMED` · 429 |
 | POST | `/api/auth/login` | US-45 | P | 200, sets `sid` (body: §4.7) | 400 `VALIDATION_FAILED` · 401 `INVALID_CREDENTIALS` · 429 `RATE_LIMITED` |
-| POST | `/api/auth/logout` | US-46 | A | 204 | |
+| POST | `/api/auth/logout` | US-46 | A | 204 (no body, §4.7) | 401 `AUTH_REQUIRED` · 403 `ORIGIN_MISMATCH` |
 | GET | `/api/me` | US-45 | A | 200 (body: §4.7) | 401 `AUTH_REQUIRED` |
 | PUT | `/api/me/profile` | US-11 | S- | 200 (body: §4.11) | 400 `BIO_TOO_LONG`, `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
 | PUT | `/api/me/skills` | US-10 | S- | 200 (body: §4.10) | 400 `SKILL_EMPTY`, `SKILLS_LIMIT`, `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
@@ -63,7 +63,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | GET | `/api/tasks` (feed) | US-12, US-13, US-14, US-15 | S- (any student with a confirmed email) | 200 (body: §4.12) | 400 `VALIDATION_FAILED` (bad `limit` or `cursor`) · 401 `AUTH_REQUIRED` · 403 `EMAIL_NOT_CONFIRMED`, `ROLE_FORBIDDEN` |
 | GET | `/api/tasks/:id` | US-13, US-15, US-22 | S- (published) · Ex (own assigned task) · Own · M | 200 (body: §4.13, executor: §4.13a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` · 404 `NOT_FOUND` |
 | POST | `/api/tasks` | US-16, US-17, US-40/S3 | C (confirmed) | 201, always `pending_moderation` | 400 `VALIDATION_FAILED`, `TITLE_TOO_SHORT`, `PRICE_BELOW_MIN`, `PRICE_ABOVE_MAX`, `DEADLINE_IN_PAST` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
-| GET | `/api/my/tasks` | US-50 | C | 200 (each task with `applicationsCount`) | |
+| GET | `/api/my/tasks` | US-50 | C | 200 (body: §4.13b, each task with `applicationsCount`) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN` |
 | DELETE | `/api/tasks/:id` | US-22/S2, US-50, A-08 | Own | 204 | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` · 409 `TASK_HAS_EXECUTOR`, `INVALID_TRANSITION` |
 
 ### Applications and executor selection
@@ -72,7 +72,7 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 |---|---|---|---|---|---|
 | POST | `/api/tasks/:id/applications` | US-18, US-19, US-42 | S+ | 201 | 400 `NOTE_TOO_LONG` · 403 `STUDENT_NOT_VERIFIED` · 404 `NOT_FOUND` (not in the feed: not published, assigned, expired or unknown) · 409 `ALREADY_APPLIED`, `TASK_NOT_OPEN` (race only) |
 | GET | `/api/me/applications` | US-20 | S- | 200 (body: §4.3a) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |
-| GET | `/api/tasks/:id/applications` | US-24, US-25 | Own | 200 (body: §4.3d) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` |
+| GET | `/api/tasks/:id/applications` | US-24, US-25 | Own | 200 (body: §4.3d) | 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` · 404 `NOT_FOUND` (an unknown task and another customer's task, US-50) |
 | POST | `/api/tasks/:id/applications/:appId/reject` | US-20/S3 | Own | *Planned, not implemented yet (W-20).* 200 | 403 · 409 `APPLICATION_NOT_PENDING` |
 | POST | `/api/tasks/:id/assign` | US-25, US-26, US-21 | Own | 200 (body: §4.1) | 400 `VALIDATION_FAILED` (no `applicationId`, or a bad `Idempotency-Key`) · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED`, `NOT_TASK_OWNER` · 404 `NOT_FOUND` (task, or an application that is not this task's) · 409 `TASK_ALREADY_ASSIGNED`, `TASK_NOT_OPEN`, `APPLICATION_NOT_PENDING` · 422 `INSUFFICIENT_FUNDS` |
 
@@ -418,6 +418,8 @@ A second call (US-18/S2):
 { "error": { "code": "ALREADY_APPLIED", "message": "Ви вже подали відгук на це завдання" } }
 ```
 
+US-47. In the same transaction that stores the application, the owner of the task gets a notification `application_received` (§4.3b), through `notifyApplicationReceived(tx, …)`. A refused application (409 `ALREADY_APPLIED`, 409 `TASK_NOT_OPEN`, 403, 404) rolls back and tells no one. Every application makes its own notification, there is no grouping.
+
 ### 4.3a `GET /api/me/applications` (my applications)
 
 US-20. The caller's own applications, newest first, at most 100 (OQ-26). Access "S-": a student with a confirmed email, verified or not. The status is the stored one (`sent`, `accepted`, `rejected`); the UI shows «Надіслано», «Прийнято», «Відхилено».
@@ -452,6 +454,7 @@ The types that exist, with the text of each (the text is built by the server fro
 | `type` | Who gets it | `text` | `payload` | Link on `/notifications` |
 |---|---|---|---|---|
 | `executor_selected` | the selected student (US-21) | «Вас обрано виконавцем завдання [Назва]» | `{ taskId, taskTitle }` | `/work/:taskId` |
+| `application_received` | the customer who owns the task (US-47) | «Новий відгук на завдання «[Назва]»» | `{ taskId, taskTitle }` | `/c/tasks/:taskId` (the candidates, US-24) |
 | `result_submitted` | the customer who owns the task (US-28, US-48) | «Студент надіслав результат за завданням «[Назва]» на перевірку» | `{ taskId, taskTitle }` | `/c/tasks/:taskId` |
 | `result_returned` | the executor, the student (US-33) | «Замовник повернув результат на доопрацювання за завданням «[Назва]»» (the comment is not in it: the task card shows it) | `{ taskId, taskTitle }` | `/work/:taskId` |
 | `result_accepted` | the executor, the student (US-30) | «Ваш результат прийнято замовником! Оплату нараховано» (fixed, the title is only in the payload) | `{ taskId, taskTitle }` | `/work/:taskId` |
@@ -484,7 +487,7 @@ The types that exist, with the text of each (the text is built by the server fro
 
 ### 4.3d `GET /api/tasks/:id/applications` (the owner's candidate list, US-24)
 
-Access "Own": the customer who owns the task. A student is 403 `ROLE_FORBIDDEN`, another customer 403 `NOT_TASK_OWNER`, an unknown task 404. The list is oldest first, at most 100. It is read-only. The task header (`task`) is there because the owner has no other endpoint for the task yet (OQ-31). It carries `deadlineAt` (the page turns the select off after it) and `hasExecutor` (a cancelled task that never had one shows no chat).
+Access "Own": the customer who owns the task. A student is 403 `ROLE_FORBIDDEN`. An unknown task and another customer's task are both 404 `NOT_FOUND` (US-50 sc.2, ADR-0006: the management page does not say that a task exists; it is the same body for both). The other owner actions (assign, accept, return, delete, chat) keep 403 `NOT_TASK_OWNER` until the product owner decides OQ-31(e) for all of them. The list is oldest first, at most 100. It is read-only. The task header (`task`) is there because the owner has no other endpoint for the task yet (OQ-31). It carries `deadlineAt` (the page turns the select off after it) and `hasExecutor` (a cancelled task that never had one shows no chat).
 
 The answer has `truncated`: `true` when the task has more than 100 applicants and the list was cut, so the page can say so. Each applicant is the application (§4.3) plus the public profile of the student (§4.9): `verified` is `studentVerifiedAt IS NOT NULL` as it is now (INV-03), so a student whose verification was revoked after applying shows `false` (US-24/S2, W-01). No email, role or hash, and no price.
 
@@ -571,7 +574,7 @@ The response is the customer's own view: no commission fields (they are taken at
 - A token works once. An unknown, used or replaced token gives 400 `TOKEN_INVALID`. A token past its 24 h lifetime that was never used gives 400 `TOKEN_EXPIRED`, and the UI offers a resend.
 - Resend takes `{ "email": "user@knu.edu.ua" }` and answers 202 with no body. It stores a new token, invalidates the older unused ones and sends a new email (the dev outbox shows it). An unknown email also gets 202 and nothing is sent. A confirmed account gets 409 `EMAIL_ALREADY_CONFIRMED`. Limit: 5 requests per hour per IP, then 429 `RATE_LIMITED` (proposal). Public access is open question OQ-20.
 
-### 4.7 `POST /api/auth/login` and `GET /api/me` (US-45)
+### 4.7 `POST /api/auth/login`, `POST /api/auth/logout` and `GET /api/me` (US-45, US-46)
 
 ```json
 { "email": "user@knu.edu.ua", "password": "secret-pass" }
@@ -588,6 +591,8 @@ The response is the customer's own view: no commission fields (they are taken at
 - Only the SHA-256 of the cookie value is stored in `sessions.id`.
 - Limit: 5 failed logins per 15 minutes per IP, then 429 `RATE_LIMITED` even for a correct password. Successful logins are not counted and reset the count (proposal, in memory, single API instance).
 - The start page by role is decided by the web app: student → `/feed`, customer → `/c/tasks`, moderator → `/mod/verifications`.
+- `POST /api/auth/logout` (US-46) answers 204 with no body, deletes the session row of the cookie that made the request and clears the `sid` cookie. Only this session ends, the user's other sessions stay. The delete is one conditional statement and its count is checked: the old cookie is 401 `AUTH_REQUIRED` at once, and a second or parallel logout with it is 401 as well (never 500). A request with the cookie must carry the `Origin` header (403 `ORIGIN_MISMATCH`). The web app then clears its cached data and opens `/`.
+- A missing or expired session on a protected page, or a 401 `AUTH_REQUIRED` during an action: the web app opens `/login` with the message of that code («Увійдіть, щоб продовжити»).
 - Moderators are created by `pnpm db:seed` (`SEED_MODERATOR_EMAIL`, `SEED_MODERATOR_PASSWORD`), never by registration (ADR-0006).
 
 ### 4.8 `POST /api/me/verification` and `GET /api/me/verification` (US-08)
@@ -720,6 +725,22 @@ GET /api/tasks?limit=20&cursor=<id of the last task of the previous page>
 - Access: the same as the feed (any student with a confirmed email), checked first: 401 `AUTH_REQUIRED`, 403 `ROLE_FORBIDDEN`, 403 `EMAIL_NOT_CONFIRMED`.
 - Visibility for a student is the feed rule (INV-06). A task that is pending, rejected, cancelled, taken or expired is 404 `NOT_FOUND`, so its existence is not leaked (US-14/S2).
 - The executor of the task reads it in any state (§4.13a, US-22). Reading a task that is not published, by its owner or by a moderator, stays with US-22 and US-50; US-40 built the moderator's queue (§4.14a) and does not extend this section.
+
+### 4.13b `GET /api/my/tasks` and the delete of an own task (US-50)
+
+Access "C": a customer. A student is 403 `ROLE_FORBIDDEN`, no session 401. Every task of the caller in any state, newest first, at most 100 (no paging). Only the caller's own rows are read, so another customer's task is never in the list (sc.2).
+
+```json
+200 OK
+{ "tasks": [
+  { "id": "7d0c…", "title": "Парсер сайту", "priceKopecks": 50000, "deadlineAt": "2026-12-01T12:00:00Z",
+    "status": "published", "applicationsCount": 2 }
+] }
+```
+
+`status` is the internal value (`pending_moderation`, `published`, `rejected`, `in_progress`, `in_review`, `revision`, `done`, `cancelled`); the page shows the Ukrainian labels. `applicationsCount` is the number of applications of the task in any status; the page shows it beside a published task only.
+
+`DELETE /api/tasks/:id` (US-22/S2, US-50/S3, A-08, A-14): 204. The owner may delete a task only before an executor is chosen, while it is `pending_moderation` or `published`. In ONE transaction the task becomes `cancelled` (`cancelled_at` is set, it leaves the feed) and every `sent` application of it becomes `rejected` with `decided_at`. A failure at either step rolls back both. A task with an executor is 409 `TASK_HAS_EXECUTOR` and nothing changes, a task in another state 409 `INVALID_TRANSITION`, another customer's task 403 `NOT_TASK_OWNER`. Students are not notified of the rejection (no story asks for it).
 
 ### 4.13a The executor's view of a task (US-22)
 

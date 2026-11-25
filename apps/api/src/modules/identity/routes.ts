@@ -7,12 +7,12 @@ import {
   updateProfileSchema,
 } from '@ctoc/shared';
 import { Router } from 'express';
-import { requireUser, SESSION_COOKIE } from '../../http/auth';
+import { requireUser, SESSION_COOKIE, sessionCookieOf } from '../../http/auth';
 import { failureLimiter, rateLimit } from '../../http/rate-limit';
 import { validateBody } from '../../http/validate';
 import { ApiError } from '../../errors';
 import { serializeConfirmed, serializeMe, serializePublicProfile, serializeRegistered } from './serializer';
-import { confirmEmail, getPublicProfile, login, register, resendConfirmation, setMyBio, setMySkills, suggestSkills } from './service';
+import { confirmEmail, getPublicProfile, login, logout, register, resendConfirmation, setMyBio, setMySkills, suggestSkills } from './service';
 
 export function identityRouter(): Router {
   const router = Router();
@@ -51,6 +51,13 @@ export function identityRouter(): Router {
       if (error instanceof ApiError && error.code === 'INVALID_CREDENTIALS') loginFailures.fail(req);
       throw error;
     }
+  });
+
+  // US-46. Access "A": any logged-in user. The Origin check of app.ts has already run (the request carries the cookie).
+  router.post('/auth/logout', requireUser, async (req, res) => {
+    await logout(sessionCookieOf(req));
+    res.clearCookie(SESSION_COOKIE, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/' });
+    res.status(204).end();
   });
 
   router.get('/me', requireUser, (req, res) => {

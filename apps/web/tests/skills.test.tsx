@@ -101,12 +101,13 @@ describe('/me/profile skills editor (US-10)', () => {
     expect(screen.queryByText(/Зміни збережено/)).toBeNull();
   });
 
-  it('US-10 sc.1 without a session the page shows the login prompt', async () => {
+  // US-46: the route guard sends a visitor without a session to the login page with the message, before the page is shown.
+  it('US-10 sc.1 without a session the user is sent to the login page and the editor is not shown', async () => {
     meResponse = () => apiError('AUTH_REQUIRED', 401);
     render(<RouterProvider router={createTestRouter(['/me/profile'])} future={providerFuture} />);
 
-    expect(await screen.findByText(/Увійдіть, щоб продовжити/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Увійти' })).toHaveAttribute('href', '/login');
+    expect(await screen.findByRole('form', { name: 'Вхід' })).toBeInTheDocument();
+    expect(screen.getByText(/Увійдіть, щоб продовжити/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Навичка')).toBeNull();
   });
 

@@ -4,9 +4,11 @@ import { Prisma, type User } from '@prisma/client';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { getPublicProfiles } from '../identity/service';
-import { notifyExecutorSelected } from '../notifications/service';
+import { notifyApplicationReceived, notifyExecutorSelected } from '../notifications/service';
 import { getEscrowByKey, holdEscrow } from '../payments/service';
-import { assertTaskOpen, assignTask, getTask, getTaskOwnerView } from '../tasks/service';
+import { assertTaskOpen, assignTask, deleteTask, getTask,
+  getTaskOwnerAndTitle, getTaskOwnerView } from
+  '../tasks/service';
 import { IN_PROGRESS } from '../tasks/domain';
 import { newApplicationData } from './domain';
 import { assertCanApply, assertCanAssign, assertCanListCandidates, assertCanReadMyApplications, assertOwnsTask } from './policy';
@@ -19,6 +21,7 @@ import {
   listApplicationsOfStudent,
   listApplicationsOfTask,
   rejectOtherApplications,
+  rejectSentOfTask,
 } from './repo';
 
 /**
@@ -29,6 +32,7 @@ import {
  * 2. The task must be in the feed, otherwise 404 NOT_FOUND, so an unpublished task is not leaked (US-14 sc.2).
  * 3. One transaction: the task is still open (409 TASK_NOT_OPEN if it was taken meanwhile), then the insert.
  *    A second application hits the unique (task, student) index, INV-09: 409 ALREADY_APPLIED (sc.2).
+ *    US-47: in the same transaction the owner of the task gets the notification `application_received`.
  */
 export async function createApplication(user: User, taskId: string, input: CreateApplicationInput) {
   assertCanApply(user);
@@ -37,7 +41,11 @@ export async function createApplication(user: User, taskId: string, input: Creat
   try {
     return await prisma.$transaction(async (tx) => {
       await assertTaskOpen(tx, taskId);
-      return insertApplication(tx, newApplicationData(taskId, user.id, input));
+      const application = await insertApplication(tx, newApplicationData(taskId, user.id, input));
+      // US-47: the owner is told in the same transaction. A duplicate (INV-09) throws above and leaves no notification (sc.2).
+      const task = await getTaskOwnerAndTitle(tx, taskId);
+      await notifyApplicationReceived(tx, task.customerId, task);
+      return application;
     });
   } catch (error) {
     // P2002 is a unique violation. The only unique index on applications is (task, student), INV-09. If another one is added,
@@ -61,13 +69,14 @@ export async function getMyApplications(user: User) {
 
 /**
  * US-24 sc.1, sc.2. The applicants of one task for its owner, oldest first, each with the public profile card of the student
- * (name, the verified flag as it is now, skills, bio). An unknown task is 404, someone else's task is 403 NOT_TASK_OWNER
- * (api.md §1). The cards come ready from the identity service in one batch. Read-only.
+ * (name, the verified flag as it is now, skills, bio). An unknown task and someone else's task are both 404 NOT_FOUND
+ * (US-50 sc.2, ADR-0006): the management page of a task does not say that it exists. The cards come ready from the identity
+ * service in one batch. Read-only.
  */
 export async function getCandidates(user: User, taskId: string) {
   assertCanListCandidates(user);
   const task = await getTaskOwnerView(taskId);
-  assertOwnsTask(task, user);
+  if (task.customerId !== user.id) throw new ApiError('NOT_FOUND');
 
   // One more than the cap, to know whether the list was cut (the page says so).
   const found = await listApplicationsOfTask(taskId, LIMITS.candidatesMax + 1);
@@ -80,6 +89,16 @@ export async function getCandidates(user: User, taskId: string) {
   });
   return { task, candidates, truncated };
 }
+
+/**
+ * US-50 sc.3 (US-22 sc.2, INV-13, A-14). The owner deletes a task that has no executor: it becomes `cancelled`, leaves the feed,
+ * and in the same transaction every `sent` application of it becomes `rejected`. A failure at the second step rolls back the
+ * first. The task side (checks, the conditional update, the 409 codes) is `deleteTask` of the tasks service.
+ */
+export const deleteMyTask = (user: User, taskId: string): Promise<void> =>
+  deleteTask(user, taskId, async (tx) => {
+    await rejectSentOfTask(tx, taskId, new Date());
+  });
 
 export type OwnedTask = Awaited<ReturnType<typeof getTaskOwnerView>>;
 
