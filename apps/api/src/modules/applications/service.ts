@@ -6,7 +6,7 @@ import { prisma } from '../../platform/db';
 import { getPublicProfiles } from '../identity/service';
 import { notifyExecutorSelected } from '../notifications/service';
 import { getEscrowByKey, holdEscrow } from '../payments/service';
-import { assertTaskOpen, assignTask, getTask, getTaskOwnerView } from '../tasks/service';
+import { assertTaskOpen, assignTask, deleteTask, getTask, getTaskOwnerView } from '../tasks/service';
 import { IN_PROGRESS } from '../tasks/domain';
 import { newApplicationData } from './domain';
 import { assertCanApply, assertCanAssign, assertCanListCandidates, assertCanReadMyApplications, assertOwnsTask } from './policy';
@@ -19,6 +19,7 @@ import {
   listApplicationsOfStudent,
   listApplicationsOfTask,
   rejectOtherApplications,
+  rejectSentOfTask,
 } from './repo';
 
 /**
@@ -61,13 +62,14 @@ export async function getMyApplications(user: User) {
 
 /**
  * US-24 sc.1, sc.2. The applicants of one task for its owner, oldest first, each with the public profile card of the student
- * (name, the verified flag as it is now, skills, bio). An unknown task is 404, someone else's task is 403 NOT_TASK_OWNER
- * (api.md §1). The cards come ready from the identity service in one batch. Read-only.
+ * (name, the verified flag as it is now, skills, bio). An unknown task and someone else's task are both 404 NOT_FOUND
+ * (US-50 sc.2, ADR-0006): the management page of a task does not say that it exists. The cards come ready from the identity
+ * service in one batch. Read-only.
  */
 export async function getCandidates(user: User, taskId: string) {
   assertCanListCandidates(user);
   const task = await getTaskOwnerView(taskId);
-  assertOwnsTask(task, user);
+  if (task.customerId !== user.id) throw new ApiError('NOT_FOUND');
 
   // One more than the cap, to know whether the list was cut (the page says so).
   const found = await listApplicationsOfTask(taskId, LIMITS.candidatesMax + 1);
@@ -80,6 +82,16 @@ export async function getCandidates(user: User, taskId: string) {
   });
   return { task, candidates, truncated };
 }
+
+/**
+ * US-50 sc.3 (US-22 sc.2, INV-13, A-14). The owner deletes a task that has no executor: it becomes `cancelled`, leaves the feed,
+ * and in the same transaction every `sent` application of it becomes `rejected`. A failure at the second step rolls back the
+ * first. The task side (checks, the conditional update, the 409 codes) is `deleteTask` of the tasks service.
+ */
+export const deleteMyTask = (user: User, taskId: string): Promise<void> =>
+  deleteTask(user, taskId, async (tx) => {
+    await rejectSentOfTask(tx, taskId, new Date());
+  });
 
 export type OwnedTask = Awaited<ReturnType<typeof getTaskOwnerView>>;
 

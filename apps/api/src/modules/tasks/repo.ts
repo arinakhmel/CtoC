@@ -96,6 +96,18 @@ export const findTaskForDelete = (id: string) =>
   prisma.task.findUnique({ where: { id }, select: { id: true, customerId: true, status: true, executorId: true } });
 
 /**
+ * US-50 sc.1. The tasks of one customer in every state, newest first, with the number of applications of each. Only rows of
+ * `customerId` are read, so there is no other customer's task to hide (sc.2).
+ */
+export const listTasksOfCustomer = (customerId: string, limit: number) =>
+  prisma.task.findMany({
+    where: { customerId },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: limit,
+    select: { id: true, title: true, priceKopecks: true, deadlineAt: true, status: true, _count: { select: { applications: true } } },
+  });
+
+/**
  * US-22 sc.2 (INV-13, ADR-0007). A conditional update: it cancels only an own task with no executor in a cancellable
  * state. `count` 0 means the task changed or never qualified, and the caller answers 409.
  */

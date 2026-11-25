@@ -12,6 +12,11 @@ export function assertCanCreateTask(user: User): void {
   if (user.emailConfirmedAt === null) throw new ApiError('EMAIL_NOT_CONFIRMED');
 }
 
+/** Access "C" of api.md (US-50): any customer lists their own tasks. The rows are the caller's own, so there is nothing else to check. */
+export function assertCanListMyTasks(user: User): void {
+  if (user.role !== 'customer') throw new ApiError('ROLE_FORBIDDEN');
+}
+
 /** Access "S+" of api.md (US-22): a verified student with a confirmed email lists the tasks they work on. */
 export function assertCanListMyWork(user: User): void {
   assertStudentWithConfirmedEmail(user);

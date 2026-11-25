@@ -16,6 +16,7 @@ import { TasksQueuePage } from '../features/admin/pages/TasksQueuePage';
 import { VerificationsQueuePage } from '../features/admin/pages/VerificationsQueuePage';
 import { WithdrawalsQueuePage } from '../features/admin/pages/WithdrawalsQueuePage';
 import { FeedPage } from '../features/tasks/pages/FeedPage';
+import { MyTasksPage } from '../features/tasks/pages/MyTasksPage';
 import { NewTaskPage } from '../features/tasks/pages/NewTaskPage';
 import { TaskPage } from '../features/tasks/pages/TaskPage';
 import { VerificationPage } from '../features/verification/pages/VerificationPage';
@@ -45,6 +46,7 @@ const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
   '/work/:taskId': () => <WorkTaskPage />,
   '/notifications': (page) => <NotificationsPage page={page} />,
   '/c/tasks/new': (page) => <NewTaskPage page={page} />,
+  '/c/tasks': (page) => <MyTasksPage page={page} />,
 };
 const renderPage = (page: PageConfig) => IMPLEMENTED[page.path]?.(page) ?? <PageStub page={page} />;
 

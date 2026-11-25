@@ -122,7 +122,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/c/tasks",
-    title: "My tasks with statuses",
+    title: "Мої завдання",
     access: "C",
     stories: ["US-50"],
   },

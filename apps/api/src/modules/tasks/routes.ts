@@ -2,9 +2,9 @@ import { createTaskSchema, feedQuerySchema, type CreateTaskInput, type FeedQuery
 import { Router, type RequestHandler } from 'express';
 import { requireUser } from '../../http/auth';
 import { parsedQuery, validateBody, validateQuery } from '../../http/validate';
-import { assertCanCreateTask, assertCanDeleteTask, assertCanListMyWork, assertCanReadFeed } from './policy';
-import { serializeFeedTask, serializeOwnTask, serializeWorkTask } from './serializer';
-import { createTask, deleteTask, getFeed, getMyWork, getTaskDetails } from './service';
+import { assertCanCreateTask, assertCanListMyTasks, assertCanListMyWork, assertCanReadFeed } from './policy';
+import { serializeFeedTask, serializeMyTask, serializeOwnTask, serializeWorkTask } from './serializer';
+import { createTask, getFeed, getMyTasks, getMyWork, getTaskDetails } from './service';
 
 /** The access check as a step of its own, so it runs before the query is validated (403 before 400). */
 const requireFeedAccess: RequestHandler = (req, _res, next) => {
@@ -17,8 +17,8 @@ const requireWorkAccess: RequestHandler = (req, _res, next) => {
   next();
 };
 
-const requireDeleteAccess: RequestHandler = (req, _res, next) => {
-  assertCanDeleteTask(req.user!);
+const requireMyTasksAccess: RequestHandler = (req, _res, next) => {
+  assertCanListMyTasks(req.user!);
   next();
 };
 
@@ -45,9 +45,10 @@ export function tasksRouter(): Router {
     res.json({ tasks: tasks.map(serializeWorkTask) });
   });
 
-  router.delete('/tasks/:id', requireUser, requireDeleteAccess, async (req, res) => {
-    await deleteTask(req.user!, String(req.params.id));
-    res.status(204).end();
+  // US-50. `DELETE /api/tasks/:id` is in the applications router, because it also rejects the applications of the task (A-14).
+  router.get('/my/tasks', requireUser, requireMyTasksAccess, async (req, res) => {
+    const tasks = await getMyTasks(req.user!);
+    res.json({ tasks: tasks.map(serializeMyTask) });
   });
 
   router.post('/tasks', requireUser, requireCreateAccess, validateBody(createTaskSchema), async (req, res) => {
