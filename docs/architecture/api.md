@@ -418,6 +418,8 @@ A second call (US-18/S2):
 { "error": { "code": "ALREADY_APPLIED", "message": "Ви вже подали відгук на це завдання" } }
 ```
 
+US-47. In the same transaction that stores the application, the owner of the task gets a notification `application_received` (§4.3b), through `notifyApplicationReceived(tx, …)`. A refused application (409 `ALREADY_APPLIED`, 409 `TASK_NOT_OPEN`, 403, 404) rolls back and tells no one. Every application makes its own notification, there is no grouping.
+
 ### 4.3a `GET /api/me/applications` (my applications)
 
 US-20. The caller's own applications, newest first, at most 100 (OQ-26). Access "S-": a student with a confirmed email, verified or not. The status is the stored one (`sent`, `accepted`, `rejected`); the UI shows «Надіслано», «Прийнято», «Відхилено».
@@ -452,6 +454,7 @@ The types that exist, with the text of each (the text is built by the server fro
 | `type` | Who gets it | `text` | `payload` | Link on `/notifications` |
 |---|---|---|---|---|
 | `executor_selected` | the selected student (US-21) | «Вас обрано виконавцем завдання [Назва]» | `{ taskId, taskTitle }` | `/work/:taskId` |
+| `application_received` | the customer who owns the task (US-47) | «Новий відгук на завдання «[Назва]»» | `{ taskId, taskTitle }` | `/c/tasks/:taskId` (the candidates, US-24) |
 | `result_submitted` | the customer who owns the task (US-28, US-48) | «Студент надіслав результат за завданням «[Назва]» на перевірку» | `{ taskId, taskTitle }` | `/c/tasks/:taskId` |
 | `result_returned` | the executor, the student (US-33) | «Замовник повернув результат на доопрацювання за завданням «[Назва]»» (the comment is not in it: the task card shows it) | `{ taskId, taskTitle }` | `/work/:taskId` |
 | `result_accepted` | the executor, the student (US-30) | «Ваш результат прийнято замовником! Оплату нараховано» (fixed, the title is only in the payload) | `{ taskId, taskTitle }` | `/work/:taskId` |
