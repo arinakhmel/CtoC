@@ -10,6 +10,16 @@ import { BuddyFigure } from './BuddyFigure';
 export function HelperBuddy() {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  // The arrival walk plays once per tab (sessionStorage), not on every page change.
+  const [arriving] = useState(() => {
+    try {
+      if (window.sessionStorage.getItem('ctoc.buddyArrived')) return false;
+      window.sessionStorage.setItem('ctoc.buddyArrived', '1');
+      return true;
+    } catch {
+      return false;
+    }
+  });
   const cardId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -26,7 +36,7 @@ export function HelperBuddy() {
   }, [open]);
 
   return (
-    <div className={`buddy${open ? ' is-open' : ''}`}>
+    <div className={`buddy${open ? ' is-open' : ''}${arriving ? ' is-arriving' : ''}`}>
       {open && (
         <div id={cardId} className="buddy__card" role="dialog" aria-label={t('buddy.title')}>
           <button type="button" className="buddy__close" aria-label={t('buddy.close')} onClick={() => setOpen(false)}>

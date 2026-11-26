@@ -3788,3 +3788,136 @@ button.scroll-top[type='button']:hover:not(:disabled) {
     transform: translateY(30%);
   }
 }
+
+/* ============================== «Лупик», calmer and rounder ==============================
+ * 3D: a lit face (gradient), a darker side block and a soft ground shadow. Motion: one slow glide up and a gentle float,
+ * no squash, no blinking, no waving (they looked jerky). */
+.buddy__body {
+  stroke: var(--line);
+  stroke-width: 2.5;
+}
+.buddy__face-light {
+  stop-color: color-mix(in srgb, var(--surface) 70%, #ffffff);
+}
+.buddy__face-dark {
+  stop-color: color-mix(in srgb, var(--surface-2) 85%, var(--line) 6%);
+}
+.buddy__side {
+  fill: color-mix(in srgb, var(--line) 78%, var(--surface));
+}
+.buddy__ground {
+  fill: var(--shadow);
+  opacity: 0.18;
+}
+.buddy__svg {
+  filter: none;
+}
+
+/* Peek: bigger, a slow glide up and a soft float while the card is hovered. */
+.peek {
+  right: 0.75rem;
+  width: 6.5rem;
+  height: 5.6rem;
+}
+.peek .buddy__svg {
+  width: 6.5rem;
+  height: 6.5rem;
+  transform: translateY(100%);
+}
+.how-it-works ol {
+  padding-top: 4.5rem;
+  row-gap: 5.5rem;
+}
+.how-it-works li:hover .peek .buddy__svg,
+.how-it-works li:focus-within .peek .buddy__svg {
+  transform: translateY(12%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .peek .buddy__svg {
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .how-it-works li:hover .peek .buddy__body,
+  .how-it-works li:hover .peek .buddy__ink,
+  .how-it-works li:hover .peek .buddy__cheek,
+  .how-it-works li:hover .peek .buddy__prop {
+    animation: none;
+  }
+  .how-it-works li:hover .peek .buddy__svg {
+    animation: buddy-float 3.2s ease-in-out 0.9s infinite;
+  }
+  .buddy__button:hover .buddy__svg,
+  .buddy__button:focus-visible .buddy__svg {
+    transform: translateY(-5px);
+  }
+  .buddy__button:hover .buddy__glass,
+  .buddy__button:focus-visible .buddy__glass {
+    transform: rotate(-8deg);
+  }
+  .buddy__svg,
+  .buddy__glass {
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+@keyframes buddy-float {
+  0%,
+  100% {
+    transform: translateY(12%);
+  }
+  50% {
+    transform: translateY(6%);
+  }
+}
+
+/* The corner helper is bigger too. */
+.buddy__button[type='button'] {
+  width: 4.75rem;
+  min-width: 4.75rem;
+  height: 4.75rem;
+  min-height: 4.75rem;
+}
+.buddy__button .buddy__svg {
+  width: 4.75rem;
+  height: 4.75rem;
+}
+button.scroll-top[type='button'] {
+  right: 6.5rem;
+}
+
+/* First visit: «Лупик» rises from the bottom edge, walks a little to the left and back to his corner, once per tab. */
+@media (prefers-reduced-motion: no-preference) {
+  .buddy.is-arriving .buddy__button {
+    animation: buddy-arrive 2.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+@keyframes buddy-arrive {
+  0% {
+    transform: translate(0, 140%);
+  }
+  25% {
+    transform: translate(0, 0);
+  }
+  45% {
+    transform: translate(-3.5rem, -0.4rem) rotate(-4deg);
+  }
+  60% {
+    transform: translate(-5rem, 0) rotate(3deg);
+  }
+  80% {
+    transform: translate(-1rem, -0.3rem) rotate(-2deg);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+@media (max-width: 34rem) {
+  .buddy__button[type='button'],
+  .buddy__button .buddy__svg {
+    width: 3.6rem;
+    min-width: 3.6rem;
+    height: 3.6rem;
+    min-height: 3.6rem;
+  }
+  button.scroll-top[type='button'] {
+    right: 4.9rem;
+  }
+}
