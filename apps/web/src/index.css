@@ -3539,3 +3539,385 @@ fieldset.segment-radios input[type='radio'] {
 .how-it-works ol {
   row-gap: 3.25rem;
 }
+
+/* ============================== Legal documents ============================== */
+main > article.legal-page {
+  max-width: 46rem;
+}
+.legal-page__kicker {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.legal-page__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1.75rem;
+}
+.legal-page__tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.legal-page__tabs a[aria-current='page'] {
+  color: var(--bg);
+  background: var(--text);
+}
+.legal-page__body {
+  line-height: 1.7;
+}
+.legal-page__body > p:first-child em {
+  display: inline-block;
+  padding: 0.35rem 0.7rem;
+  border-left: 3px solid var(--mark);
+  color: var(--muted);
+  background: var(--surface-2);
+  font-style: normal;
+  font-size: 0.9rem;
+}
+.legal-page__body h2 {
+  margin-top: 2.25rem;
+  padding-top: 1rem;
+  border-top: 1.5px dashed var(--line-soft);
+  font-size: 1.15rem;
+}
+.legal-page__body h2:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.legal-page__body ul,
+.legal-page__body ol {
+  padding-left: 1.3rem;
+}
+.legal-page__body li {
+  margin-bottom: 0.4rem;
+}
+.legal-page__body table {
+  display: block;
+  width: 100%;
+  margin: 1rem 0 1.5rem;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.legal-page__body th,
+.legal-page__body td {
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: top;
+}
+.legal-page__body th {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.legal-page__body code {
+  white-space: nowrap;
+}
+
+/* Footer: the three documents. */
+.footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  margin-top: 1.5rem;
+}
+.footer-legal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+/* ============================== «Нагору» ============================== */
+button.scroll-top[type='button'] {
+  position: fixed;
+  right: 5.75rem;
+  bottom: 1.4rem;
+  z-index: 34;
+  width: 3rem;
+  min-width: 3rem;
+  height: 3rem;
+  min-height: 3rem;
+  padding: 0;
+  border: var(--border);
+  border-radius: 0.9rem;
+  color: var(--on-accent);
+  background: var(--accent);
+  box-shadow: 3px 3px 0 var(--shadow);
+  opacity: 0;
+  transform: translateY(1.5rem) scale(0.8);
+  pointer-events: none;
+}
+button.scroll-top.is-shown[type='button'] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+button.scroll-top[type='button']:hover:not(:disabled) {
+  color: var(--on-accent);
+  background: var(--accent-hover);
+}
+@media (prefers-reduced-motion: no-preference) {
+  button.scroll-top[type='button'] {
+    transition:
+      opacity 0.25s ease,
+      transform 0.35s cubic-bezier(0.3, 1.5, 0.5, 1),
+      background-color 0.15s ease;
+  }
+  button.scroll-top[type='button']:hover:not(:disabled) svg {
+    animation: arrow-up 0.6s ease-in-out infinite;
+  }
+}
+@keyframes arrow-up {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@media (max-width: 34rem) {
+  button.scroll-top[type='button'] {
+    right: 4.4rem;
+    bottom: 0.9rem;
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+/* ============================== Bigger, livelier peeking «Лупик» ============================== */
+.peek {
+  right: 1rem;
+  width: 5rem;
+  height: 4.6rem;
+}
+.peek .buddy__svg {
+  width: 5rem;
+  height: 5rem;
+}
+.how-it-works ol {
+  padding-top: 3.75rem;
+  row-gap: 4.5rem;
+}
+.how-it-works li:hover .peek .buddy__svg,
+.how-it-works li:focus-within .peek .buddy__svg {
+  transform: translateY(6%) rotate(-4deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .peek .buddy__svg {
+    transition: transform 0.55s cubic-bezier(0.34, 1.8, 0.5, 1);
+  }
+  /* Once up, he bobs, blinks and waves his thing. */
+  .how-it-works li:hover .peek .buddy__body,
+  .how-it-works li:hover .peek .buddy__ink,
+  .how-it-works li:hover .peek .buddy__cheek {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+  }
+  .how-it-works li:hover .peek .buddy__body {
+    animation: buddy-squash 1.6s ease-in-out 0.55s infinite;
+  }
+  .how-it-works li:hover .peek .buddy__ink {
+    transform-origin: center;
+    animation: buddy-blink 2.4s ease-in-out 0.8s infinite;
+  }
+  .how-it-works li:hover .peek .buddy__prop {
+    animation: prop-wave 0.9s ease-in-out 0.5s infinite;
+  }
+  .how-it-works li:hover .peek .buddy__cheek {
+    animation: cheek-glow 1.6s ease-in-out 0.55s infinite;
+  }
+}
+@keyframes buddy-squash {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  40% {
+    transform: scale(1.04, 0.95);
+  }
+  60% {
+    transform: scale(0.97, 1.03);
+  }
+}
+@keyframes buddy-blink {
+  0%,
+  44%,
+  52%,
+  100% {
+    transform: scaleY(1);
+  }
+  48% {
+    transform: scaleY(0.12);
+  }
+}
+@keyframes prop-wave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-16deg);
+  }
+  70% {
+    transform: rotate(8deg);
+  }
+}
+@keyframes cheek-glow {
+  50% {
+    opacity: 0.8;
+  }
+}
+@media (hover: none) {
+  .peek .buddy__svg {
+    transform: translateY(30%);
+  }
+}
+
+/* ============================== «Лупик», calmer and rounder ==============================
+ * 3D: a lit face (gradient), a darker side block and a soft ground shadow. Motion: one slow glide up and a gentle float,
+ * no squash, no blinking, no waving (they looked jerky). */
+.buddy__body {
+  stroke: var(--line);
+  stroke-width: 2.5;
+}
+.buddy__face-light {
+  stop-color: color-mix(in srgb, var(--surface) 70%, #ffffff);
+}
+.buddy__face-dark {
+  stop-color: color-mix(in srgb, var(--surface-2) 85%, var(--line) 6%);
+}
+.buddy__side {
+  fill: color-mix(in srgb, var(--line) 78%, var(--surface));
+}
+.buddy__ground {
+  fill: var(--shadow);
+  opacity: 0.18;
+}
+.buddy__svg {
+  filter: none;
+}
+
+/* Peek: bigger, a slow glide up and a soft float while the card is hovered. */
+.peek {
+  right: 0.75rem;
+  width: 6.5rem;
+  height: 5.6rem;
+}
+.peek .buddy__svg {
+  width: 6.5rem;
+  height: 6.5rem;
+  transform: translateY(100%);
+}
+.how-it-works ol {
+  padding-top: 4.5rem;
+  row-gap: 5.5rem;
+}
+.how-it-works li:hover .peek .buddy__svg,
+.how-it-works li:focus-within .peek .buddy__svg {
+  transform: translateY(12%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .peek .buddy__svg {
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .how-it-works li:hover .peek .buddy__body,
+  .how-it-works li:hover .peek .buddy__ink,
+  .how-it-works li:hover .peek .buddy__cheek,
+  .how-it-works li:hover .peek .buddy__prop {
+    animation: none;
+  }
+  .how-it-works li:hover .peek .buddy__svg {
+    animation: buddy-float 3.2s ease-in-out 0.9s infinite;
+  }
+  .buddy__button:hover .buddy__svg,
+  .buddy__button:focus-visible .buddy__svg {
+    transform: translateY(-5px);
+  }
+  .buddy__button:hover .buddy__glass,
+  .buddy__button:focus-visible .buddy__glass {
+    transform: rotate(-8deg);
+  }
+  .buddy__svg,
+  .buddy__glass {
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+@keyframes buddy-float {
+  0%,
+  100% {
+    transform: translateY(12%);
+  }
+  50% {
+    transform: translateY(6%);
+  }
+}
+
+/* The corner helper is bigger too. */
+.buddy__button[type='button'] {
+  width: 4.75rem;
+  min-width: 4.75rem;
+  height: 4.75rem;
+  min-height: 4.75rem;
+}
+.buddy__button .buddy__svg {
+  width: 4.75rem;
+  height: 4.75rem;
+}
+button.scroll-top[type='button'] {
+  right: 6.5rem;
+}
+
+/* First visit: «Лупик» rises from the bottom edge, walks a little to the left and back to his corner, once per tab. */
+@media (prefers-reduced-motion: no-preference) {
+  .buddy.is-arriving .buddy__button {
+    animation: buddy-arrive 2.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+@keyframes buddy-arrive {
+  0% {
+    transform: translate(0, 140%);
+  }
+  25% {
+    transform: translate(0, 0);
+  }
+  45% {
+    transform: translate(-3.5rem, -0.4rem) rotate(-4deg);
+  }
+  60% {
+    transform: translate(-5rem, 0) rotate(3deg);
+  }
+  80% {
+    transform: translate(-1rem, -0.3rem) rotate(-2deg);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+@media (max-width: 34rem) {
+  .buddy__button[type='button'],
+  .buddy__button .buddy__svg {
+    width: 3.6rem;
+    min-width: 3.6rem;
+    height: 3.6rem;
+    min-height: 3.6rem;
+  }
+  button.scroll-top[type='button'] {
+    right: 4.9rem;
+  }
+}

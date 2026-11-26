@@ -15,7 +15,7 @@ beforeEach(() => {
 const renderAt = (path: string) => render(<RouterProvider router={createTestRouter([path])} future={providerFuture} />);
 
 /** Pages with a real implementation have their own tests (for example tests/register.test.tsx). */
-const IMPLEMENTED_PAGES = ['/register', '/confirm-email', '/login', '/me/verification', '/u/:userId', '/me/profile', '/feed', '/tasks/:id', '/c/tasks/new', '/c/tasks', '/me/applications', '/notifications', '/me/work', '/work/:taskId', '/c/tasks/:id', '/c/balance', '/me/finance', '/mod/withdrawals', '/mod/verifications', '/mod/tasks', '/terms', '/mod/settings', '/', '/payment-safety'];
+const IMPLEMENTED_PAGES = ['/register', '/confirm-email', '/login', '/me/verification', '/u/:userId', '/me/profile', '/feed', '/tasks/:id', '/c/tasks/new', '/c/tasks', '/me/applications', '/notifications', '/me/work', '/work/:taskId', '/c/tasks/:id', '/c/balance', '/me/finance', '/mod/withdrawals', '/mod/verifications', '/mod/tasks', '/terms', '/mod/settings', '/', '/payment-safety', '/legal/terms', '/legal/privacy', '/legal/safe-deal'];
 
 describe('overview.md §4: every page stub renders what the router promises', () => {
   it.each(PAGES.filter((page) => !IMPLEMENTED_PAGES.includes(page.path)).map((page) => [page.path, page] as const))('%s shows its title, its stories and the way home', async (_path, page) => {

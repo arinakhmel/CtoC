@@ -9,6 +9,7 @@ import { useApiHealth } from '../lib/useApiHealth';
 import { CompactPreferences } from '../ui/Preferences';
 import { Ticker } from '../ui/Ticker';
 import { HelperBuddy } from '../ui/HelperBuddy';
+import { ScrollTop } from '../ui/ScrollTop';
 import { menuFor } from './navigation';
 import { PagesMenu } from './PagesMenu';
 
@@ -85,6 +86,11 @@ function Footer() {
             <p>{t('layout.footerAbout')}</p>
           </div>
         </div>
+        <nav className="footer-legal" aria-label={t('layout.legal')}>
+          <Link to="/legal/terms">{t('layout.legalTerms')}</Link>
+          <Link to="/legal/privacy">{t('layout.legalPrivacy')}</Link>
+          <Link to="/legal/safe-deal">{t('layout.legalDeal')}</Link>
+        </nav>
         <div className="footer-bottom">
           <p>{t('layout.footerMade')}</p>
           <p role="status" className="api-status" data-health={health}>
@@ -126,6 +132,7 @@ function Shell() {
         <Outlet />
       </main>
       <Footer />
+      <ScrollTop />
       <HelperBuddy />
     </>
   );

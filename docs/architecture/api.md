@@ -40,6 +40,9 @@ The contract between `apps/web` and `apps/api`. The style is decided in ADR-0005
 | POST | `/api/auth/confirm-email` | US-07/S1, S2 | P | 200 (body: §4.6) | 400 `TOKEN_INVALID`, `TOKEN_EXPIRED` |
 | POST | `/api/auth/resend-confirmation` | US-07/S3 | P (OQ-20) | 202, no body | 400 `VALIDATION_FAILED` · 409 `EMAIL_ALREADY_CONFIRMED` · 429 |
 | POST | `/api/auth/login` | US-45 | P | 200, sets `sid` (body: §4.7) | 400 `VALIDATION_FAILED` · 401 `INVALID_CREDENTIALS` · 429 `RATE_LIMITED` |
+| GET | `/api/auth/team-login` | ADR-0010 | P | 200 `{ enabled }`: true when the server has `TEAM_LOGIN_CODE`. The code is never returned | — |
+| POST | `/api/auth/team-login/check` | ADR-0010 | P | 204 for the right `{ code }` | 400 `VALIDATION_FAILED` · 401 `INVALID_CREDENTIALS` · 404 `NOT_FOUND` (feature off) · 429 `RATE_LIMITED` (5 wrong codes / 15 min / IP) |
+| POST | `/api/auth/team-login` | ADR-0010 | P | 200, sets `sid` (body: §4.7) for `{ code, account: student \| customer \| moderator }` | 400 `VALIDATION_FAILED` · 401 `INVALID_CREDENTIALS` · 404 `NOT_FOUND` (feature off, or the demo account is missing) · 429 `RATE_LIMITED` |
 | POST | `/api/auth/logout` | US-46 | A | 204 (no body, §4.7) | 401 `AUTH_REQUIRED` · 403 `ORIGIN_MISMATCH` |
 | GET | `/api/me` | US-45 | A | 200 (body: §4.7) | 401 `AUTH_REQUIRED` |
 | PUT | `/api/me/profile` | US-11 | S- | 200 (body: §4.11) | 400 `BIO_TOO_LONG`, `VALIDATION_FAILED` · 401 `AUTH_REQUIRED` · 403 `ROLE_FORBIDDEN`, `EMAIL_NOT_CONFIRMED` |

@@ -1,11 +1,29 @@
+import { useId } from 'react';
+
 /** What «Лупик» holds: a different thing for each step of the deal. */
 export type BuddyProp = 'magnifier' | 'glasses' | 'pen' | 'coin';
 
 /** The character: a soft paper square with a face and one prop. Drawn inline, always decorative. */
 export function BuddyFigure({ prop = 'magnifier', size = 64 }: { prop?: BuddyProp; size?: number }) {
+  // Gradient ids must be unique on the page: several figures can be drawn at once.
+  const id = useId().replace(/:/g, '');
   return (
     <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" className="buddy__svg">
-      <rect x="8" y="14" width="40" height="40" rx="12" className="buddy__body" />
+      <defs>
+        <linearGradient id={`${id}-face`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" className="buddy__face-light" />
+          <stop offset="1" className="buddy__face-dark" />
+        </linearGradient>
+        <radialGradient id={`${id}-shine`} cx="0.3" cy="0.25" r="0.5">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.85" />
+          <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {/* soft shadow on the ground and the side of the block, for depth */}
+      <ellipse cx="29" cy="58" rx="17" ry="3" className="buddy__ground" />
+      <rect x="11" y="17" width="40" height="40" rx="12" className="buddy__side" />
+      <rect x="8" y="14" width="40" height="40" rx="12" className="buddy__body" fill={`url(#${id}-face)`} />
+      <rect x="11" y="16" width="26" height="18" rx="9" fill={`url(#${id}-shine)`} />
       <rect x="14" y="38" width="6" height="3" rx="1.5" className="buddy__cheek" />
       <rect x="34" y="38" width="6" height="3" rx="1.5" className="buddy__cheek" />
       {prop === 'glasses' ? (
