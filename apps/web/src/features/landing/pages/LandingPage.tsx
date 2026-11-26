@@ -4,6 +4,17 @@ import type { PageConfig } from '../../../routes.config';
 import { HowItWorks } from '../components/HowItWorks';
 import { PageTitle } from '../../../ui/PageTitle';
 
+/** A text made of parts separated by `|`, shown as separate words with space between them (no separator dots). */
+function Parts({ text, className }: { text: string; className?: string }) {
+  return (
+    <span className={className}>
+      {text.split('|').map((part) => (
+        <span key={part}>{part}</span>
+      ))}
+    </span>
+  );
+}
+
 /** Three sample tasks pinned to the board in the hero: decoration, so hidden from a screen reader (the text says the same). */
 function TicketStack() {
   const { t } = useI18n();
@@ -15,7 +26,7 @@ function TicketStack() {
     <div className="ticket-stack" aria-hidden="true">
       {tickets.map((ticket, index) => (
         <div key={ticket.title} className={`ticket ticket--back ticket--${index + 1}`}>
-          <span className="ticket__meta">{ticket.meta}</span>
+          <Parts className="ticket__meta" text={ticket.meta} />
           <span className="ticket__title">{ticket.title}</span>
           <span className="ticket__price">{ticket.price} ₴</span>
         </div>
@@ -23,7 +34,7 @@ function TicketStack() {
       <div className="ticket ticket--front">
         <span className="ticket__label">{t('landing.ticketLabel')}</span>
         <span className="ticket__title">{t('landing.ticketTitle')}</span>
-        <span className="ticket__meta">{t('landing.ticketMeta')}</span>
+        <Parts className="ticket__meta" text={t('landing.ticketMeta')} />
         <span className="ticket__row">
           <span className="ticket__price">{t('landing.ticketPrice')}</span>
           <span className="ticket__stamp">✓ {t('landing.ticketNote')}</span>
@@ -43,7 +54,6 @@ export function LandingPage({ page }: { page: PageConfig }) {
     <article aria-labelledby="page-title" className="landing">
       <div className="hero">
         <div className="hero__text">
-          <p className="eyebrow">{t('landing.eyebrow')}</p>
           <h1 id="page-title"><PageTitle page={page} /></h1>
           <p className="hero__lead">{t('landing.lead')}</p>
           <p className="hero__actions">
