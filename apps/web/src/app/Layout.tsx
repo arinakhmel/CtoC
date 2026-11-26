@@ -8,6 +8,7 @@ import { createQueryClient } from '../lib/queryClient';
 import { useApiHealth } from '../lib/useApiHealth';
 import { CompactPreferences } from '../ui/Preferences';
 import { Ticker } from '../ui/Ticker';
+import { HelperBuddy } from '../ui/HelperBuddy';
 import { menuFor } from './navigation';
 import { PagesMenu } from './PagesMenu';
 
@@ -125,6 +126,7 @@ function Shell() {
         <Outlet />
       </main>
       <Footer />
+      <HelperBuddy />
     </>
   );
 }
