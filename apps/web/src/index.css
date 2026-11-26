@@ -2225,3 +2225,173 @@ strong {
   background: var(--danger-bg);
   font-weight: 700;
 }
+
+/* ============================== Calmer cards ============================== */
+/* Lighter list cards: thinner frame, no hover jump, more air. */
+main ul[aria-label] > li > article {
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--line) 35%, transparent);
+  background: var(--surface);
+}
+@media (prefers-reduced-motion: no-preference) {
+  main ul[aria-label] > li > article:hover {
+    transform: none;
+    border-color: var(--line);
+    box-shadow: 3px 3px 0 var(--shadow);
+  }
+}
+main ul[aria-label] > li > article h2 a::after {
+  content: none;
+}
+/* The description of a card is two lines at most; the whole text is on the task page. */
+.card-text {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.card-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+/* Feed price: one big number, the net behind ★. */
+.price-block--compact {
+  margin: 0.75rem 0 0.5rem;
+}
+.price-block--compact .price-block__row:first-child dd {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.45rem;
+}
+.price-block__row[hidden] {
+  display: none;
+}
+.price-block--compact .price-block__row--net {
+  align-self: flex-end;
+}
+.star-toggle[type='button'] {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 1.5px dashed var(--line-soft);
+  border-radius: 50%;
+  color: var(--accent);
+  background: transparent;
+  box-shadow: none;
+  font-size: 1.05rem;
+}
+.star-toggle[type='button']:hover:not(:disabled),
+.star-toggle[aria-expanded='true'] {
+  border-style: solid;
+  border-color: var(--line);
+  color: var(--on-mark);
+  background: var(--mark);
+}
+
+/* ---------- Card parts: head, meta row, actions ---------- */
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+}
+main ul[aria-label] > li > article .card-head h2 {
+  flex: 1 1 14rem;
+  margin: 0;
+}
+.card-status {
+  flex: none;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0;
+}
+.card-status strong {
+  font-size: 0.75rem !important;
+}
+.card-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  margin: 0.85rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+.card-actions > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.link-ghost--sm {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  font-size: 0.95rem;
+}
+button.button-quiet[type='button'] {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-color: var(--line-soft);
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+button.button-quiet[type='button']:hover:not(:disabled) {
+  border-color: var(--line);
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+/* Notifications: «Нове» is a small tag with space after it. */
+.notice-text {
+  margin-bottom: 0.35rem;
+}
+.tag-new {
+  display: inline-block;
+  margin-right: 0.6rem;
+  padding: 0 0.45rem;
+  border-radius: 0.25rem;
+  color: var(--on-accent);
+  background: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  vertical-align: 0.12em;
+}
+
+/* Status messages: a quiet note with a coloured edge, no tick. */
+main [role='status']::before {
+  content: none;
+}
+main [role='status'] {
+  border-width: 1px;
+  border-left-width: 4px;
+  font-weight: 550;
+}
+
+/* «Верифікований студент»: a stamp with a student-cap mark instead of a tick, and room under it. */
+.badge-verified::before {
+  content: '';
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.45rem;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 9l10-5 10 5-10 5z'/%3E%3Cpath d='M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5'/%3E%3Cpath d='M22 9v6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 9l10-5 10 5-10 5z'/%3E%3Cpath d='M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5'/%3E%3Cpath d='M22 9v6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+main > article > .badge {
+  margin: 0 0 1.75rem;
+}
+.star-toggle[type='button'] { border-radius: var(--radius-sm); }
