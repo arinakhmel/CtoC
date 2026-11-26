@@ -21,7 +21,7 @@ export function TermsPage({ page }: { page: PageConfig }) {
         {settings.isPending && <p role="status">Завантаження…</p>}
         {settings.isSuccess && (
           <p>
-            Комісія CtoC: <strong>{formatCommission(settings.data.commissionBp)}</strong> від ціни завдання. Її утримують із виплати студентові, інших
+            Комісія CtoC: <strong className="commission-value">{formatCommission(settings.data.commissionBp)}</strong> від ціни завдання. Її утримують із виплати студентові, інших
             прихованих платежів немає.
           </p>
         )}

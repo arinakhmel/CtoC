@@ -6,7 +6,7 @@ test.describe('smoke journey: the web app, the proxy and the API are wired toget
 
     await page.getByRole('button', { name: 'Усі сторінки' }).click();
     await expect(page.getByRole('navigation', { name: 'Pages' })).toBeVisible();
-    await expect(page.getByRole('link', { name: '/feed', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Стрічка завдань', exact: true })).toBeVisible();
     await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toBeVisible();
 
     // "API: ok" means the browser reached /api/health through the Vite proxy.

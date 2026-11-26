@@ -3,6 +3,7 @@ import { useI18n } from '../../../lib/i18n';
 import type { PageConfig } from '../../../routes.config';
 import { HowItWorks } from '../components/HowItWorks';
 import { StickerStack } from '../components/StickerStack';
+import { TickerIcon } from '../../../ui/TickerIcon';
 import { PageTitle } from '../../../ui/PageTitle';
 
 /** A text made of parts separated by `|`, shown as separate words with space between them (no separator dots). */
@@ -24,7 +25,7 @@ function TicketStack() {
       hint={t('landing.dragHint')}
       stickers={[
         {
-          id: 'excel',
+          id: 'scraper',
           className: 'ticket--back ticket--1',
           x: -24,
           y: 0,
@@ -33,12 +34,12 @@ function TicketStack() {
             <>
               <Parts className="ticket__meta" text={t('landing.ticket2Meta')} />
               <span className="ticket__title">{t('landing.ticket2Title')}</span>
-              <span className="ticket__price">800 ₴</span>
+              <span className="ticket__price">900 ₴</span>
             </>
           ),
         },
         {
-          id: 'smm',
+          id: 'sql',
           className: 'ticket--back ticket--2',
           x: 28,
           y: 44,
@@ -47,12 +48,12 @@ function TicketStack() {
             <>
               <Parts className="ticket__meta" text={t('landing.ticket3Meta')} />
               <span className="ticket__title">{t('landing.ticket3Title')}</span>
-              <span className="ticket__price">1 500 ₴</span>
+              <span className="ticket__price">700 ₴</span>
             </>
           ),
         },
         {
-          id: 'logo',
+          id: 'bot',
           className: 'ticket--front',
           x: 0,
           y: 110,
@@ -64,7 +65,10 @@ function TicketStack() {
               <Parts className="ticket__meta" text={t('landing.ticketMeta')} />
               <span className="ticket__row">
                 <span className="ticket__price">{t('landing.ticketPrice')}</span>
-                <span className="ticket__stamp">✓ {t('landing.ticketNote')}</span>
+                <span className="ticket__stamp">
+                  <TickerIcon index={2} />
+                  {t('landing.ticketNote')}
+                </span>
               </span>
             </>
           ),

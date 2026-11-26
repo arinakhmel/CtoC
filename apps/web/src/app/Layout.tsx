@@ -1,11 +1,12 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { isAnonymous, ME_KEY, useLogout, useMe } from '../features/identity/queries/session';
 import { I18nProvider, useI18n } from '../lib/i18n';
 import { createQueryClient } from '../lib/queryClient';
 import { useApiHealth } from '../lib/useApiHealth';
 import { Preferences } from '../ui/Preferences';
+import { TickerIcon } from '../ui/TickerIcon';
 import { menuFor } from './navigation';
 import { PagesMenu } from './PagesMenu';
 
@@ -105,21 +106,27 @@ function Shell() {
           <p>
             {t('layout.ticker')
               .split('|')
-              .map((part) => (
-                <span key={part}>{part}</span>
+              .map((part, index) => (
+                <Fragment key={part}>
+                  {index > 0 && <span className="ticker__dot" aria-hidden="true" />}
+                  <span className="ticker__item">
+                    <TickerIcon index={index} />
+                    {part}
+                  </span>
+                </Fragment>
               ))}
           </p>
         </div>
       </div>
       <header className="site-header">
         <div className="container header-bar">
-          <PagesMenu />
           <Link className="brand" to="/" aria-label={t('layout.home')}>
             Cto<span>C</span>
           </Link>
           <MainMenu />
           <Preferences />
           <HeaderActions />
+          <PagesMenu />
         </div>
       </header>
       <main id="main" tabIndex={-1}>

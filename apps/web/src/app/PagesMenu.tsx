@@ -43,7 +43,7 @@ const GROUPS: {
 /**
  * «Усі сторінки»: the index of every route (a development aid for the team), behind a button with three bars in the header.
  * The panel is a disclosure: Escape, the backdrop or opening a page closes it, and the focus goes back to the button.
- * Link texts are the routes, the human names are beside them.
+ * Each link is the human name of the page; the route itself is not shown.
  */
 export function PagesMenu() {
   const { t, lang } = useI18n();
@@ -95,9 +95,8 @@ export function PagesMenu() {
                     <ul>
                       {pages.map((page) => (
                         <li key={page.path} className={page.path.includes(':') ? 'is-template' : undefined}>
-                          <span>{PAGE_NAMES[page.path]?.[lang] ?? page.title}</span>
                           <NavLink to={hrefFor(page.path)} end>
-                            {page.path}
+                            {PAGE_NAMES[page.path]?.[lang] ?? page.title}
                           </NavLink>
                         </li>
                       ))}

@@ -122,7 +122,6 @@ html {
 }
 
 body {
-  font-variant-numeric: tabular-nums;
   display: flex;
   flex-direction: column;
   margin: 0;
@@ -2019,4 +2018,210 @@ legend,
   .sticker-board {
     min-height: 21rem;
   }
+}
+
+/* ============================== Header order (final) ==============================
+ * Wide (72rem+): logo, role menu, then preferences, account actions and «Усі сторінки» on the right. The menu takes the
+ * free space and scrolls inside itself if it is long, so nothing is pushed to a new line.
+ * Medium: the role menu drops to a second row. Narrow: preferences go to their own row too.
+ * «Усі сторінки» is an icon with a hidden name except on wide screens. */
+.site-header .container {
+  max-width: 80rem;
+}
+.header-bar .brand {
+  order: 0;
+  margin-right: auto;
+}
+.header-bar .main-nav {
+  order: 10;
+  width: 100%;
+  margin-right: 0;
+}
+.header-bar .prefs,
+.header-bar .header-actions,
+.header-bar .menu-button {
+  flex: none;
+}
+@media (min-width: 72rem) {
+  .header-bar {
+    flex-wrap: nowrap;
+  }
+  .header-bar .main-nav {
+    order: 0;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    margin-right: 0.5rem;
+  }
+  .header-bar .brand {
+    margin-right: 1rem;
+  }
+}
+@media (max-width: 88rem) {
+  .menu-button__text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 56rem) {
+  .header-bar .prefs {
+    order: 11;
+  }
+}
+@media (max-width: 34rem) {
+  .header-bar .menu-button {
+    order: 1;
+  }
+  .header-bar .header-actions {
+    order: 5;
+    width: 100%;
+  }
+  .header-bar .prefs {
+    order: 11;
+  }
+}
+
+/* Numbers: proportional figures in text (so «10%» reads as one number), tabular only where amounts line up. */
+strong {
+  font-variant-numeric: normal;
+}
+.price-block dd,
+.finance-balance strong,
+.filter-tabs .count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* /terms: the commission is the one number the page is about, set like a marker highlight. */
+.commission-value {
+  display: inline-block;
+  padding: 0 0.4rem;
+  border: var(--border);
+  border-radius: 0.3rem;
+  color: var(--on-mark);
+  background: var(--mark);
+  font-family: var(--font-display);
+  font-size: 1.15em;
+  font-weight: 700;
+  line-height: 1.3;
+  transform: rotate(-2deg);
+}
+
+/* The strip: three promises spread over the whole width, an icon before each, a dot between them.
+ * On a narrow screen it scrolls inside itself. */
+.ticker p {
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  text-overflow: clip;
+}
+.ticker p::-webkit-scrollbar {
+  display: none;
+}
+.ticker__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+.ticker__dot {
+  flex: none;
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+}
+.ticker svg {
+  flex: none;
+}
+@media (max-width: 40rem) {
+  .ticker p {
+    justify-content: flex-start;
+  }
+}
+
+/* «Усі сторінки»: each row is one link with the page name. */
+.pages-panel .site-nav li {
+  display: block;
+  padding: 0;
+}
+.pages-panel .site-nav a {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 0.35rem;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.98rem;
+}
+.pages-panel .site-nav a::after {
+  content: none;
+}
+.pages-panel .site-nav a:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+.pages-panel .site-nav a[aria-current='page'] {
+  color: var(--accent);
+  font-weight: 700;
+}
+.pages-panel .site-nav li.is-template a {
+  color: var(--muted);
+}
+
+/* Sticker meta: the stack on the left, the time on the right. The stamp has a lock, not a tick. */
+.ticket__meta {
+  justify-content: space-between;
+}
+.ticket--back {
+  gap: 0.35rem;
+}
+.ticket__stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* The «Усі сторінки» button is on the right, so the panel slides in from the right. */
+.pages-panel {
+  left: auto;
+  right: 0;
+  border-right: 0;
+  border-left: var(--border);
+  box-shadow: -7px 0 0 var(--shadow);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pages-panel:not([hidden]) {
+    animation-name: panel-in-right;
+  }
+}
+@keyframes panel-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+/* The API status (ADR-0009 health check) is for the team and the tests. A visitor sees it only when the server is down. */
+.api-status:not([data-health='unavailable']) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.site-footer .footer-bottom .api-status[data-health='unavailable'] {
+  padding: 0.3rem 0.7rem;
+  border: 1.5px solid var(--danger);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  background: var(--danger-bg);
+  font-weight: 700;
 }
