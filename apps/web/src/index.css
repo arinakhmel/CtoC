@@ -3921,3 +3921,70 @@ button.scroll-top[type='button'] {
     right: 4.9rem;
   }
 }
+
+/* ============================== Status pills: pastel, normal case ==============================
+ * Each status has its own soft colour with dark text (contrast ≥ 7:1 on every pastel), the same shape as the
+ * «Очікує перевірки» chip. The word is always written, so the colour is only a hint. */
+strong.status-pill,
+main ul[aria-label] > li > article p > strong.status-pill:only-child {
+  display: inline-block;
+  padding: 0.12rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--pill-ink, #2b2b2b) 35%, transparent);
+  border-radius: 999px;
+  color: var(--pill-ink, #2b2b2b);
+  background: var(--pill-bg, #ece7dc);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.5;
+  text-transform: none;
+  white-space: nowrap;
+}
+.status-pill[data-status='pending_moderation'],
+.status-pill[data-status='pending'],
+.status-pill[data-status='sent'] {
+  --pill-bg: #fbe7a1;
+  --pill-ink: #4f3b00;
+}
+.status-pill[data-status='published'] {
+  --pill-bg: #d6e8fb;
+  --pill-ink: #173c6b;
+}
+.status-pill[data-status='in_progress'] {
+  --pill-bg: #e4dcfa;
+  --pill-ink: #3a2873;
+}
+.status-pill[data-status='in_review'] {
+  --pill-bg: #fde0c9;
+  --pill-ink: #63300d;
+}
+.status-pill[data-status='revision'] {
+  --pill-bg: #f9d6dc;
+  --pill-ink: #6a1d2b;
+}
+.status-pill[data-status='done'],
+.status-pill[data-status='accepted'],
+.status-pill[data-status='approved'] {
+  --pill-bg: #d4f0dc;
+  --pill-ink: #1b5530;
+}
+.status-pill[data-status='rejected'],
+.status-pill[data-status='cancelled'],
+.status-pill[data-status='revoked'] {
+  --pill-bg: #e8e3da;
+  --pill-ink: #4a443a;
+}
+.card-status strong.status-pill {
+  font-size: 0.82rem !important;
+}
+
+/* Forms: a little room between the last field and the button (commission form). */
+form p + button[type='submit'],
+form [role='status'] + button[type='submit'],
+form [role='alert'] + button[type='submit'] {
+  margin-top: 0.75rem;
+}
+form input + button[type='submit'] {
+  margin-top: 1rem;
+}
