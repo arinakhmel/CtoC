@@ -117,7 +117,7 @@ pnpm dev
 | `pnpm test:all` | усе разом: `pnpm typecheck && pnpm test && pnpm test:e2e` |
 | `pnpm db:reset` | перестворити локальну базу |
 
-Усі перевірки однією командою: `pnpm test:all`. Звіт про тестування: [`docs/testing-report.md`](docs/testing-report.md).
+Усі перевірки однією командою: `pnpm test:all`. Якщо `playwright install chromium` не завантажується, запустіть e2e в уже встановленому браузері: PowerShell `$env:E2E_BROWSER_CHANNEL='chrome'; pnpm test:e2e` (або `msedge`), Bash `E2E_BROWSER_CHANNEL=chrome pnpm test:e2e`. Без змінної використовується Chromium від Playwright. Звіт про тестування: [`docs/testing-report.md`](docs/testing-report.md).
 
 Структура: `apps/api` (Express 5 + Prisma + SQLite), `apps/web` (Vite + React), `packages/shared` (zod-схеми, статуси, коди помилок). Документація та рішення: `docs/`. Правила роботи з Claude Code: `CLAUDE.md`.
 

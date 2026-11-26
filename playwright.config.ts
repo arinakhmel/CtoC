@@ -4,6 +4,9 @@ import { defineConfig, devices } from '@playwright/test';
 // database file, so they never touch the development data (docs/architecture/testing.md §6).
 const apiPort = Number(process.env.E2E_API_PORT ?? 3101);
 const webPort = Number(process.env.E2E_WEB_PORT ?? 5174);
+// Optional: run in an installed browser instead of the Playwright Chromium, for example E2E_BROWSER_CHANNEL=chrome or msedge
+// (useful when `playwright install chromium` cannot download). Unset, the Playwright Chromium is used.
+const channel = process.env.E2E_BROWSER_CHANNEL || undefined;
 
 export default defineConfig({
   testDir: 'e2e',
@@ -16,7 +19,7 @@ export default defineConfig({
     baseURL: `http://localhost:${webPort}`,
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], channel } }],
   webServer: [
     {
       command: 'pnpm --filter @ctoc/api dev',
