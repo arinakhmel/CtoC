@@ -6,6 +6,7 @@ import { formatDate } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { useDecideVerification, useVerificationQueue, type ModVerification } from '../queries/verifications';
 import { PageTitle } from '../../../ui/PageTitle';
+import { SampleStudentCard } from '../components/SampleStudentCard';
 
 const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
@@ -25,7 +26,9 @@ function VerificationItem({ item, decide }: { item: ModVerification; decide: Ret
       <p>
         {item.student.email}, подано <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
       </p>
-      <p>Статус: {VERIFICATION_STATUS_LABELS_UK[item.status]}</p>
+      <p className="card-status">
+        Статус: <strong>{VERIFICATION_STATUS_LABELS_UK[item.status]}</strong>
+      </p>
       <p>
         <a href={`${API_BASE_URL}/files/${encodeURIComponent(item.file.id)}`} target="_blank" rel="noreferrer">
           Переглянути документ
@@ -108,7 +111,10 @@ export function VerificationsQueuePage({ page }: { page: PageConfig }) {
   return (
     <article aria-labelledby="page-title">
       <h1 id="page-title"><PageTitle page={page} /></h1>
-      <p>Статус {VERIFICATION_STATUS_LABELS_UK.pending}: відкрийте документ і перевірте, що його надіслав справжній студент.</p>
+      <p className="page-lead">
+        У черзі документи зі статусом <span className="status-chip">{VERIFICATION_STATUS_LABELS_UK.pending}</span>. Відкрийте документ і перевірте,
+        що його надіслав справжній студент.
+      </p>
 
       {shownError && <p role="alert">{messageFor(shownError)}</p>}
       {decide.isSuccess && (
@@ -116,7 +122,7 @@ export function VerificationsQueuePage({ page }: { page: PageConfig }) {
       )}
 
       {queue.isPending && <p>Завантаження…</p>}
-      {queue.isSuccess && queue.data.length === 0 && <p>Документів на перевірку немає.</p>}
+      {queue.isSuccess && queue.data.length === 0 && <p className="empty-filter">Документів на перевірку немає.</p>}
       {queue.isSuccess && queue.data.length > 0 && (
         <ul aria-label="Документи на перевірку">
           {queue.data.map((item) => (
@@ -126,6 +132,8 @@ export function VerificationsQueuePage({ page }: { page: PageConfig }) {
           ))}
         </ul>
       )}
+
+      <SampleStudentCard />
     </article>
   );
 }
