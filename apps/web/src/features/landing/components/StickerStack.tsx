@@ -21,15 +21,12 @@ interface Body {
 
 const FRICTION = 0.92;
 const BOUNCE = 0.55;
-const SHUFFLE_EVERY_MS = 5200;
-const IDLE_BEFORE_SHUFFLE_MS = 4000;
 
 const reducedMotion = () => typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /**
  * Sample task stickers on the landing page that the visitor can grab and toss. A thrown sticker slides on with friction,
- * bounces off the edges of the board and tilts with its speed. When nobody touches them, the bottom sticker jumps to the
- * top now and then. Decorative (aria-hidden): the hero text says the same. With reduced motion they only follow the pointer.
+ * bounces off the edges of the board and tilts with its speed; they never move on their own. Decorative (aria-hidden): the hero text says the same. With reduced motion they only follow the pointer, without the toss.
  */
 export function StickerStack({ stickers, hint }: { stickers: Sticker[]; hint: string }) {
   const boardRef = useRef<HTMLDivElement>(null);
@@ -38,7 +35,6 @@ export function StickerStack({ stickers, hint }: { stickers: Sticker[]; hint: st
   const [order, setOrder] = useState(() => stickers.map((s) => s.id));
   const [grabbed, setGrabbed] = useState<string | null>(null);
   const drag = useRef<{ id: string; dx: number; dy: number; lastX: number; lastY: number; lastT: number } | null>(null);
-  const lastTouch = useRef(0);
   const frame = useRef(0);
 
   const paint = (id: string) => {
@@ -93,32 +89,11 @@ export function StickerStack({ stickers, hint }: { stickers: Sticker[]; hint: st
     return () => cancelAnimationFrame(frame.current);
   }, []);
 
-  // Now and then, while nobody plays with them, the bottom sticker hops to the top of the pile.
-  useEffect(() => {
-    if (reducedMotion()) return;
-    const timer = window.setInterval(() => {
-      if (drag.current || Date.now() - lastTouch.current < IDLE_BEFORE_SHUFFLE_MS || document.hidden) return;
-      setOrder((current) => {
-        const [bottom, ...rest] = current;
-        const body = bodies.current.get(bottom!);
-        if (body) {
-          body.vy = -6;
-          body.vx = (Math.random() - 0.5) * 6;
-          body.vr = (Math.random() - 0.5) * 2;
-          run();
-        }
-        return [...rest, bottom!];
-      });
-    }, SHUFFLE_EVERY_MS);
-    return () => window.clearInterval(timer);
-  }, []);
-
   const onPointerDown = (id: string) => (event: ReactPointerEvent<HTMLDivElement>) => {
     const body = bodies.current.get(id)!;
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = { id, dx: event.clientX - body.x, dy: event.clientY - body.y, lastX: event.clientX, lastY: event.clientY, lastT: performance.now() };
     body.vx = body.vy = body.vr = 0;
-    lastTouch.current = Date.now();
     setGrabbed(id);
     setOrder((current) => [...current.filter((other) => other !== id), id]);
   };
@@ -143,7 +118,6 @@ export function StickerStack({ stickers, hint }: { stickers: Sticker[]; hint: st
   const onPointerUp = (id: string) => () => {
     if (drag.current?.id !== id) return;
     drag.current = null;
-    lastTouch.current = Date.now();
     setGrabbed(null);
     const body = bodies.current.get(id)!;
     if (reducedMotion()) {
