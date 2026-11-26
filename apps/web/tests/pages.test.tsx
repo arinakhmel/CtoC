@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { hrefFor } from '../src/app/Layout';
+import { PAGE_NAMES } from '../src/app/navigation';
 import { createTestRouter, providerFuture } from '../src/app/router';
 import { PAGES } from '../src/routes.config';
 
@@ -17,18 +18,20 @@ const renderAt = (path: string) => render(<RouterProvider router={createTestRout
 const IMPLEMENTED_PAGES = ['/register', '/confirm-email', '/login', '/me/verification', '/u/:userId', '/me/profile', '/feed', '/tasks/:id', '/c/tasks/new', '/c/tasks', '/me/applications', '/notifications', '/me/work', '/work/:taskId', '/c/tasks/:id', '/c/balance', '/me/finance', '/mod/withdrawals', '/mod/verifications', '/mod/tasks', '/terms', '/mod/settings', '/', '/payment-safety'];
 
 describe('overview.md §4: every page stub renders what the router promises', () => {
-  it.each(PAGES.filter((page) => !IMPLEMENTED_PAGES.includes(page.path)).map((page) => [page.path, page] as const))('%s shows its title, its stories and the link to all pages', async (_path, page) => {
+  it.each(PAGES.filter((page) => !IMPLEMENTED_PAGES.includes(page.path)).map((page) => [page.path, page] as const))('%s shows its title, its stories and the way home', async (_path, page) => {
     renderAt(hrefFor(page.path));
 
     const main = within(screen.getByRole('main'));
-    expect(await main.findByRole('heading', { level: 1, name: page.title })).toBeInTheDocument();
+    // English team titles are shown as the short Ukrainian name (PageTitle).
+    const shown = /[а-яіїєґ]/i.test(page.title) ? page.title : PAGE_NAMES[page.path]!.uk;
+    expect(await main.findByRole('heading', { level: 1, name: shown })).toBeInTheDocument();
 
     for (const story of page.stories) {
       expect(main.getByRole('link', { name: story })).toHaveAttribute('href', expect.stringContaining('requirements.md'));
     }
-    if (page.stories.length === 0) expect(main.getByText(/no story yet/i)).toBeInTheDocument();
+    if (page.stories.length === 0) expect(main.getByText(/ще немає історії/)).toBeInTheDocument();
 
-    expect(main.getByRole('link', { name: 'All pages' })).toHaveAttribute('href', '/');
+    expect(main.getByRole('link', { name: '← На головну' })).toHaveAttribute('href', '/');
   });
 
   it('overview.md §4: the landing page is served at /', async () => {

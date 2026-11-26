@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-/** The three themes of the design system (index.css). `paper` is light, `graphite` dark, `blueprint` the blue drawing paper. */
-export const THEMES = ['paper', 'graphite', 'blueprint'] as const;
+/** The three themes of the design system (index.css). `paper` is light, `graphite` dark, `cloud` a light sky blue. */
+export const THEMES = ['paper', 'graphite', 'cloud'] as const;
 export type Theme = (typeof THEMES)[number];
 
 export const THEME_STORAGE_KEY = 'ctoc.theme';

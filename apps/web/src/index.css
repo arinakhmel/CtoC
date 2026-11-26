@@ -1,14 +1,14 @@
 /*
  * CtoC design system: "дошка оголошень" (a university notice board).
  * Warm paper, ink lines, hard offset shadows instead of soft blur, mono labels like stamped tickets,
- * one accent per theme. Three themes on <html data-theme>: paper (light), graphite (dark), blueprint.
+ * one accent per theme. Three themes on <html data-theme>: paper (light), graphite (dark), cloud (light blue).
  *
  * Fonts (self-hosted, Cyrillic): Unbounded for display, Onest for text, labels and money.
  *
  * Accessibility (WCAG 2.2 AA), measured on the real backgrounds:
  *   paper      text 14.6:1 · muted 5.8:1 · accent 4.9:1 · text on accent 5.8:1
  *   graphite   text 15.2:1 · muted 7.1:1 · accent 8.0:1 · text on accent 8.0:1
- *   blueprint  text 11.4:1 · muted 7.7:1 · accent 8.8:1 · text on accent 8.8:1
+ *   cloud      text 13.4:1 · muted 5.9:1 · accent 5.8:1 · text on accent 6.8:1
  * Focus is always visible, targets are at least 44px, meaning never rests on colour alone,
  * motion respects prefers-reduced-motion, nothing scrolls the page sideways at 390px.
  */
@@ -65,34 +65,30 @@
   --texture-size: 160px 160px;
 }
 
-/* Blueprint: the engineering drawing paper, with its grid. */
-:root[data-theme='blueprint'] {
-  color-scheme: dark;
-  --bg: #16306e;
-  --surface: #1c3a80;
-  --surface-2: #24479a;
-  --text: #f1f4ff;
-  --muted: #c0cbf0;
-  --line: #f1f4ff;
-  --line-soft: #3e5cab;
-  --accent: #ffd447;
-  --accent-hover: #ffe07a;
-  --on-accent: #16306e;
-  --accent-soft: #2c4a8f;
-  --mark: #ffd447;
-  --on-mark: #16306e;
-  --shadow: #0c1c45;
-  --danger: #ffb4a6;
-  --danger-bg: #4a2a52;
-  --ok: #b4f0b0;
-  --ok-bg: #1f4a6a;
-  --input-bg: #132a62;
-  --texture:
-    linear-gradient(rgba(241, 244, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(241, 244, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(rgba(241, 244, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(241, 244, 255, 0.035) 1px, transparent 1px);
-  --texture-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+/* Cloud («Хмаринка»): a light sky blue, soft and calm, with faint dots like a notebook. */
+:root[data-theme='cloud'] {
+  color-scheme: light;
+  --bg: #e4eefa;
+  --surface: #f5f9ff;
+  --surface-2: #dce7f6;
+  --text: #13233d;
+  --muted: #4a5b77;
+  --line: #13233d;
+  --line-soft: #b8c8e2;
+  --accent: #2457b5;
+  --accent-hover: #1c4796;
+  --on-accent: #ffffff;
+  --accent-soft: #d3e1f7;
+  --mark: #ffd66b;
+  --on-mark: #13233d;
+  --shadow: #13233d;
+  --danger: #a3200f;
+  --danger-bg: #f8dcd4;
+  --ok: #22663a;
+  --ok-bg: #d9efdf;
+  --input-bg: #ffffff;
+  --texture: radial-gradient(rgba(36, 87, 181, 0.09) 1px, transparent 1.2px);
+  --texture-size: 18px 18px;
 }
 
 :root {
@@ -471,8 +467,8 @@ button.link-pill {
 .swatch--graphite {
   background: linear-gradient(135deg, #141310 50%, #ff8a5b 50%);
 }
-.swatch--blueprint {
-  background: linear-gradient(135deg, #16306e 50%, #ffd447 50%);
+.swatch--cloud {
+  background: linear-gradient(135deg, #e4eefa 50%, #2457b5 50%);
 }
 
 /* ============================== Main ============================== */
@@ -2497,7 +2493,7 @@ input[type='date']::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 :root[data-theme='graphite'] input::-webkit-calendar-picker-indicator,
-:root[data-theme='blueprint'] input::-webkit-calendar-picker-indicator {
+:root[data-theme='cloud'] input::-webkit-calendar-picker-indicator {
   filter: none;
 }
 .date-presets {
@@ -3076,5 +3072,388 @@ fieldset.segment-radios input[type='radio'] {
 @media (prefers-reduced-motion: no-preference) {
   .prefs-compact__list {
     animation: fade-in 0.15s ease;
+  }
+}
+
+/* ============================== Strip: one promise at a time ============================== */
+.ticker {
+  display: block !important;
+  overflow: hidden;
+}
+.ticker .container {
+  padding: 0 1rem;
+}
+.ticker__list {
+  position: relative;
+  display: grid;
+  height: 1.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ticker .ticker__item {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(100%);
+  pointer-events: none;
+}
+.ticker .ticker__item.is-current {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ticker .ticker__item {
+    transition:
+      opacity 0.35s ease,
+      transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .ticker .ticker__item:not(.is-current) {
+    transform: translateY(-100%);
+  }
+}
+@media (max-width: 34rem) {
+  .ticker {
+    font-size: 0.7rem;
+  }
+}
+
+/* Smoother strip: a slow cross-fade with a short glide. */
+@media (prefers-reduced-motion: no-preference) {
+  .ticker .ticker__item {
+    transform: translateY(55%);
+    transition:
+      opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .ticker .ticker__item:not(.is-current) {
+    transform: translateY(-55%);
+  }
+  .ticker .ticker__item.is-current {
+    transform: none;
+    transition-delay: 0.15s;
+  }
+}
+
+/* ============================== Header switches: one square each ============================== */
+.prefs-compact--header {
+  position: relative;
+  flex: none;
+  gap: 0.4rem;
+}
+.prefs-compact--header .prefs-compact__item {
+  flex: none;
+}
+.prefs-compact--header .prefs-compact__toggle[type='button'] {
+  justify-content: center;
+  gap: 0.3rem;
+  width: auto;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0 0.55rem;
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.prefs-compact--header .prefs-compact__label,
+.prefs-compact--header .prefs-compact__name {
+  display: none;
+}
+.prefs-compact--header .prefs-compact__caret {
+  width: 0.32rem;
+  height: 0.32rem;
+  margin-left: 0.1rem;
+}
+.prefs-compact--header .prefs-compact__list {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 30;
+  min-width: 10rem;
+  box-shadow: var(--hard-shadow);
+}
+.header-bar .prefs-compact--header {
+  order: 0;
+}
+@media (max-width: 56rem) {
+  .header-bar .prefs-compact--header {
+    order: 0;
+  }
+}
+@media (max-width: 34rem) {
+  .header-bar > .prefs-compact--header {
+    display: none;
+  }
+}
+
+/* Page stub: the stories as small tags. */
+.story-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.story-tags a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.story-tags a:hover {
+  color: var(--on-mark);
+  background: var(--mark);
+}
+
+/* ============================== «Лупик», the helper in the corner ============================== */
+.buddy {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  pointer-events: none;
+}
+.buddy > * {
+  pointer-events: auto;
+}
+.buddy__button[type='button'] {
+  position: relative;
+  width: 4rem;
+  min-width: 4rem;
+  height: 4rem;
+  min-height: 4rem;
+  padding: 0;
+  border: 0;
+  border-radius: 1.1rem;
+  background: transparent;
+  box-shadow: none;
+}
+.buddy__button[type='button']:hover:not(:disabled) {
+  background: transparent;
+}
+.buddy__svg {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(3px 3px 0 var(--shadow));
+}
+.buddy__body {
+  fill: var(--surface);
+  stroke: var(--line);
+  stroke-width: 2.5;
+}
+.buddy__ink {
+  fill: var(--line);
+}
+.buddy__cheek {
+  fill: var(--accent);
+  opacity: 0.45;
+}
+.buddy__line {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+.buddy__lens {
+  fill: color-mix(in srgb, var(--mark) 55%, transparent);
+  stroke: var(--line);
+  stroke-width: 2.5;
+}
+.buddy__handle {
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.buddy__shine {
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.buddy__glass {
+  transform-origin: 46px 38px;
+}
+/* The hint appears beside it on hover or focus. */
+.buddy__hint {
+  position: absolute;
+  right: calc(100% + 0.5rem);
+  bottom: 0.9rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(6px);
+  pointer-events: none;
+}
+.buddy__button:hover .buddy__hint,
+.buddy__button:focus-visible .buddy__hint {
+  opacity: 1;
+  transform: none;
+}
+.buddy.is-open .buddy__hint {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .buddy__svg,
+  .buddy__glass,
+  .buddy__hint {
+    transition:
+      transform 0.35s cubic-bezier(0.3, 1.6, 0.5, 1),
+      opacity 0.2s ease;
+  }
+  .buddy__button:hover .buddy__svg,
+  .buddy__button:focus-visible .buddy__svg {
+    transform: translateY(-8px) rotate(-4deg);
+  }
+  .buddy__button:hover .buddy__glass,
+  .buddy__button:focus-visible .buddy__glass {
+    transform: rotate(-14deg) scale(1.08);
+  }
+}
+
+.buddy__card {
+  position: relative;
+  width: min(19rem, calc(100vw - 2rem));
+  padding: 1rem 1.1rem 1.1rem;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--hard-shadow);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .buddy__card {
+    animation: buddy-pop 0.28s cubic-bezier(0.3, 1.4, 0.5, 1);
+    transform-origin: bottom right;
+  }
+}
+@keyframes buddy-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+}
+.buddy__title {
+  margin: 0 2rem 0.6rem 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 650;
+}
+.buddy__steps {
+  margin: 0 0 0.75rem;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+}
+.buddy__steps li {
+  margin-bottom: 0.35rem;
+}
+.buddy__more {
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+.buddy__close[type='button'] {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  border-width: 1px;
+  box-shadow: none;
+  font-size: 0.8rem;
+}
+@media (max-width: 34rem) {
+  .buddy {
+    right: 0.6rem;
+    bottom: 0.6rem;
+  }
+  .buddy__button[type='button'] {
+    width: 3.25rem;
+    min-width: 3.25rem;
+    height: 3.25rem;
+    min-height: 3.25rem;
+  }
+  .buddy__svg {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+  .buddy__hint {
+    display: none;
+  }
+}
+
+/* ============================== Compact header up to tablet width (≤ 48rem) ==============================
+ * Row 1: logo, «Вхід», ☰. Language, theme, «Почати безкоштовно» and «Вийти» are in the ☰ drawer, so nothing wraps. */
+@media (max-width: 48rem) {
+  .header-bar {
+    flex-wrap: wrap;
+  }
+  .header-bar > .prefs-compact--header {
+    display: none;
+  }
+  .header-bar > .header-actions {
+    order: 1;
+    width: auto;
+  }
+  .header-bar > .header-actions .link-pill,
+  .header-bar > .header-actions [role='alert'] {
+    display: none;
+  }
+  .header-bar .menu-button {
+    order: 2;
+  }
+  .header-bar .main-nav {
+    order: 10;
+    width: 100%;
+  }
+  .pages-panel {
+    width: min(85vw, 24rem);
+  }
+  .pages-panel__phone {
+    display: grid;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1.5px dashed var(--line-soft);
+  }
+  .pages-panel__phone .header-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-right: 3.25rem;
+  }
+  .pages-panel__phone .header-actions > * {
+    width: auto;
+    min-height: 2.5rem;
+    padding: 0 0.85rem;
+    font-size: 0.92rem;
+    box-shadow: none;
+  }
+  .pages-panel__phone .header-actions .link-plain {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
   }
 }

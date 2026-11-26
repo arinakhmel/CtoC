@@ -1,13 +1,14 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Fragment, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { isAnonymous, ME_KEY, useLogout, useMe } from '../features/identity/queries/session';
 import { I18nProvider, useI18n } from '../lib/i18n';
 import { ThemeProvider } from '../lib/theme';
 import { createQueryClient } from '../lib/queryClient';
 import { useApiHealth } from '../lib/useApiHealth';
-import { CompactPreferences, Preferences } from '../ui/Preferences';
-import { TickerIcon } from '../ui/TickerIcon';
+import { CompactPreferences } from '../ui/Preferences';
+import { Ticker } from '../ui/Ticker';
+import { HelperBuddy } from '../ui/HelperBuddy';
 import { menuFor } from './navigation';
 import { PagesMenu } from './PagesMenu';
 
@@ -102,35 +103,14 @@ function Shell() {
       <a className="skip-link" href="#main">
         {t('layout.skip')}
       </a>
-      <div className="ticker">
-        <div className="container">
-          <p>
-            {/* On a phone the strip scrolls by itself, so the items are drawn twice (the copy is hidden from screen readers). */}
-            {[false, true].map((copy) => (
-              <span key={String(copy)} className={copy ? 'ticker__group ticker__group--copy' : 'ticker__group'} aria-hidden={copy || undefined}>
-                {t('layout.ticker')
-                  .split('|')
-                  .map((part, index) => (
-                    <Fragment key={part}>
-                      {index > 0 && <span className="ticker__dot" aria-hidden="true" />}
-                      <span className="ticker__item">
-                        <TickerIcon index={index} />
-                        {part}
-                      </span>
-                    </Fragment>
-                  ))}
-              </span>
-            ))}
-          </p>
-        </div>
-      </div>
+      <Ticker text={t('layout.ticker')} />
       <header className="site-header">
         <div className="container header-bar">
           <Link className="brand" to="/" aria-label={t('layout.home')}>
             Cto<span>C</span>
           </Link>
           <MainMenu />
-          <Preferences />
+          <CompactPreferences variant="header" />
           <HeaderActions />
           <PagesMenu
             phoneExtras={
@@ -146,6 +126,7 @@ function Shell() {
         <Outlet />
       </main>
       <Footer />
+      <HelperBuddy />
     </>
   );
 }

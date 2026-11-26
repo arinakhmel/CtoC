@@ -22,7 +22,7 @@ const uk = {
   'layout.footerMade': 'Зроблено студентами НаУКМА, 2026',
   'theme.paper': 'Папір',
   'theme.graphite': 'Графіт',
-  'theme.blueprint': 'Синька',
+  'theme.cloud': 'Хмаринка',
   'lang.uk': 'Українська',
   'lang.en': 'English',
 
@@ -109,6 +109,14 @@ const uk = {
   'pages.moderator': 'Модератор',
   'pages.account': 'Будь-який акаунт',
 
+  'buddy.hint': 'Підказка: як усе влаштовано',
+  'buddy.title': 'Коротко про CtoC',
+  'buddy.step1': 'Замовник публікує завдання з чесною ціною, модератор перевіряє його.',
+  'buddy.step2': 'Студент відгукується, замовник обирає й резервує оплату наперед.',
+  'buddy.step3': 'Результат прийнято: гроші на баланс, досвід у профіль.',
+  'buddy.more': 'Як захищено оплату',
+  'buddy.close': 'Закрити підказку',
+
   'notFound.title': 'Сторінку не знайдено',
   'notFound.text': 'За цією адресою нічого немає. Можливо, посилання застаріло.',
   'notFound.home': 'На головну',
@@ -133,7 +141,7 @@ const en: Record<MessageKey, string> = {
   'layout.footerMade': 'Made by NaUKMA students, 2026',
   'theme.paper': 'Paper',
   'theme.graphite': 'Graphite',
-  'theme.blueprint': 'Blueprint',
+  'theme.cloud': 'Cloud',
   'lang.uk': 'Українська',
   'lang.en': 'English',
 
@@ -219,6 +227,14 @@ const en: Record<MessageKey, string> = {
   'pages.customer': 'Customer',
   'pages.moderator': 'Moderator',
   'pages.account': 'Any account',
+
+  'buddy.hint': 'Hint: how it all works',
+  'buddy.title': 'CtoC in short',
+  'buddy.step1': 'A business posts a task at a fair price, a moderator checks it.',
+  'buddy.step2': 'A student applies, the business picks one and reserves the payment up front.',
+  'buddy.step3': 'Result accepted: money to the balance, experience to the profile.',
+  'buddy.more': 'How payment is protected',
+  'buddy.close': 'Close the hint',
 
   'notFound.title': 'Page not found',
   'notFound.text': 'There is nothing at this address. The link may be out of date.',
