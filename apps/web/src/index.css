@@ -1808,3 +1808,16 @@ main > article.landing {
 .swatch {
   border-radius: 0.2rem;
 }
+
+/* Filter bar internals. */
+.list-toolbar__fields p {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+.list-toolbar__fields label {
+  margin-bottom: 0.3rem;
+}
+.empty-filter p {
+  margin-bottom: 1rem;
+}
