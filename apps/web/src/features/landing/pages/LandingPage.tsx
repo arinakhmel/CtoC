@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useI18n } from '../../../lib/i18n';
 import type { PageConfig } from '../../../routes.config';
 import { HowItWorks } from '../components/HowItWorks';
+import { PageTitle } from '../../../ui/PageTitle';
 
 /** Three sample tasks pinned to the board in the hero: decoration, so hidden from a screen reader (the text says the same). */
 function TicketStack() {
@@ -43,7 +44,7 @@ export function LandingPage({ page }: { page: PageConfig }) {
       <div className="hero">
         <div className="hero__text">
           <p className="eyebrow">{t('landing.eyebrow')}</p>
-          <h1 id="page-title">{page.title}</h1>
+          <h1 id="page-title"><PageTitle page={page} /></h1>
           <p className="hero__lead">{t('landing.lead')}</p>
           <p className="hero__actions">
             <Link className="link-pill link-pill--lg" to="/register">

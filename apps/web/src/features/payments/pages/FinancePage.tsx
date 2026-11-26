@@ -9,6 +9,7 @@ import { WithdrawalForm } from '../components/WithdrawalForm';
 import { WithdrawalList } from '../components/WithdrawalList';
 import { useFinance } from '../queries/finance';
 import { useMyWithdrawals } from '../queries/withdrawals';
+import { PageTitle } from '../../../ui/PageTitle';
 
 const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
@@ -33,7 +34,7 @@ export function FinancePage({ page }: { page: PageConfig }) {
 
   return (
     <article aria-labelledby="page-title">
-      <h1 id="page-title">{page.title}</h1>
+      <h1 id="page-title"><PageTitle page={page} /></h1>
 
       {errorCode && errorCode !== 'AUTH_REQUIRED' && (
         <p role="alert">

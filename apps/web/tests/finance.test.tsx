@@ -133,6 +133,6 @@ describe('/me/finance: errors', () => {
     financeResponse = () => apiError('AUTH_REQUIRED', 401);
     open();
 
-    expect(await screen.findByRole('heading', { level: 1, name: /^Login/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Вхід' })).toBeInTheDocument();
   });
 });

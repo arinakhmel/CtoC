@@ -5,6 +5,7 @@ import { ApiClientError } from '../../../lib/api';
 import { formatDeadline, formatUah } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { useMyWork } from '../queries/work';
+import { PageTitle } from '../../../ui/PageTitle';
 
 const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
@@ -22,7 +23,7 @@ export function MyWorkPage({ page }: { page: PageConfig }) {
 
   return (
     <article aria-labelledby="page-title">
-      <h1 id="page-title">{page.title}</h1>
+      <h1 id="page-title"><PageTitle page={page} /></h1>
 
       {errorCode && errorCode !== 'AUTH_REQUIRED' && (
         <p role="alert">

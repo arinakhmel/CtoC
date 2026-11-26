@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
 import type { PageConfig } from '../../../routes.config';
 import { registerAccount } from '../queries/register';
+import { PageTitle } from '../../../ui/PageTitle';
 
 type FormValues = RegisterInput;
 
@@ -46,7 +47,7 @@ export function RegisterPage({ page }: { page: PageConfig }) {
   if (done) {
     return (
       <article aria-labelledby="page-title">
-        <h1 id="page-title">{page.title}</h1>
+        <h1 id="page-title"><PageTitle page={page} /></h1>
         <p role="status">Акаунт створено. Ми надіслали лист для підтвердження електронної пошти.</p>
         <p>
           <Link to="/login">Увійти</Link>
@@ -62,7 +63,7 @@ export function RegisterPage({ page }: { page: PageConfig }) {
 
   return (
     <article aria-labelledby="page-title">
-      <h1 id="page-title">{page.title}</h1>
+      <h1 id="page-title"><PageTitle page={page} /></h1>
       <form onSubmit={onSubmit} noValidate aria-label="Реєстрація">
         <fieldset>
           <legend>Я реєструюся як</legend>
