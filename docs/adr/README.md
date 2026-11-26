@@ -15,6 +15,7 @@ Short records of decisions that are expensive to change later. Written for peopl
 | [0007](0007-concurrency-and-money.md) | Concurrency and money: DB-enforced invariants, simulated payments | Proposed |
 | [0008](0008-frontend-stack.md) | Frontend: Vite, React Router, TanStack Query, Tailwind | Proposed |
 | [0009](0009-deployment.md) | Deployment: local first, optional single hosted service | Proposed |
+| [0010](0010-team-quick-login.md) | Team quick login to the demo accounts with a server-side code | Proposed |
 
 Options behind each decision: [`docs/analysis/options.md`](../analysis/options.md). Requirements: [`requirements-digest.md`](../analysis/requirements-digest.md).
 
