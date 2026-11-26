@@ -2922,3 +2922,159 @@ fieldset.segment-radios input[type='radio'] {
 .star-hint summary span[aria-hidden='true'] {
   font-size: 0.75rem;
 }
+
+/* ============================== Phone, round 2 ============================== */
+/* The strip: one group of items on a wide screen; on a phone two copies scroll in a loop. */
+.ticker__group {
+  display: contents;
+}
+.ticker__group--copy {
+  display: none;
+}
+@media (max-width: 34rem) {
+  .ticker {
+    display: block;
+    overflow: hidden;
+    font-size: 0.7rem;
+  }
+  .ticker .container {
+    padding: 0;
+  }
+  .ticker p {
+    display: flex;
+    width: max-content;
+    gap: 0;
+    overflow: visible;
+  }
+  .ticker__group,
+  .ticker__group--copy {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+@media (max-width: 34rem) and (prefers-reduced-motion: no-preference) {
+  .ticker p {
+    animation: ticker-loop 22s linear infinite;
+  }
+}
+@media (max-width: 34rem) and (prefers-reduced-motion: reduce) {
+  .ticker p {
+    width: auto;
+    overflow-x: auto;
+  }
+  .ticker__group--copy {
+    display: none;
+  }
+}
+@keyframes ticker-loop {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* The ☰ menu on a phone: a drawer of 85% width over a dimmed page, closed by ✕ or a tap outside. */
+@media (max-width: 34rem) {
+  .pages-panel {
+    width: min(85vw, 22rem);
+    padding: 1rem 1rem 2rem;
+    border-left: var(--border);
+    box-shadow: -6px 0 0 var(--shadow);
+  }
+  .pages-backdrop {
+    background: color-mix(in srgb, var(--shadow) 45%, transparent);
+  }
+  .pages-panel__phone {
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+  }
+  /* Account actions: two small buttons in one row. */
+  .pages-panel__phone .header-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-right: 3.25rem;
+  }
+  .pages-panel__phone .header-actions > * {
+    width: auto;
+    min-height: 2.5rem;
+    padding: 0 0.85rem;
+    font-size: 0.92rem;
+    box-shadow: none;
+  }
+  .pages-panel__phone .header-actions .link-plain {
+    border: 1px solid var(--line);
+  }
+  .pages-panel__title {
+    font-size: 1.05rem;
+  }
+  .pages-panel__hint {
+    font-size: 0.82rem;
+  }
+}
+
+/* Compact preferences: «Мова UA ▾» and «Тема ▾», each opening a short list under it. */
+.prefs-compact {
+  display: flex;
+  gap: 0.5rem;
+}
+.prefs-compact__item {
+  position: relative;
+  flex: 1;
+}
+.prefs-compact__toggle[type='button'] {
+  justify-content: flex-start;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--line);
+  box-shadow: none;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+.prefs-compact__label {
+  color: var(--muted);
+  font-weight: 500;
+}
+.prefs-compact__caret {
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+}
+.prefs-compact__toggle[aria-expanded='true'] .prefs-compact__caret {
+  transform: rotate(-135deg) translateY(-1px);
+}
+.prefs-compact__list {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.prefs-compact__list button[type='button'] {
+  justify-content: flex-start;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0 0.6rem;
+  border: 0;
+  box-shadow: none;
+  font-size: 0.9rem;
+  font-weight: 550;
+}
+.prefs-compact__list button[aria-pressed='true'] {
+  color: var(--on-mark);
+  background: var(--mark);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .prefs-compact__list {
+    animation: fade-in 0.15s ease;
+  }
+}
