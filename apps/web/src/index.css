@@ -3457,3 +3457,85 @@ fieldset.segment-radios input[type='radio'] {
     border-radius: var(--radius-sm);
   }
 }
+
+/* ---------- «Лупик» props ---------- */
+.buddy__lens-flat {
+  fill: color-mix(in srgb, var(--mark) 45%, var(--surface));
+  stroke: var(--line);
+  stroke-width: 2;
+}
+.buddy__pen {
+  fill: var(--accent);
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+.buddy__pen-cap {
+  fill: var(--line);
+}
+.buddy__pen-tip {
+  fill: var(--mark);
+  stroke: var(--line);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+.buddy__coin {
+  fill: var(--mark);
+  stroke: var(--line);
+  stroke-width: 2.2;
+}
+.buddy__coin-mark {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+/* ---------- «Лупик» peeks out over the top edge of a «Як це працює» card on hover ---------- */
+.how-it-works li {
+  position: relative;
+}
+.peek {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 100%;
+  width: 3.5rem;
+  height: 3.1rem;
+  overflow: hidden;
+  pointer-events: none;
+}
+.peek .buddy__svg {
+  display: block;
+  filter: none;
+  transform: translateY(105%);
+}
+.how-it-works li:hover .peek .buddy__svg,
+.how-it-works li:focus-within .peek .buddy__svg {
+  transform: translateY(8%) rotate(-3deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .peek .buddy__svg {
+    transition: transform 0.45s cubic-bezier(0.3, 1.5, 0.5, 1);
+  }
+  .how-it-works li:hover .peek .buddy__prop {
+    animation: prop-wiggle 1.2s ease-in-out 0.4s infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+}
+@keyframes prop-wiggle {
+  50% {
+    transform: rotate(-10deg);
+  }
+}
+/* Touch screens have no hover: the helpers just sit a little above each card. */
+@media (hover: none) {
+  .peek .buddy__svg {
+    transform: translateY(40%);
+  }
+}
+.how-it-works ol {
+  padding-top: 2.5rem;
+}
+.how-it-works ol {
+  row-gap: 3.25rem;
+}
