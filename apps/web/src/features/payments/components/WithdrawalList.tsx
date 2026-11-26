@@ -17,7 +17,7 @@ export function WithdrawalList({ withdrawals }: { withdrawals: MyWithdrawal[] })
                 <strong>{formatUah(withdrawal.amountKopecks)}</strong> на картку •••• {withdrawal.cardLast4}
               </p>
               <p>
-                Статус: {WITHDRAWAL_STATUS_LABELS_UK[withdrawal.status]} · <time dateTime={withdrawal.createdAt}>{formatDate(withdrawal.createdAt)}</time>
+                Статус: {WITHDRAWAL_STATUS_LABELS_UK[withdrawal.status]}, <time dateTime={withdrawal.createdAt}>{formatDate(withdrawal.createdAt)}</time>
               </p>
               {withdrawal.status === 'rejected' && withdrawal.reason && <p>Причина: {withdrawal.reason}. Гроші повернуто на баланс.</p>}
             </li>

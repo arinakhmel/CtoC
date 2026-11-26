@@ -5,6 +5,7 @@ import { ApiClientError } from '../../../lib/api';
 import { formatDate, formatUah } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { useDecideWithdrawal, useWithdrawalQueue, type ModWithdrawal } from '../queries/withdrawals';
+import { PageTitle } from '../../../ui/PageTitle';
 
 const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
@@ -30,7 +31,7 @@ function WithdrawalItem({ withdrawal, decide }: { withdrawal: ModWithdrawal; dec
         Картка: {withdrawal.cardNumber ? <strong>{groupCard(withdrawal.cardNumber)}</strong> : <>•••• {withdrawal.cardLast4}</>}
       </p>
       <p>
-        Статус: {WITHDRAWAL_STATUS_LABELS_UK[withdrawal.status]} · подано <time dateTime={withdrawal.createdAt}>{formatDate(withdrawal.createdAt)}</time>
+        Статус: {WITHDRAWAL_STATUS_LABELS_UK[withdrawal.status]}, подано <time dateTime={withdrawal.createdAt}>{formatDate(withdrawal.createdAt)}</time>
       </p>
       {withdrawal.reason && <p>Причина відхилення: {withdrawal.reason}</p>}
 
@@ -110,7 +111,7 @@ export function WithdrawalsQueuePage({ page }: { page: PageConfig }) {
 
   return (
     <article aria-labelledby="page-title">
-      <h1 id="page-title">{page.title}</h1>
+      <h1 id="page-title"><PageTitle page={page} /></h1>
       <p>Виплата робиться вручну: переказ на картку студента, потім позначка тут. Повний номер картки видно лише до рішення.</p>
 
       <label htmlFor="withdrawal-status">Показати</label>

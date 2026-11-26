@@ -2,6 +2,7 @@ import { formatCommission, MESSAGES_UK } from '@ctoc/shared';
 import { ApiClientError } from '../../../lib/api';
 import type { PageConfig } from '../../../routes.config';
 import { usePublicSettings } from '../queries/settings';
+import { PageTitle } from '../../../ui/PageTitle';
 
 /**
  * /terms: US-03 sc.1, sc.3. The commission of the platform as digits, for a visitor who has no account. Nothing is shown in its
@@ -13,14 +14,14 @@ export function TermsPage({ page }: { page: PageConfig }) {
 
   return (
     <article aria-labelledby="page-title">
-      <h1 id="page-title">{page.title}</h1>
+      <h1 id="page-title"><PageTitle page={page} /></h1>
 
       <section aria-labelledby="commission-title">
         <h2 id="commission-title">Комісія платформи</h2>
         {settings.isPending && <p role="status">Завантаження…</p>}
         {settings.isSuccess && (
           <p>
-            Комісія CtoC: <strong>{formatCommission(settings.data.commissionBp)}</strong> від ціни завдання. Її утримують із виплати студентові, інших
+            Комісія CtoC: <strong className="commission-value">{formatCommission(settings.data.commissionBp)}</strong> від ціни завдання. Її утримують із виплати студентові, інших
             прихованих платежів немає.
           </p>
         )}

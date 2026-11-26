@@ -7,6 +7,7 @@ import { ApiClientError } from '../../../lib/api';
 import { formatUah, uahToKopecks } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { useBalance, useTopUp } from '../queries/balance';
+import { PageTitle } from '../../../ui/PageTitle';
 
 const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
@@ -41,7 +42,7 @@ export function BalancePage({ page }: { page: PageConfig }) {
 
   return (
     <article aria-labelledby="page-title">
-      <h1 id="page-title">{page.title}</h1>
+      <h1 id="page-title"><PageTitle page={page} /></h1>
 
       <p role="note" className="sandbox-note">
         Тестовий режим: це поповнення не списує реальні гроші. Гроші з’являються лише на вашому тестовому балансі.

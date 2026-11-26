@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { PageConfig } from '../../../routes.config';
+import { PageTitle } from '../../../ui/PageTitle';
 
 /** The stages of a deal in the order they happen (US-04 sc.1). Each one is a block of the list; the CSS puts them in one column on a phone (sc.3). */
 const STAGES = [
@@ -33,7 +34,7 @@ const STAGES = [
 export function PaymentSafetyPage({ page }: { page: PageConfig }) {
   return (
     <article aria-labelledby="page-title" className="payment-safety">
-      <h1 id="page-title">{page.title}</h1>
+      <h1 id="page-title"><PageTitle page={page} /></h1>
       <p>Ви отримаєте гроші за свою роботу: оплата зарезервована ще до того, як ви почнете. Ось як проходить безпечна угода від початку до кінця.</p>
 
       <section aria-labelledby="stages-title">

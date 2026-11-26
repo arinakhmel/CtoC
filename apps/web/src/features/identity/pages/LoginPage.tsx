@@ -10,6 +10,7 @@ import type { PageConfig } from '../../../routes.config';
 import { login, type SessionUser } from '../queries/login';
 import { ME_KEY } from '../queries/session';
 import { ResendForm } from './ConfirmEmailPage';
+import { PageTitle } from '../../../ui/PageTitle';
 
 /** Start page by role (US-45 checklist): student → feed, customer → «Мої завдання», moderator → verification queue. */
 const HOME_BY_ROLE: Record<SessionUser['user']['role'], string> = {
@@ -58,7 +59,7 @@ export function LoginPage({ page }: { page: PageConfig }) {
   if (unconfirmedEmail !== null) {
     return (
       <article aria-labelledby="page-title">
-        <h1 id="page-title">{page.title}</h1>
+        <h1 id="page-title"><PageTitle page={page} /></h1>
         <p role="alert">{MESSAGES_UK.EMAIL_NOT_CONFIRMED}. Ми можемо надіслати лист підтвердження ще раз.</p>
         <ResendForm defaultEmail={unconfirmedEmail} />
         <p>
@@ -70,7 +71,7 @@ export function LoginPage({ page }: { page: PageConfig }) {
 
   return (
     <article aria-labelledby="page-title">
-      <h1 id="page-title">{page.title}</h1>
+      <h1 id="page-title"><PageTitle page={page} /></h1>
       {sessionEnded && <p role="status">{MESSAGES_UK.AUTH_REQUIRED}</p>}
       <form onSubmit={onSubmit} noValidate aria-label="Вхід">
         <p>

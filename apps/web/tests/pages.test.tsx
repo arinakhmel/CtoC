@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { hrefFor } from '../src/app/Layout';
@@ -38,15 +39,16 @@ describe('overview.md §4: every page stub renders what the router promises', ()
 });
 
 describe('overview.md §4: unknown addresses', () => {
-  it('show the not-found page with a link to all pages', async () => {
+  it('show the not-found page with a link to the landing page', async () => {
     renderAt('/no/such/page');
     const main = within(screen.getByRole('main'));
-    expect(await main.findByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument();
-    expect(main.getByRole('link', { name: 'All pages' })).toHaveAttribute('href', '/');
+    expect(await main.findByRole('heading', { level: 1, name: 'Сторінку не знайдено' })).toBeInTheDocument();
+    expect(main.getByRole('link', { name: 'На головну' })).toHaveAttribute('href', '/');
   });
 
-  it('keep the layout: the navigation lists every page', async () => {
+  it('keep the layout: the «Усі сторінки» menu lists every page', async () => {
     renderAt('/no/such/page');
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Усі сторінки' }));
     const nav = within(await screen.findByRole('navigation', { name: 'Pages' }));
     expect(nav.getAllByRole('link')).toHaveLength(PAGES.length);
   });

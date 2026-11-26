@@ -2,9 +2,22 @@ import { APPLICATION_STATUS_UK, MESSAGES_UK } from '@ctoc/shared';
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
+import { useI18n } from '../../../lib/i18n';
+import { FilterTabs, useFilterTabs, type FilterTab } from '../../../ui/FilterTabs';
 import { formatUah } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { useMyApplications } from '../queries/myApplications';
+import { PageTitle } from '../../../ui/PageTitle';
+
+type Application = NonNullable<ReturnType<typeof useMyApplications>['data']>[number];
+
+/** The tabs of «Мої відгуки», one per status of an application (domain-model.md §3.3). */
+const TABS: FilterTab<Application>[] = [
+  { id: 'all', label: 'filters.all', test: () => true },
+  { id: 'sent', label: 'filters.sent', test: (a) => a.status === 'sent' },
+  { id: 'accepted', label: 'filters.accepted', test: (a) => a.status === 'accepted' },
+  { id: 'rejected', label: 'filters.rejected', test: (a) => a.status === 'rejected' },
+];
 
 const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
@@ -13,6 +26,9 @@ const messageFor = (code: string): string =>
 export function MyApplicationsPage({ page }: { page: PageConfig }) {
   const navigate = useNavigate();
   const applications = useMyApplications();
+  const { t } = useI18n();
+  const all = applications.data ?? [];
+  const tabs = useFilterTabs(TABS, all);
 
   const errorCode = applications.isError ? (applications.error instanceof ApiClientError ? applications.error.code : 'UNKNOWN_ERROR') : null;
 
@@ -22,7 +38,7 @@ export function MyApplicationsPage({ page }: { page: PageConfig }) {
 
   return (
     <article aria-labelledby="page-title">
-      <h1 id="page-title">{page.title}</h1>
+      <h1 id="page-title"><PageTitle page={page} /></h1>
 
       {errorCode && errorCode !== 'AUTH_REQUIRED' && (
         <p role="alert">
@@ -40,8 +56,13 @@ export function MyApplicationsPage({ page }: { page: PageConfig }) {
       )}
 
       {applications.isSuccess && applications.data.length > 0 && (
+        <FilterTabs tabs={TABS} items={all} value={tabs.value} onChange={tabs.setValue} />
+      )}
+      {applications.isSuccess && applications.data.length > 0 && tabs.visible.length === 0 && <p className="empty-filter">{t('filters.empty')}</p>}
+
+      {tabs.visible.length > 0 && (
         <ul aria-label="Мої відгуки">
-          {applications.data.map((application) => (
+          {tabs.visible.map((application) => (
             <li key={application.id}>
               <article aria-labelledby={`application-${application.id}`}>
                 <h2 id={`application-${application.id}`}>

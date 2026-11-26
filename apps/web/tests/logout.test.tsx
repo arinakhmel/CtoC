@@ -30,6 +30,8 @@ beforeEach(() => {
         return logoutResponse();
       }
       if (url === '/api/health') return json({ status: 'ok' });
+      // A public endpoint (api.md §4.1e): it answers without a session, as the real API does.
+      if (url === '/api/public/settings') return json({ commissionBp: 1000 });
       return otherResponse();
     }),
   );
@@ -123,7 +125,8 @@ describe('protected pages without a session (US-46)', () => {
     await user.click(await screen.findByRole('button', { name: 'Вийти' }));
     expect(await screen.findByRole('heading', { level: 1, name: /мікрозавдання/ })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('link', { name: '/c/balance' }));
+    await user.click(screen.getByRole('button', { name: 'Усі сторінки' }));
+    await user.click(screen.getByRole('link', { name: 'Баланс замовника' }));
 
     expect(await screen.findByRole('form', { name: 'Вхід' })).toBeInTheDocument();
     expect(screen.getByText('Увійдіть, щоб продовжити')).toBeInTheDocument();
