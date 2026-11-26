@@ -1,6 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { isAnonymous, ME_KEY, useLogout, useMe } from '../features/identity/queries/session';
 import { I18nProvider, useI18n } from '../lib/i18n';
 import { ThemeProvider } from '../lib/theme';
@@ -57,8 +57,16 @@ function HeaderActions() {
 function MainMenu() {
   const user = useCurrentUser();
   const { t } = useI18n();
+  const navRef = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+  // On a phone the menu scrolls sideways: keep the current page's tab in view.
+  useEffect(() => {
+    const nav = navRef.current;
+    const current = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (nav && current) nav.scrollLeft = Math.max(0, current.offsetLeft - (nav.clientWidth - current.offsetWidth) / 2);
+  }, [pathname, user?.role]);
   return (
-    <nav className="main-nav" aria-label={t('layout.menu')}>
+    <nav ref={navRef} className="main-nav" aria-label={t('layout.menu')}>
       <ul>
         {menuFor(user).map((item) => (
           <li key={item.to}>
