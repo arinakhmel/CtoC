@@ -25,7 +25,12 @@ export function TermsPage({ page }: { page: PageConfig }) {
           </p>
         )}
         {settings.isError && (
-          <p role="alert">{code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : MESSAGES_UK.INTERNAL_ERROR}</p>
+          <>
+            <p role="alert">{code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : MESSAGES_UK.INTERNAL_ERROR}</p>
+            <button type="button" onClick={() => void settings.refetch()} disabled={settings.isFetching}>
+              Спробувати ще раз
+            </button>
+          </>
         )}
       </section>
     </article>

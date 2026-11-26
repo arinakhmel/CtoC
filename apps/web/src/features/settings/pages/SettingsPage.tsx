@@ -48,7 +48,14 @@ export function SettingsPage({ page }: { page: PageConfig }) {
     <article aria-labelledby="page-title">
       <h1 id="page-title">{page.title}</h1>
       {stored.isPending && <p role="status">Завантаження…</p>}
-      {loadError && <p role="alert">{messageFor(loadError)}</p>}
+      {loadError && (
+        <>
+          <p role="alert">{messageFor(loadError)}</p>
+          <button type="button" onClick={() => void stored.refetch()} disabled={stored.isFetching}>
+            Спробувати ще раз
+          </button>
+        </>
+      )}
       {stored.isSuccess && (
         <form aria-label="Комісія платформи" noValidate onSubmit={onSubmit}>
           <p>
@@ -61,7 +68,13 @@ export function SettingsPage({ page }: { page: PageConfig }) {
             inputMode="decimal"
             aria-invalid={errors.percent ? true : undefined}
             aria-describedby={errors.percent ? 'commission-error' : undefined}
-            {...register('percent')}
+            {...register('percent', {
+              // A new edit makes the earlier «Збережено» and the earlier server error stale: remove them.
+              onChange: () => {
+                setSaved(null);
+                update.reset();
+              },
+            })}
           />
           {errors.percent && (
             <p id="commission-error" role="alert">
