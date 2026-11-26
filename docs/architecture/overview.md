@@ -164,10 +164,10 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 
 | Route | Page | Access | Stories |
 |---|---|---|---|
-| `/` | Landing: beginners-only message, "Як це працює", commission | P | US-01, US-02, US-03 |
+| `/` | CtoC: мікрозавдання для студентів-початківців | P | US-01, US-02, US-03 |
 | `/payment-safety` | "Оплата та безпека" | P | US-04 |
 | `/resume-info` | How experience records are confirmed, with an example | P | US-05 |
-| `/terms` | Terms and current commission | P | US-03 |
+| `/terms` | Умови та поточна комісія | P | US-03 |
 | `/register` | Sign-up, choosing student or customer, with display name | P | US-06, US-43, US-44 |
 | `/login` | Login. Logout is a button in the header of every page. | P | US-45, US-46 |
 | `/confirm-email` | Result of the confirmation link, resend | P | US-07 |
@@ -188,7 +188,7 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 | `/mod/verifications` | "Перевірка студентських документів" | M | US-39, US-41 |
 | `/mod/tasks` | "Модерація завдань" | M | US-40, US-14, US-15/S2 (resolution: OQ-08) |
 | `/mod/withdrawals` | "Заявки на виведення" | M | US-36 (A-10, OQ-10, OQ-42) |
-| `/mod/settings` | Commission, price limits, university domains | M | US-03/S3 |
+| `/mod/settings` | Комісія платформи | M | US-03/S3 |
 
 Every one of the 50 stories (US-01 to US-42 and the added US-43 to US-50) appears in at least one page row. Logout (US-46) is a header button and is listed on the `/login` row.
 
@@ -284,3 +284,4 @@ These are stories that are not covered, or that contradict each other or the des
 | OQ-44 | US-44: the checklist says the display name is shown in the task chat and in notifications. `api.md` §4.3c keeps the chat without names (`mine` and `from` say who wrote), and the notification texts have no name. None of the three scenarios asks for it. (b) The name length is counted in code points, like the database CHECK, so 60 emoji are accepted (decided with the implementation). | The name is shown in the applicant list (US-24) and on the public profile (US-09). Chat and notifications stay as they are. Decide whether the chat shows the counterpart's name and which notifications carry a name. |
 | OQ-45 | US-46: (a) The route guard (`app/RequireAuth.tsx`) only checks that there is a session. A logged-in user of the wrong role who opens a page of another role (a student on `/mod/tasks`) is not redirected: the page loads and the API answers 403 `ROLE_FORBIDDEN`. The story asks only for the redirect of a visitor. (b) Logout ends the session of this browser only, the user's other sessions stay valid (decided with the product owner). (c) A logout without a session is 401 `AUTH_REQUIRED`, not a silent 204 (decided). (d) The pages with their own «Увійдіть» prompt (`/me/profile`, `/me/verification`) are now caught by the guard first and open `/login`, so their own prompt is no longer reached. | Guard by session only, policies on the server decide roles. Decide whether the guard should also check the role from `GET /api/me` and where a wrong-role user is sent. |
 | OQ-46 | US-50: (a) US-50 sc.2 asks for 404 on the management page of another customer's task, while `api.md` §1 gives 403 `NOT_TASK_OWNER` to every owner action (OQ-29(d), OQ-30(f), OQ-31(e)). (b) Cancelling a task rejects its `sent` applications (A-14, open since OQ-29(c)). (c) The number of applications is returned for every task, the page shows it for published ones. | (a) Decided with the implementation: only `GET /api/tasks/:id/applications` (the data of `/c/tasks/:id`) is 404 for another customer's task. Assign, accept, return, delete and chat keep 403; one decision for all of them is still open for the product owner. (b) Done: `DELETE /api/tasks/:id` rejects them in the same transaction (the route is in the applications module, like assign). The students are not notified. (c) As described. |
+| OQ-47 | US-03: (a) `PUT /api/mod/settings` writes only the commission (`commissionBp`). The table `settings` also allows `min_price_kopecks` and `max_price_kopecks`, and the page table said «price limits, university domains», but the limits are constants in `LIMITS` that the schemas of US-16/US-17 use, and no story asks to change them. Decided for the MVP: not settable, the title of `/mod/settings` is «Комісія платформи». (b) The commission is shown on `/terms` only. The home page `/` is the stub of US-01 and gets the same line when it is built. (c) The commission is a rate, so only a percent is shown, never a fixed sum (the checklist allows both). | Open |

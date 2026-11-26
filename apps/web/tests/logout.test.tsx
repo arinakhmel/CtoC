@@ -49,7 +49,7 @@ describe('header: logout (US-46)', () => {
     expect(logoutCalls).toBe(1);
     expect(screen.queryByRole('button', { name: 'Вийти' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Почати безкоштовно' })).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { level: 1, name: /Landing/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /мікрозавдання/ })).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Вхід' })).toBeNull();
   });
 
@@ -64,7 +64,7 @@ describe('header: logout (US-46)', () => {
     await user.click(await screen.findByRole('button', { name: 'Вийти' }));
 
     expect(await screen.findByRole('link', { name: 'Вхід' })).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { level: 1, name: /Landing/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /мікрозавдання/ })).toBeInTheDocument();
   });
 
   it('US-46 a failed logout keeps the user in and says so', async () => {
@@ -100,7 +100,7 @@ describe('protected pages without a session (US-46)', () => {
     loggedIn = false;
     open('/terms');
 
-    expect(await screen.findByRole('heading', { level: 1, name: /Terms/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /Умови/ })).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Вхід' })).toBeNull();
   });
 
@@ -121,7 +121,7 @@ describe('protected pages without a session (US-46)', () => {
     const user = userEvent.setup();
     open('/feed');
     await user.click(await screen.findByRole('button', { name: 'Вийти' }));
-    expect(await screen.findByRole('heading', { level: 1, name: /Landing/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /мікрозавдання/ })).toBeInTheDocument();
 
     await user.click(screen.getByRole('link', { name: '/c/balance' }));
 

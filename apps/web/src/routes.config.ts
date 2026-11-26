@@ -14,7 +14,7 @@ export interface PageConfig {
 export const PAGES: PageConfig[] = [
   {
     path: "/",
-    title: "Landing: beginners-only message, Як це працює, commission",
+    title: "CtoC: мікрозавдання для студентів-початківців",
     access: "P",
     stories: ["US-01", "US-02", "US-03"],
   },
@@ -32,7 +32,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/terms",
-    title: "Terms and current commission",
+    title: "Умови та поточна комісія",
     access: "P",
     stories: ["US-03"],
   },
@@ -158,7 +158,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     path: "/mod/settings",
-    title: "Commission, price limits, university domains",
+    title: "Комісія платформи",
     access: "M",
     stories: ["US-03"],
   },

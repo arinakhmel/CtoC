@@ -1,8 +1,10 @@
-import { moderationRejectSchema, modTasksQuerySchema, modVerificationsQuerySchema, modWithdrawalsQuerySchema, type ModTasksQuery, type ModVerificationsQuery, type ModWithdrawalsQuery } from '@ctoc/shared';
+import { moderationRejectSchema, updateSettingsSchema, modTasksQuerySchema, modVerificationsQuerySchema, modWithdrawalsQuerySchema, type ModTasksQuery, type ModVerificationsQuery, type ModWithdrawalsQuery } from '@ctoc/shared';
 import { Router, type RequestHandler } from 'express';
 import { requireUser } from '../../http/auth';
 import { parsedQuery, validateBody, validateQuery } from '../../http/validate';
 import { assertModerator } from './policy';
+import { serializeSettings } from '../settings/serializer';
+import { getCommissionBp, setCommissionBp } from '../settings/service';
 import { serializeModTask } from '../tasks/serializer';
 import { serializeModVerification } from '../verification/serializer';
 import { serializeModWithdrawal, serializeModWithdrawals } from './serializer';
@@ -17,6 +19,17 @@ const requireModerator: RequestHandler = (req, _res, next) => {
 /** Back office (api.md "Moderation and admin"): withdrawals (A-10, OQ-10, US-36) and student documents (US-39). */
 export function adminRouter(): Router {
   const router = Router();
+
+  /** US-03 sc.3: the commission the moderator sets (api.md §4.1e). Only `commissionBp` is writable (OQ-47). */
+  router.get('/mod/settings', requireUser, requireModerator, async (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(serializeSettings(await getCommissionBp()));
+  });
+
+  router.put('/mod/settings', requireUser, requireModerator, validateBody(updateSettingsSchema), async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(serializeSettings(await setCommissionBp(req.user!, (req.body as { commissionBp: number }).commissionBp)));
+  });
 
   router.get('/mod/withdrawals', requireUser, requireModerator, validateQuery(modWithdrawalsQuerySchema), async (req, res) => {
     res.json(serializeModWithdrawals(await getWithdrawalQueue(req.user!, parsedQuery<ModWithdrawalsQuery>(res).status)));
