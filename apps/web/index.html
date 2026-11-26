@@ -12,7 +12,7 @@
       (function () {
         try {
           var t = localStorage.getItem('ctoc.theme');
-          if (t !== 'paper' && t !== 'graphite' && t !== 'blueprint') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'graphite' : 'paper';
+          if (t !== 'paper' && t !== 'graphite' && t !== 'cloud') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'graphite' : 'paper';
           document.documentElement.dataset.theme = t;
           var l = localStorage.getItem('ctoc.lang');
           if (l === 'en' || l === 'uk') document.documentElement.lang = l;
