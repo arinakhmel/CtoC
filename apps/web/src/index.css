@@ -2020,3 +2020,68 @@ legend,
     min-height: 21rem;
   }
 }
+
+/* ============================== Header order (final) ==============================
+ * Wide (72rem+): logo, role menu, then preferences, account actions and «Усі сторінки» on the right. The menu takes the
+ * free space and scrolls inside itself if it is long, so nothing is pushed to a new line.
+ * Medium: the role menu drops to a second row. Narrow: preferences go to their own row too.
+ * «Усі сторінки» is an icon with a hidden name except on wide screens. */
+.site-header .container {
+  max-width: 80rem;
+}
+.header-bar .brand {
+  order: 0;
+  margin-right: auto;
+}
+.header-bar .main-nav {
+  order: 10;
+  width: 100%;
+  margin-right: 0;
+}
+.header-bar .prefs,
+.header-bar .header-actions,
+.header-bar .menu-button {
+  flex: none;
+}
+@media (min-width: 72rem) {
+  .header-bar {
+    flex-wrap: nowrap;
+  }
+  .header-bar .main-nav {
+    order: 0;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    margin-right: 0.5rem;
+  }
+  .header-bar .brand {
+    margin-right: 1rem;
+  }
+}
+@media (max-width: 88rem) {
+  .menu-button__text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 56rem) {
+  .header-bar .prefs {
+    order: 11;
+  }
+}
+@media (max-width: 34rem) {
+  .header-bar .menu-button {
+    order: 1;
+  }
+  .header-bar .header-actions {
+    order: 5;
+    width: 100%;
+  }
+  .header-bar .prefs {
+    order: 11;
+  }
+}

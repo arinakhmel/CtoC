@@ -113,13 +113,13 @@ function Shell() {
       </div>
       <header className="site-header">
         <div className="container header-bar">
-          <PagesMenu />
           <Link className="brand" to="/" aria-label={t('layout.home')}>
             Cto<span>C</span>
           </Link>
           <MainMenu />
           <Preferences />
           <HeaderActions />
+          <PagesMenu />
         </div>
       </header>
       <main id="main" tabIndex={-1}>
