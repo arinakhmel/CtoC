@@ -123,7 +123,7 @@ describe('/mod/withdrawals: the moderator pays or rejects a request (US-36, A-10
     open();
     await screen.findByText('Заявок зі статусом «Очікує виплати» немає.');
 
-    await user.selectOptions(screen.getByLabelText('Показати'), 'paid');
+    await user.click(within(screen.getByRole('group', { name: 'Показати' })).getByRole('radio', { name: 'Виплачено' }));
 
     const card = await screen.findByRole('article', { name: /500 грн для Олена Коваль/ });
     expect(within(card).getByText(/•••• 1111/)).toBeInTheDocument();

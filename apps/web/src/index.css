@@ -2552,3 +2552,163 @@ main ul.chips[aria-label] > li {
   color: var(--on-mark);
   background: var(--mark);
 }
+
+/* ============================== Moderator pages ============================== */
+.page-lead {
+  max-width: 40rem;
+  color: var(--muted);
+}
+.status-chip {
+  display: inline-block;
+  padding: 0 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.25rem;
+  color: var(--text);
+  background: var(--mark);
+  font-size: 0.85em;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.card-status:not(.card-head .card-status) {
+  font-size: 0.92rem;
+}
+
+/* Status filter as a segmented row of radio pills (real radios, so arrows move between them). */
+fieldset.segment-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1rem 0 1.25rem;
+}
+fieldset.segment-radios legend {
+  width: 100%;
+}
+fieldset.segment-radios label {
+  width: auto;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 1rem;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-weight: 600;
+  box-shadow: none;
+}
+fieldset.segment-radios label:has(input:checked) {
+  border-width: 1.5px;
+  color: var(--bg);
+  background: var(--text);
+  box-shadow: 2px 2px 0 var(--accent);
+}
+fieldset.segment-radios input[type='radio'] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* «Що перевіряти»: a drawn sample student card beside the checklist. */
+.sample-check {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1.5px dashed var(--line-soft);
+}
+.sample-check h2 {
+  margin-top: 0;
+}
+.sample-check__grid {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (min-width: 46rem) {
+  .sample-check__grid {
+    grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+  }
+}
+.sample-check__list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.sample-check__list li {
+  margin-bottom: 0.6rem;
+}
+.student-card {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border: var(--border);
+  border-radius: 0.9rem;
+  color: #1b2a4a;
+  background: linear-gradient(160deg, #eef3ff 0%, #dfe8ff 55%, #f6efd9 100%);
+  box-shadow: var(--hard-shadow);
+  font-size: 0.82rem;
+  transform: rotate(-1deg);
+}
+.student-card__top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.75rem 1rem;
+  color: #f4f7ff;
+  background: #1f4fa3;
+}
+.student-card__org {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+.student-card__uni {
+  opacity: 0.85;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.student-card__body {
+  display: flex;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem 0.5rem;
+}
+.student-card__photo {
+  display: grid;
+  flex: none;
+  place-items: end center;
+  width: 4.25rem;
+  height: 5.25rem;
+  border: 1px solid #9fb3df;
+  border-radius: 0.35rem;
+  color: #6b80b3;
+  background: #f7f9ff;
+}
+.student-card__fields {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+}
+.student-card__fields dt {
+  color: #5b6a8c;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.student-card__fields dd {
+  margin: 0;
+  font-weight: 650;
+}
+.student-card__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 1rem 0.8rem;
+  color: #5b6a8c;
+  font-variant-numeric: tabular-nums;
+}
+.student-card__stamp {
+  padding: 0.1rem 0.6rem;
+  border: 2px solid #b83214;
+  border-radius: 0.25rem;
+  color: #b83214;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+}
