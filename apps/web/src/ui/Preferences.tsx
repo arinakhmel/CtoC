@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { LANGS, useI18n } from '../lib/i18n';
 import { THEMES, useTheme } from '../lib/theme';
 
@@ -21,6 +22,72 @@ export function Preferences() {
             <span className={`swatch swatch--${name}`} aria-hidden="true" />
           </button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The phone version: one small button per setting that shows the current choice; a tap drops the options down under it.
+ * Only one list is open at a time.
+ */
+export function CompactPreferences() {
+  const { lang, setLang, t } = useI18n();
+  const { theme, setTheme } = useTheme();
+  const [open, setOpen] = useState<'lang' | 'theme' | null>(null);
+  const toggle = (which: 'lang' | 'theme') => setOpen((current) => (current === which ? null : which));
+
+  return (
+    <div className="prefs-compact" role="group" aria-label={t('layout.prefs')}>
+      <div className="prefs-compact__item">
+        <button type="button" className="prefs-compact__toggle" aria-expanded={open === 'lang'} onClick={() => toggle('lang')}>
+          <span className="prefs-compact__label">{t('layout.language')}</span>
+          <span>{lang === 'uk' ? 'UA' : 'EN'}</span>
+          <span aria-hidden="true" className="prefs-compact__caret" />
+        </button>
+        {open === 'lang' && (
+          <div className="prefs-compact__list">
+            {LANGS.map((code) => (
+              <button
+                key={code}
+                type="button"
+                aria-pressed={lang === code}
+                lang={code}
+                onClick={() => {
+                  setLang(code);
+                  setOpen(null);
+                }}
+              >
+                {t(`lang.${code}`)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="prefs-compact__item">
+        <button type="button" className="prefs-compact__toggle" aria-expanded={open === 'theme'} onClick={() => toggle('theme')}>
+          <span className="prefs-compact__label">{t('layout.theme')}</span>
+          <span className={`swatch swatch--${theme}`} aria-hidden="true" />
+          <span>{t(`theme.${theme}`)}</span>
+          <span aria-hidden="true" className="prefs-compact__caret" />
+        </button>
+        {open === 'theme' && (
+          <div className="prefs-compact__list">
+            {THEMES.map((name) => (
+              <button
+                key={name}
+                type="button"
+                aria-pressed={theme === name}
+                onClick={() => {
+                  setTheme(name);
+                  setOpen(null);
+                }}
+              >
+                <span className={`swatch swatch--${name}`} aria-hidden="true" /> {t(`theme.${name}`)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

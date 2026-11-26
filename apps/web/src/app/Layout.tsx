@@ -6,7 +6,7 @@ import { I18nProvider, useI18n } from '../lib/i18n';
 import { ThemeProvider } from '../lib/theme';
 import { createQueryClient } from '../lib/queryClient';
 import { useApiHealth } from '../lib/useApiHealth';
-import { Preferences } from '../ui/Preferences';
+import { CompactPreferences, Preferences } from '../ui/Preferences';
 import { TickerIcon } from '../ui/TickerIcon';
 import { menuFor } from './navigation';
 import { PagesMenu } from './PagesMenu';
@@ -105,17 +105,22 @@ function Shell() {
       <div className="ticker">
         <div className="container">
           <p>
-            {t('layout.ticker')
-              .split('|')
-              .map((part, index) => (
-                <Fragment key={part}>
-                  {index > 0 && <span className="ticker__dot" aria-hidden="true" />}
-                  <span className="ticker__item">
-                    <TickerIcon index={index} />
-                    {part}
-                  </span>
-                </Fragment>
-              ))}
+            {/* On a phone the strip scrolls by itself, so the items are drawn twice (the copy is hidden from screen readers). */}
+            {[false, true].map((copy) => (
+              <span key={String(copy)} className={copy ? 'ticker__group ticker__group--copy' : 'ticker__group'} aria-hidden={copy || undefined}>
+                {t('layout.ticker')
+                  .split('|')
+                  .map((part, index) => (
+                    <Fragment key={part}>
+                      {index > 0 && <span className="ticker__dot" aria-hidden="true" />}
+                      <span className="ticker__item">
+                        <TickerIcon index={index} />
+                        {part}
+                      </span>
+                    </Fragment>
+                  ))}
+              </span>
+            ))}
           </p>
         </div>
       </div>
@@ -131,7 +136,7 @@ function Shell() {
             phoneExtras={
               <>
                 <HeaderActions />
-                <Preferences />
+                <CompactPreferences />
               </>
             }
           />
