@@ -3988,3 +3988,83 @@ form [role='alert'] + button[type='submit'] {
 form input + button[type='submit'] {
   margin-top: 1rem;
 }
+
+/* ============================== One status format everywhere ==============================
+ * The shape of the «Нове» tag: a small square-cornered label with an ink border, capitals, bold.
+ * The pastel colour per status stays; «Нове» keeps the accent. */
+strong.status-pill,
+main ul[aria-label] > li > article p > strong.status-pill:only-child,
+.card-status strong.status-pill,
+.tag-new {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border: 1.5px solid var(--line);
+  border-radius: 0.3rem;
+  font-family: var(--font-sans);
+  font-size: 0.72rem !important;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: 0.1em;
+}
+strong.status-pill {
+  color: var(--pill-ink, #2b2b2b);
+  background: var(--pill-bg, #ece7dc);
+}
+.status-pill[data-status='requested'] {
+  --pill-bg: #fbe7a1;
+  --pill-ink: #4f3b00;
+}
+.status-pill[data-status='paid'] {
+  --pill-bg: #d4f0dc;
+  --pill-ink: #1b5530;
+}
+
+/* ============================== Phone pass ============================== */
+@media (max-width: 34rem) {
+  /* «Лупик» peeks in from the right edge, so it never covers text; a tap brings him in. */
+  .buddy {
+    right: 0;
+    bottom: 0.75rem;
+  }
+  .buddy:not(.is-open) .buddy__button {
+    transform: translateX(38%) rotate(-8deg);
+  }
+  .buddy.is-arriving .buddy__button {
+    animation: none;
+  }
+  .buddy__button[type='button'],
+  .buddy__button .buddy__svg {
+    width: 3.25rem;
+    min-width: 3.25rem;
+    height: 3.25rem;
+    min-height: 3.25rem;
+  }
+  .buddy__card {
+    margin-right: 0.6rem;
+  }
+  button.scroll-top[type='button'] {
+    right: 2.9rem;
+  }
+  /* Filter tabs: one row that scrolls sideways instead of three rows. */
+  .filter-tabs {
+    flex-wrap: nowrap;
+    margin: 0 -1rem;
+    padding: 0.2rem 1rem 0.4rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .filter-tabs button[type='button'] {
+    flex: none;
+  }
+}
+@media (max-width: 34rem) and (prefers-reduced-motion: no-preference) {
+  .buddy__button {
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
