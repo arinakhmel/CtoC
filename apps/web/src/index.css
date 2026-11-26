@@ -3196,3 +3196,29 @@ fieldset.segment-radios input[type='radio'] {
     display: none;
   }
 }
+
+/* Page stub: the stories as small tags. */
+.story-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.story-tags a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.story-tags a:hover {
+  color: var(--on-mark);
+  background: var(--mark);
+}
