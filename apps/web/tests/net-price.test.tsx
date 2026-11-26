@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestRouter, providerFuture } from '../src/app/router';
@@ -53,6 +54,8 @@ describe('/feed cards (US-15)', () => {
 
     const list = await screen.findByRole('list', { name: 'Доступні завдання' });
     const card = within(list).getAllByRole('article')[0]!;
+    // On a feed card the net amount opens from the ★ button, which keeps the card light.
+    await userEvent.setup().click(within(card).getByRole('button', { name: 'Скільки я отримаю після комісії' }));
     const gross = valueOf(within(card), 'Ціна замовника');
     const net = valueOf(within(card), /Ви отримаєте/);
 

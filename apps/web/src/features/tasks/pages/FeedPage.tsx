@@ -72,9 +72,9 @@ export function FeedPage({ page }: { page: PageConfig }) {
                 <h2 id={`task-${task.id}`}>
                   <Link to={`/tasks/${task.id}`}>{task.title}</Link>
                 </h2>
-                <p>{task.description}</p>
-                <PriceBlock priceKopecks={task.priceKopecks} netKopecks={task.netKopecks} grossLabel="Ціна замовника" />
-                <p>
+                <p className="card-text">{task.description}</p>
+                <PriceBlock priceKopecks={task.priceKopecks} netKopecks={task.netKopecks} grossLabel="Ціна замовника" compact />
+                <p className="card-meta">
                   Виконати до: <time dateTime={task.deadlineAt}>{formatDeadline(task.deadlineAt)}</time>
                 </p>
               </article>

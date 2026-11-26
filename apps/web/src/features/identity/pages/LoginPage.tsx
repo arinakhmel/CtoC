@@ -63,7 +63,7 @@ export function LoginPage({ page }: { page: PageConfig }) {
         <p role="alert">{MESSAGES_UK.EMAIL_NOT_CONFIRMED}. Ми можемо надіслати лист підтвердження ще раз.</p>
         <ResendForm defaultEmail={unconfirmedEmail} />
         <p>
-          <Link to="/">All pages</Link>
+          <Link to="/">На головну</Link>
         </p>
       </article>
     );
@@ -97,7 +97,7 @@ export function LoginPage({ page }: { page: PageConfig }) {
         <Link to="/register">Створити акаунт</Link>
       </p>
       <p>
-        <Link to="/">All pages</Link>
+        <Link to="/">На головну</Link>
       </p>
     </article>
   );

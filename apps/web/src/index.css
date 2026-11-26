@@ -2225,3 +2225,490 @@ strong {
   background: var(--danger-bg);
   font-weight: 700;
 }
+
+/* ============================== Calmer cards ============================== */
+/* Lighter list cards: thinner frame, no hover jump, more air. */
+main ul[aria-label] > li > article {
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--line) 35%, transparent);
+  background: var(--surface);
+}
+@media (prefers-reduced-motion: no-preference) {
+  main ul[aria-label] > li > article:hover {
+    transform: none;
+    border-color: var(--line);
+    box-shadow: 3px 3px 0 var(--shadow);
+  }
+}
+main ul[aria-label] > li > article h2 a::after {
+  content: none;
+}
+/* The description of a card is two lines at most; the whole text is on the task page. */
+.card-text {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.card-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+/* Feed price: one big number, the net behind ★. */
+.price-block--compact {
+  margin: 0.75rem 0 0.5rem;
+}
+.price-block--compact .price-block__row:first-child dd {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.45rem;
+}
+.price-block__row[hidden] {
+  display: none;
+}
+.price-block--compact .price-block__row--net {
+  align-self: flex-end;
+}
+.star-toggle[type='button'] {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 1.5px dashed var(--line-soft);
+  border-radius: 50%;
+  color: var(--accent);
+  background: transparent;
+  box-shadow: none;
+  font-size: 1.05rem;
+}
+.star-toggle[type='button']:hover:not(:disabled),
+.star-toggle[aria-expanded='true'] {
+  border-style: solid;
+  border-color: var(--line);
+  color: var(--on-mark);
+  background: var(--mark);
+}
+
+/* ---------- Card parts: head, meta row, actions ---------- */
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+}
+main ul[aria-label] > li > article .card-head h2 {
+  flex: 1 1 14rem;
+  margin: 0;
+}
+.card-status {
+  flex: none;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0;
+}
+.card-status strong {
+  font-size: 0.75rem !important;
+}
+.card-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  margin: 0.85rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+.card-actions > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.link-ghost--sm {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  font-size: 0.95rem;
+}
+button.button-quiet[type='button'] {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-color: var(--line-soft);
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+button.button-quiet[type='button']:hover:not(:disabled) {
+  border-color: var(--line);
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+/* Notifications: «Нове» is a small tag with space after it. */
+.notice-text {
+  margin-bottom: 0.35rem;
+}
+.tag-new {
+  display: inline-block;
+  margin-right: 0.6rem;
+  padding: 0 0.45rem;
+  border-radius: 0.25rem;
+  color: var(--on-accent);
+  background: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  vertical-align: 0.12em;
+}
+
+/* Status messages: a quiet note with a coloured edge, no tick. */
+main [role='status']::before {
+  content: none;
+}
+main [role='status'] {
+  border-width: 1px;
+  border-left-width: 4px;
+  font-weight: 550;
+}
+
+/* «Верифікований студент»: a stamp with a student-cap mark instead of a tick, and room under it. */
+.badge-verified::before {
+  content: '';
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.45rem;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 9l10-5 10 5-10 5z'/%3E%3Cpath d='M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5'/%3E%3Cpath d='M22 9v6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 9l10-5 10 5-10 5z'/%3E%3Cpath d='M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5'/%3E%3Cpath d='M22 9v6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+main > article > .badge {
+  margin: 0 0 1.75rem;
+}
+.star-toggle[type='button'] { border-radius: var(--radius-sm); }
+
+/* ============================== Forms, softer ============================== */
+/* Focus: a soft rounded ring that grows in, instead of a hard square outline. */
+input:not([type='radio']):not([type='checkbox']):not([type='file']),
+textarea,
+select {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.25s ease;
+}
+input:not([type='radio']):not([type='checkbox']):not([type='file']):focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* ★ examples and notes. */
+.star-hint {
+  margin: -0.6rem 0 1.15rem;
+}
+.star-hint summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.star-hint summary::-webkit-details-marker {
+  display: none;
+}
+.star-hint summary:hover {
+  text-decoration: underline;
+}
+.star-hint__body {
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--mark);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--muted);
+  background: var(--surface-2);
+  font-size: 0.95rem;
+}
+.star-hint__body p:last-child {
+  margin-bottom: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .star-hint[open] .star-hint__body {
+    animation: fade-in 0.2s ease;
+  }
+}
+
+/* Price with «грн» inside the field and without the up/down arrows. */
+.input-suffix {
+  position: relative;
+  display: block;
+}
+.input-suffix::after {
+  content: attr(data-suffix);
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  color: var(--muted);
+  font-weight: 600;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.input-suffix input {
+  padding-right: 3.25rem !important;
+  font-size: 1.15rem !important;
+  font-weight: 600;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+/* Date: a calmer field, an accent calendar icon, quick presets under it. */
+input[type='datetime-local'],
+input[type='date'] {
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+input[type='datetime-local']::-webkit-calendar-picker-indicator,
+input[type='date']::-webkit-calendar-picker-indicator {
+  width: 1.3rem;
+  height: 1.3rem;
+  padding: 0.35rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--mark);
+  cursor: pointer;
+}
+:root[data-theme='graphite'] input::-webkit-calendar-picker-indicator,
+:root[data-theme='blueprint'] input::-webkit-calendar-picker-indicator {
+  filter: none;
+}
+.date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.date-presets button.button-quiet[type='button'] {
+  min-height: 2.5rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+}
+
+/* ============================== Profile ============================== */
+/* The skills list is tags, not cards (it has an aria-label, so the card-list rule would catch it). */
+main ul.chips[aria-label] {
+  display: flex;
+  margin: 0.5rem 0 0.75rem;
+}
+main ul.chips[aria-label] > li {
+  animation: none;
+}
+.chips li {
+  border-color: var(--line);
+  color: var(--on-mark);
+  background: var(--mark);
+}
+.chips li button[type='button'] {
+  color: var(--on-mark);
+}
+/* Catalogue suggestions: outlined tags that fill on hover. */
+.skill-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.25rem 0 0.75rem;
+}
+.skill-suggestions button[type='button'] {
+  min-height: 2.5rem;
+  padding: 0 0.85rem;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.skill-suggestions button[type='button']:hover:not(:disabled) {
+  border-style: solid;
+  color: var(--on-mark);
+  background: var(--mark);
+}
+
+/* ============================== Moderator pages ============================== */
+.page-lead {
+  max-width: 40rem;
+  color: var(--muted);
+}
+.status-chip {
+  display: inline-block;
+  padding: 0 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.25rem;
+  color: var(--text);
+  background: var(--mark);
+  font-size: 0.85em;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.card-status:not(.card-head .card-status) {
+  font-size: 0.92rem;
+}
+
+/* Status filter as a segmented row of radio pills (real radios, so arrows move between them). */
+fieldset.segment-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1rem 0 1.25rem;
+}
+fieldset.segment-radios legend {
+  width: 100%;
+}
+fieldset.segment-radios label {
+  width: auto;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 1rem;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-weight: 600;
+  box-shadow: none;
+}
+fieldset.segment-radios label:has(input:checked) {
+  border-width: 1.5px;
+  color: var(--bg);
+  background: var(--text);
+  box-shadow: 2px 2px 0 var(--accent);
+}
+fieldset.segment-radios input[type='radio'] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* «Що перевіряти»: a drawn sample student card beside the checklist. */
+.sample-check {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1.5px dashed var(--line-soft);
+}
+.sample-check h2 {
+  margin-top: 0;
+}
+.sample-check__grid {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (min-width: 46rem) {
+  .sample-check__grid {
+    grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+  }
+}
+.sample-check__list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.sample-check__list li {
+  margin-bottom: 0.6rem;
+}
+.student-card {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border: var(--border);
+  border-radius: 0.9rem;
+  color: #1b2a4a;
+  background: linear-gradient(160deg, #eef3ff 0%, #dfe8ff 55%, #f6efd9 100%);
+  box-shadow: var(--hard-shadow);
+  font-size: 0.82rem;
+  transform: rotate(-1deg);
+}
+.student-card__top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.75rem 1rem;
+  color: #f4f7ff;
+  background: #1f4fa3;
+}
+.student-card__org {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+.student-card__uni {
+  opacity: 0.85;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.student-card__body {
+  display: flex;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem 0.5rem;
+}
+.student-card__photo {
+  display: grid;
+  flex: none;
+  place-items: end center;
+  width: 4.25rem;
+  height: 5.25rem;
+  border: 1px solid #9fb3df;
+  border-radius: 0.35rem;
+  color: #6b80b3;
+  background: #f7f9ff;
+}
+.student-card__fields {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+}
+.student-card__fields dt {
+  color: #5b6a8c;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.student-card__fields dd {
+  margin: 0;
+  font-weight: 650;
+}
+.student-card__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 1rem 0.8rem;
+  color: #5b6a8c;
+  font-variant-numeric: tabular-nums;
+}
+.student-card__stamp {
+  padding: 0.1rem 0.6rem;
+  border: 2px solid #b83214;
+  border-radius: 0.25rem;
+  color: #b83214;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+}

@@ -103,7 +103,7 @@ export function RegisterPage({ page }: { page: PageConfig }) {
         </button>
       </form>
       <p>
-        <Link to="/">All pages</Link>
+        <Link to="/">На головну</Link>
       </p>
     </article>
   );

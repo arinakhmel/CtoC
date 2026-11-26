@@ -48,7 +48,7 @@ export function ConfirmEmailPage({ page }: { page: PageConfig }) {
         </>
       )}
       <p>
-        <Link to="/">All pages</Link>
+        <Link to="/">На головну</Link>
       </p>
     </article>
   );
