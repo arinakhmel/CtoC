@@ -36,3 +36,11 @@ export function normalizeSteps(steps: readonly Partial<HowItWorksStep>[] | null 
   }
   return prepared.length >= HOW_IT_WORKS_MIN && prepared.length <= HOW_IT_WORKS_MAX ? prepared : HOW_IT_WORKS_STEPS;
 }
+
+/** The same steps in English, for the English UI. Same ids, so `normalizeSteps` treats them as the template steps. */
+export const HOW_IT_WORKS_STEPS_EN: readonly HowItWorksStep[] = [
+  { id: 'register', icon: '📝', title: 'Sign up', description: 'Use your university email and confirm you are a student, so customers know you are a beginner.' },
+  { id: 'apply', icon: '🔍', title: 'Find a task and apply', description: 'Pick a task with a fixed price and send an application. The customer chooses the executor.' },
+  { id: 'deliver', icon: '💻', title: 'Do the work', description: 'Once the customer has reserved the payment, do the task and upload the result.' },
+  { id: 'paid', icon: '💰', title: 'Get paid', description: 'When the work is accepted you get the money minus the commission, plus a confirmed experience record for your CV.' },
+];

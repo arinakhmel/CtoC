@@ -38,11 +38,11 @@ describe('overview.md §4: every page stub renders what the router promises', ()
 });
 
 describe('overview.md §4: unknown addresses', () => {
-  it('show the not-found page with a link to all pages', async () => {
+  it('show the not-found page with a link to the landing page', async () => {
     renderAt('/no/such/page');
     const main = within(screen.getByRole('main'));
-    expect(await main.findByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument();
-    expect(main.getByRole('link', { name: 'All pages' })).toHaveAttribute('href', '/');
+    expect(await main.findByRole('heading', { level: 1, name: 'Сторінку не знайдено' })).toBeInTheDocument();
+    expect(main.getByRole('link', { name: 'На головну' })).toHaveAttribute('href', '/');
   });
 
   it('keep the layout: the navigation lists every page', async () => {
