@@ -23,7 +23,9 @@ function TaskItem({ item, decide }: { item: ModTask; decide: ReturnType<typeof u
   return (
     <article aria-labelledby={titleId}>
       <h2 id={titleId}>{item.title}</h2>
-      <p>Статус: {TASK_STATUS_UK[item.status]}</p>
+      <p>
+        Статус: <strong className="status-pill" data-status={item.status}>{TASK_STATUS_UK[item.status]}</strong>
+      </p>
       <p>{item.description}</p>
       <p>Ціна: {formatUah(item.priceKopecks)}</p>
       <p>
