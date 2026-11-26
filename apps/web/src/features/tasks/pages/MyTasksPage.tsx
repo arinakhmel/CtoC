@@ -2,6 +2,8 @@ import { MESSAGES_UK, TASK_STATUS_UK } from '@ctoc/shared';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
+import { useI18n } from '../../../lib/i18n';
+import { FilterTabs, useFilterTabs, type FilterTab } from '../../../ui/FilterTabs';
 import { formatDeadline, formatUah } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { useDeleteTask, useMyTasks, type MyTask } from '../queries/myTasks';
@@ -11,6 +13,15 @@ const messageFor = (code: string): string =>
 
 /** The owner may delete a task only before an executor is chosen (INV-13, A-08): while it is on moderation or published. */
 const DELETABLE = ['pending_moderation', 'published'];
+
+/** The tabs of «Мої завдання»: the statuses grouped by what the customer has to do (domain-model.md §3). */
+const TABS: FilterTab<MyTask>[] = [
+  { id: 'all', label: 'filters.all', test: () => true },
+  { id: 'waiting', label: 'filters.waiting', test: (task) => task.status === 'pending_moderation' || task.status === 'published' },
+  { id: 'active', label: 'filters.active', test: (task) => ['in_progress', 'in_review', 'revision'].includes(task.status) },
+  { id: 'finished', label: 'filters.finished', test: (task) => task.status === 'done' },
+  { id: 'closed', label: 'filters.closed', test: (task) => task.status === 'rejected' || task.status === 'cancelled' },
+];
 
 /** One task of the list: its terms, its status, the number of applications of a published task, the way to manage it and the delete. */
 function TaskItem({ task }: { task: MyTask }) {
@@ -60,6 +71,9 @@ function TaskItem({ task }: { task: MyTask }) {
 export function MyTasksPage({ page }: { page: PageConfig }) {
   const navigate = useNavigate();
   const tasks = useMyTasks();
+  const { t } = useI18n();
+  const all = tasks.data ?? [];
+  const tabs = useFilterTabs(TABS, all);
 
   const errorCode = tasks.isError ? (tasks.error instanceof ApiClientError ? tasks.error.code : 'UNKNOWN_ERROR') : null;
 
@@ -90,11 +104,16 @@ export function MyTasksPage({ page }: { page: PageConfig }) {
           <p>
             <Link to="/c/tasks/new">Нове завдання</Link>
           </p>
-          <ul aria-label="Список завдань">
-            {tasks.data.map((task) => (
-              <TaskItem key={task.id} task={task} />
-            ))}
-          </ul>
+          <FilterTabs tabs={TABS} items={all} value={tabs.value} onChange={tabs.setValue} />
+          {tabs.visible.length === 0 ? (
+            <p className="empty-filter">{t('filters.empty')}</p>
+          ) : (
+            <ul aria-label="Список завдань">
+              {tabs.visible.map((task) => (
+                <TaskItem key={task.id} task={task} />
+              ))}
+            </ul>
+          )}
         </>
       )}
     </article>

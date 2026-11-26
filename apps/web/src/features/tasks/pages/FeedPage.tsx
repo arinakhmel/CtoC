@@ -1,9 +1,11 @@
 import { MESSAGES_UK } from '@ctoc/shared';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
+import { useI18n } from '../../../lib/i18n';
 import { formatDeadline } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
+import { applyFeedFilter, EMPTY_FEED_FILTER, FeedFilters } from '../components/FeedFilters';
 import { PriceBlock } from '../components/PriceBlock';
 import { useFeed } from '../queries/feed';
 
@@ -14,11 +16,15 @@ const messageFor = (code: string): string =>
 export function FeedPage({ page }: { page: PageConfig }) {
   const navigate = useNavigate();
   const feed = useFeed();
+  const { t } = useI18n();
+  const [filter, setFilter] = useState(EMPTY_FEED_FILTER);
 
   // The alert shows whenever the query is in error, also when pages are cached. Loaded cards stay visible, so a
   // failed "Показати ще" does not wipe what the student already read.
   const errorCode = feed.isError ? (feed.error instanceof ApiClientError ? feed.error.code : 'UNKNOWN_ERROR') : null;
   const tasks = feed.data?.pages.flatMap((result) => result.tasks) ?? [];
+  // The filters work on the cards already loaded; «Показати ще» still brings the next page.
+  const shown = applyFeedFilter(tasks, filter);
 
   useEffect(() => {
     if (errorCode === 'AUTH_REQUIRED') navigate('/login', { replace: true }); // US-12 sc.3
@@ -40,8 +46,26 @@ export function FeedPage({ page }: { page: PageConfig }) {
       {feed.isSuccess && tasks.length === 0 && <p role="status">Поки що немає доступних завдань.</p>}
 
       {tasks.length > 0 && (
-        <ul aria-label="Доступні завдання">
-          {tasks.map((task) => (
+        <section className="list-toolbar" aria-label={t('feed.toolbar')}>
+          <FeedFilters value={filter} onChange={setFilter} />
+          <p className="list-summary" aria-live="polite">
+            {t('feed.shown', { shown: shown.length, total: tasks.length })}
+          </p>
+        </section>
+      )}
+
+      {tasks.length > 0 && shown.length === 0 && (
+        <div className="empty-filter">
+          <p>{t('feed.nothing')}</p>
+          <button type="button" onClick={() => setFilter(EMPTY_FEED_FILTER)}>
+            {t('feed.reset')}
+          </button>
+        </div>
+      )}
+
+      {shown.length > 0 && (
+        <ul aria-label="Доступні завдання" className="card-grid">
+          {shown.map((task) => (
             <li key={task.id}>
               <article aria-labelledby={`task-${task.id}`}>
                 <h2 id={`task-${task.id}`}>

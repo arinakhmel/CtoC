@@ -20,7 +20,6 @@ function TicketStack() {
         </div>
       ))}
       <div className="ticket ticket--front">
-        <span className="ticket__pin" />
         <span className="ticket__label">{t('landing.ticketLabel')}</span>
         <span className="ticket__title">{t('landing.ticketTitle')}</span>
         <span className="ticket__meta">{t('landing.ticketMeta')}</span>
