@@ -1,4 +1,5 @@
 import { useI18n } from '../../../lib/i18n';
+import { BuddyFigure, type BuddyProp } from '../../../ui/BuddyFigure';
 import { HOW_IT_WORKS_STEPS_EN, normalizeSteps, type HowItWorksStep } from '../steps';
 
 /**
@@ -6,6 +7,9 @@ import { HOW_IT_WORKS_STEPS_EN, normalizeSteps, type HowItWorksStep } from '../s
  * the default steps are shown (in English when the UI is English). Whatever is passed goes through `normalizeSteps`, so a wrong count
  * or an empty text never reaches the page. The decorative mark of a step is its number, hidden from a screen reader (the list is numbered).
  */
+/** What «Лупик» holds when it peeks out of each step: sign up with a pen, look for a task, work in glasses, get a coin. */
+const PROPS: BuddyProp[] = ['pen', 'magnifier', 'glasses', 'coin'];
+
 export function HowItWorks({ steps }: { steps?: readonly Partial<HowItWorksStep>[] }) {
   const { lang, t } = useI18n();
   const shown = normalizeSteps(steps ?? (lang === 'en' ? HOW_IT_WORKS_STEPS_EN : undefined));
@@ -21,6 +25,9 @@ export function HowItWorks({ steps }: { steps?: readonly Partial<HowItWorksStep>
             </span>{' '}
             <strong>{step.title}</strong>
             <p>{step.description}</p>
+            <span className="peek" aria-hidden="true">
+              <BuddyFigure prop={PROPS[index % PROPS.length]} size={56} />
+            </span>
           </li>
         ))}
       </ol>
