@@ -112,7 +112,7 @@ export function VerificationsQueuePage({ page }: { page: PageConfig }) {
     <article aria-labelledby="page-title">
       <h1 id="page-title"><PageTitle page={page} /></h1>
       <p className="page-lead">
-        У черзі документи зі статусом <span className="status-chip">{VERIFICATION_STATUS_LABELS_UK.pending}</span>. Відкрийте документ і перевірте,
+        У черзі документи зі статусом <strong className="status-pill" data-status="pending">{VERIFICATION_STATUS_LABELS_UK.pending}</strong>. Відкрийте документ і перевірте,
         що його надіслав справжній студент.
       </p>
 

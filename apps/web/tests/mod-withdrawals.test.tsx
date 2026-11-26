@@ -77,7 +77,7 @@ describe('/mod/withdrawals: the moderator pays or rejects a request (US-36, A-10
     const card = await screen.findByRole('article', { name: /500 грн для Олена Коваль/ });
     expect(within(card).getByText('4111 1111 1111 1111')).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: 'Олена Коваль' })).toHaveAttribute('href', '/u/s1');
-    expect(within(card).getByText(/Статус: Очікує виплати/)).toBeInTheDocument();
+    expect(card).toHaveTextContent(/Статус: Очікує виплати/); // the status is a label inside the line
     expect(screen.getByRole('heading', { level: 1, name: 'Заявки на виведення' })).toBeInTheDocument();
   });
 
