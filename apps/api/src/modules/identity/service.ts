@@ -1,6 +1,7 @@
-import { emailDomain, type RegisterInput } from '@ctoc/shared';
+import { emailDomain, type RegisterInput, type TeamLoginAccount } from '@ctoc/shared';
 import { Prisma, type User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { ApiError } from '../../errors';
 import { prisma } from '../../platform/db';
 import { getMailer } from '../../platform/ports/mailer';
@@ -150,11 +151,46 @@ export async function login(email: string, password: string) {
   const passwordOk = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH);
   if (!user || !passwordOk) throw new ApiError('INVALID_CREDENTIALS');
 
+  return startSession(user);
+}
+
+/** A new session for a user who has proved who they are (password, or the team code of ADR-0010). */
+async function startSession(user: User) {
   const now = new Date();
   const sessionId = generateSessionId();
   await deleteExpiredSessions(now);
   await insertSession({ id: hashSessionId(sessionId), userId: user.id, expiresAt: new Date(now.getTime() + SESSION_TTL_MS) });
   return { user, sessionId, maxAgeMs: SESSION_TTL_MS };
+}
+
+/**
+ * ADR-0010: the team quick login. On only when TEAM_LOGIN_CODE is set on the server; the code never reaches the browser.
+ * The accounts are the demo accounts named in the environment (defaults: the seed accounts).
+ */
+export const teamLoginEnabled = (): boolean => (process.env.TEAM_LOGIN_CODE ?? '').length > 0;
+
+const TEAM_ACCOUNT_EMAIL: Record<TeamLoginAccount, () => string> = {
+  student: () => process.env.TEAM_LOGIN_STUDENT_EMAIL ?? 'seed.student@ctoc.local',
+  customer: () => process.env.TEAM_LOGIN_CUSTOMER_EMAIL ?? 'seed.customer@ctoc.local',
+  moderator: () => process.env.TEAM_LOGIN_MODERATOR_EMAIL ?? process.env.SEED_MODERATOR_EMAIL ?? 'moderator@ctoc.local',
+};
+
+/** Compares the codes in constant time (both hashed first, so the length does not leak either). */
+const sameCode = (given: string, expected: string): boolean =>
+  timingSafeEqual(createHash('sha256').update(given).digest(), createHash('sha256').update(expected).digest());
+
+/** 404 when the feature is off (as if the endpoint did not exist), 401 INVALID_CREDENTIALS for a wrong code. */
+export function checkTeamCode(code: string): void {
+  if (!teamLoginEnabled()) throw new ApiError('NOT_FOUND');
+  if (!sameCode(code, process.env.TEAM_LOGIN_CODE!)) throw new ApiError('INVALID_CREDENTIALS');
+}
+
+/** Opens a demo account with the team code. 404 NOT_FOUND when that demo account does not exist in this database. */
+export async function teamLogin(code: string, account: TeamLoginAccount) {
+  checkTeamCode(code);
+  const user = await findUserByEmail(TEAM_ACCOUNT_EMAIL[account]().trim().toLowerCase());
+  if (!user) throw new ApiError('NOT_FOUND');
+  return startSession(user);
 }
 
 /**

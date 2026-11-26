@@ -1,0 +1,83 @@
+/* ADR-0010 «Для команди» under the login form: a small «?» that opens the code field, then three account buttons. */
+.team-login {
+  margin: 0.5rem 0 1rem;
+}
+.team-login__toggle[type='button'] {
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0 0.85rem 0 0.4rem;
+  border: 1px dashed var(--line-soft);
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.team-login__toggle[type='button']:hover:not(:disabled),
+.team-login__toggle[aria-expanded='true'] {
+  border-style: solid;
+  border-color: var(--line);
+  color: var(--text);
+  background: var(--surface-2);
+}
+.team-login__q {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: var(--radius-sm);
+  color: var(--on-mark);
+  background: var(--mark);
+  font-weight: 800;
+}
+.team-login__body {
+  margin-top: 0.6rem;
+  padding: 0.9rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.team-login__form label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+}
+.team-login__row {
+  display: flex;
+  gap: 0.5rem;
+}
+.team-login__row input {
+  flex: 1;
+  min-width: 0;
+  letter-spacing: 0.3em;
+}
+.team-login__row button {
+  min-height: 3rem;
+  padding: 0 1.1rem;
+}
+.team-login__accounts {
+  display: grid;
+  gap: 0.5rem;
+}
+@media (min-width: 30rem) {
+  .team-login__accounts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.team-login__accounts button[type='button'] {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-height: 4rem;
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+}
+.team-login__accounts button span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.team-login [role='alert'] {
+  margin: 0.6rem 0 0;
+}
