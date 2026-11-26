@@ -11,6 +11,8 @@ import {
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
+import { useI18n } from '../../../lib/i18n';
+import { FilterTabs, useFilterTabs, type FilterTab } from '../../../ui/FilterTabs';
 import { formatDeadline } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { useMarkRead, useNotifications, type AppNotification } from '../queries/notifications';
@@ -56,11 +58,21 @@ const linkOf = (notification: AppNotification): string | null => {
   return null;
 };
 
+/** Read or not: the only thing the user sorts notifications by. Old ones stay listed under «Прочитані» (US-21 sc.3). */
+const TABS: FilterTab<AppNotification>[] = [
+  { id: 'all', label: 'filters.all', test: () => true },
+  { id: 'unread', label: 'filters.unread', test: (n) => !n.read },
+  { id: 'read', label: 'filters.read', test: (n) => n.read },
+];
+
 /** /notifications: US-21. The notification centre. Unread ones are marked and can be marked as read; old ones stay listed (sc.3). */
 export function NotificationsPage({ page }: { page: PageConfig }) {
   const navigate = useNavigate();
   const notifications = useNotifications();
   const markRead = useMarkRead();
+  const { t } = useI18n();
+  const all = notifications.data ?? [];
+  const tabs = useFilterTabs(TABS, all);
 
   const errorCode = notifications.isError ? (notifications.error instanceof ApiClientError ? notifications.error.code : 'UNKNOWN_ERROR') : null;
   const markError = markRead.isError ? (markRead.error instanceof ApiClientError ? markRead.error.code : 'UNKNOWN_ERROR') : null;
@@ -82,8 +94,13 @@ export function NotificationsPage({ page }: { page: PageConfig }) {
       {notifications.isSuccess && notifications.data.length === 0 && <p role="status">Сповіщень поки немає.</p>}
 
       {notifications.isSuccess && notifications.data.length > 0 && (
+        <FilterTabs tabs={TABS} items={all} value={tabs.value} onChange={tabs.setValue} />
+      )}
+      {notifications.isSuccess && notifications.data.length > 0 && tabs.visible.length === 0 && <p className="empty-filter">{t('filters.empty')}</p>}
+
+      {tabs.visible.length > 0 && (
         <ul aria-label="Сповіщення">
-          {notifications.data.map((notification) => (
+          {tabs.visible.map((notification) => (
             <li key={notification.id}>
               <article aria-label={notification.text}>
                 <p>
