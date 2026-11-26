@@ -76,7 +76,7 @@ export function MyApplicationsPage({ page }: { page: PageConfig }) {
                   )}
                 </h2>
                 <p>
-                  Статус: <strong>{APPLICATION_STATUS_UK[application.status] ?? application.status}</strong>
+                  Статус: <strong className="status-pill" data-status={application.status}>{APPLICATION_STATUS_UK[application.status] ?? application.status}</strong>
                 </p>
                 <p>Ціна замовника: {formatUah(application.task.priceKopecks)}</p>
                 {application.note && <p>Записка: {application.note}</p>}

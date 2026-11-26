@@ -50,7 +50,7 @@ export function MyWorkPage({ page }: { page: PageConfig }) {
                   <Link to={`/work/${task.id}`}>{task.title}</Link>
                 </h2>
                 <p>
-                  Статус: <strong>{task.status ? TASK_STATUS_UK[task.status as TaskStatus] : ''}</strong>
+                  Статус: <strong className="status-pill" data-status={task.status}>{task.status ? TASK_STATUS_UK[task.status as TaskStatus] : ''}</strong>
                 </p>
                 <p>Узгоджена ціна: {formatUah(task.priceKopecks)}</p>
                 <p>

@@ -27,7 +27,7 @@ function VerificationItem({ item, decide }: { item: ModVerification; decide: Ret
         {item.student.email}, подано <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
       </p>
       <p className="card-status">
-        Статус: <strong>{VERIFICATION_STATUS_LABELS_UK[item.status]}</strong>
+        Статус: <strong className="status-pill" data-status={item.status}>{VERIFICATION_STATUS_LABELS_UK[item.status]}</strong>
       </p>
       <p>
         <a href={`${API_BASE_URL}/files/${encodeURIComponent(item.file.id)}`} target="_blank" rel="noreferrer">

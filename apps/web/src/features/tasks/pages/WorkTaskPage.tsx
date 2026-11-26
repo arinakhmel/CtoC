@@ -52,7 +52,7 @@ export function WorkTaskPage() {
       {shown && (
         <>
           <p>
-            Статус: <strong>{TASK_STATUS_UK[shown.status as TaskStatus]}</strong>
+            Статус: <strong className="status-pill" data-status={shown.status}>{TASK_STATUS_UK[shown.status as TaskStatus]}</strong>
           </p>
           <h2>Умови завдання</h2>
           <p>{shown.description}</p>
