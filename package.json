@@ -13,6 +13,7 @@
     "typecheck": "pnpm -r typecheck && tsc -p e2e/tsconfig.json --noEmit",
     "test": "pnpm -r test",
     "test:e2e": "playwright test",
+    "test:all": "pnpm typecheck && pnpm test && pnpm test:e2e",
     "db:generate": "pnpm --filter @ctoc/api db:generate",
     "db:migrate": "pnpm --filter @ctoc/api db:migrate",
     "db:reset": "pnpm --filter @ctoc/api db:reset",

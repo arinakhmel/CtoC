@@ -74,6 +74,19 @@ describe('/terms: the commission for a visitor (US-03 sc.1, sc.2)', () => {
     expect(screen.queryByText(/\d+%/)).toBeNull();
   });
 
+  it('US-03 sc.2 after an error the visitor can ask again, and the rate then appears', async () => {
+    const user = userEvent.setup();
+    publicResponse = () => apiError('INTERNAL_ERROR', 500);
+    open('/terms');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Щось пішло не так');
+
+    publicResponse = null;
+    await user.click(screen.getByRole('button', { name: 'Спробувати ще раз' }));
+
+    expect(await screen.findByText('10%')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('US-03 sc.2 with no connection the page says so and shows no number', async () => {
     publicResponse = () => {
       throw new TypeError('fetch failed');
@@ -99,6 +112,50 @@ describe('/mod/settings: the moderator changes the commission (US-03 sc.3)', () 
 
     expect(await screen.findByText('Збережено: 12,5%')).toHaveAttribute('role', 'status');
     expect(puts).toEqual([{ commissionBp: 1250 }]);
+  });
+
+  it('US-03 sc.3 editing the field removes the old «Збережено» confirmation', async () => {
+    const user = userEvent.setup();
+    open('/mod/settings');
+    const field = await screen.findByLabelText('Комісія, %');
+    await vi.waitFor(() => expect(field).toHaveValue('10'));
+    await user.clear(field);
+    await user.type(field, '12');
+    await user.click(screen.getByRole('button', { name: 'Зберегти' }));
+    expect(await screen.findByText('Збережено: 12%')).toBeInTheDocument();
+
+    await user.type(field, '5');
+
+    expect(screen.queryByText(/Збережено/)).toBeNull();
+  });
+
+  it('US-03 sc.3 editing the field removes the old server error', async () => {
+    const user = userEvent.setup();
+    putResponse = () => apiError('INTERNAL_ERROR', 500);
+    open('/mod/settings');
+    const field = await screen.findByLabelText('Комісія, %');
+    await vi.waitFor(() => expect(field).toHaveValue('10'));
+    await user.click(screen.getByRole('button', { name: 'Зберегти' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    await user.clear(field);
+    await user.type(field, '15');
+
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('US-03 sc.3 if the stored rate cannot be read the moderator can try again', async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    const base = globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => (url === '/api/mod/settings' && !init?.method && fail ? apiError('INTERNAL_ERROR', 500) : base(url, init))));
+    open('/mod/settings');
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    fail = false;
+    await user.click(screen.getByRole('button', { name: 'Спробувати ще раз' }));
+
+    expect(await screen.findByLabelText('Комісія, %')).toBeInTheDocument();
   });
 
   it('US-03 sc.3 a rate over the limit or not a number shows the error and sends nothing', async () => {
