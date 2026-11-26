@@ -168,6 +168,9 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 | `/payment-safety` | "Оплата та безпека" | P | US-04 |
 | `/resume-info` | How experience records are confirmed, with an example | P | US-05 |
 | `/terms` | Умови та поточна комісія | P | US-03 |
+| `/legal/terms` | Умови користування | P | — |
+| `/legal/privacy` | Політика конфіденційності | P | — |
+| `/legal/safe-deal` | Безпечна угода та комісія | P | — |
 | `/register` | Sign-up, choosing student or customer, with display name | P | US-06, US-43, US-44 |
 | `/login` | Login. Logout is a button in the header of every page. | P | US-45, US-46 |
 | `/confirm-email` | Result of the confirmation link, resend | P | US-07 |
