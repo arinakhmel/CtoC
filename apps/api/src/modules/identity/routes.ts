@@ -4,6 +4,8 @@ import {
   putSkillsSchema,
   registerSchema,
   resendConfirmationSchema,
+  teamCodeSchema,
+  teamLoginSchema,
   updateProfileSchema,
 } from '@ctoc/shared';
 import { Router } from 'express';
@@ -12,7 +14,20 @@ import { failureLimiter, rateLimit } from '../../http/rate-limit';
 import { validateBody } from '../../http/validate';
 import { ApiError } from '../../errors';
 import { serializeConfirmed, serializeMe, serializePublicProfile, serializeRegistered } from './serializer';
-import { confirmEmail, getPublicProfile, login, logout, register, resendConfirmation, setMyBio, setMySkills, suggestSkills } from './service';
+import {
+  checkTeamCode,
+  confirmEmail,
+  getPublicProfile,
+  login,
+  logout,
+  register,
+  resendConfirmation,
+  setMyBio,
+  setMySkills,
+  suggestSkills,
+  teamLogin,
+  teamLoginEnabled,
+} from './service';
 
 export function identityRouter(): Router {
   const router = Router();
@@ -49,6 +64,38 @@ export function identityRouter(): Router {
       res.status(200).json(serializeMe(user));
     } catch (error) {
       if (error instanceof ApiError && error.code === 'INVALID_CREDENTIALS') loginFailures.fail(req);
+      throw error;
+    }
+  });
+
+  // ADR-0010: the team quick login. Wrong codes share the limiter style of the login (5 failures per 15 minutes per IP).
+  const teamFailures = failureLimiter({ max: 5, windowMs: 15 * 60_000 });
+  router.get('/auth/team-login', (_req, res) => {
+    res.json({ enabled: teamLoginEnabled() });
+  });
+  router.post('/auth/team-login/check', teamFailures.check, validateBody(teamCodeSchema), (req, res) => {
+    try {
+      checkTeamCode(req.body.code);
+      res.status(204).end();
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'INVALID_CREDENTIALS') teamFailures.fail(req);
+      throw error;
+    }
+  });
+  router.post('/auth/team-login', teamFailures.check, validateBody(teamLoginSchema), async (req, res) => {
+    try {
+      const { user, sessionId, maxAgeMs } = await teamLogin(req.body.code, req.body.account);
+      teamFailures.reset(req);
+      res.cookie(SESSION_COOKIE, sessionId, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: maxAgeMs,
+      });
+      res.status(200).json(serializeMe(user));
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'INVALID_CREDENTIALS') teamFailures.fail(req);
       throw error;
     }
   });
