@@ -61,6 +61,16 @@ describe('US-03 sc.3 the moderator changes the commission', () => {
     expect((await modSettings(moderator.cookie)).body).toEqual({ commissionBp: 1500 });
   });
 
+  it('US-03 sc.3 the moderator answers PUT and GET /api/mod/settings are 200 with Cache-Control: no-store', async () => {
+    const put = await putSettings({ commissionBp: 1300 }, moderator.cookie);
+    const get = await modSettings(moderator.cookie);
+
+    expect(put.status).toBe(200);
+    expect(put.headers['cache-control']).toBe('no-store');
+    expect(get.status).toBe(200);
+    expect(get.headers['cache-control']).toBe('no-store');
+  });
+
   it('US-03 sc.3 the change is audited with who and from → to, in one row of the settings table', async () => {
     await putSettings({ commissionBp: 1500 }, moderator.cookie);
     await putSettings({ commissionBp: 700 }, moderator.cookie);

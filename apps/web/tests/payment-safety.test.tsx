@@ -63,6 +63,13 @@ describe('/payment-safety the public page (US-04 sc.1)', () => {
 });
 
 describe('/payment-safety the key guarantees (US-04 sc.2)', () => {
+  it('US-04 sc.2 the page names both key guarantees in words: «резервування» and «виплата на картку»', async () => {
+    const text = (await pageText()).toLowerCase();
+
+    expect(text).toContain('резервування');
+    expect(text).toContain('виплата на картку');
+  });
+
   it('US-04 sc.2 the page says the customer reserves the money before the work starts', async () => {
     const text = await pageText();
 
