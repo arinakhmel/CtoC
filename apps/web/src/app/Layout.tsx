@@ -85,6 +85,11 @@ function Footer() {
             <p>{t('layout.footerAbout')}</p>
           </div>
         </div>
+        <nav className="footer-legal" aria-label={t('layout.legal')}>
+          <Link to="/legal/terms">{t('layout.legalTerms')}</Link>
+          <Link to="/legal/privacy">{t('layout.legalPrivacy')}</Link>
+          <Link to="/legal/safe-deal">{t('layout.legalDeal')}</Link>
+        </nav>
         <div className="footer-bottom">
           <p>{t('layout.footerMade')}</p>
           <p role="status" className="api-status" data-health={health}>
