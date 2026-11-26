@@ -2905,3 +2905,20 @@ fieldset.segment-radios input[type='radio'] {
     font-size: 0.92rem;
   }
 }
+
+/* Smaller ★: a light mark, not a big button (the hit area stays 32px, above the WCAG 24px minimum). */
+.star-toggle[type='button'] {
+  width: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  height: 2rem;
+  border-width: 1px;
+  font-size: 0.8rem;
+}
+.star-hint summary {
+  min-height: 2rem;
+  font-size: 0.88rem;
+}
+.star-hint summary span[aria-hidden='true'] {
+  font-size: 0.75rem;
+}
