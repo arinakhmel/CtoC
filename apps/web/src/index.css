@@ -573,27 +573,6 @@ main ul[aria-label] > li > article > p:last-child {
     transform: translate(-2px, -2px);
     box-shadow: var(--hard-shadow);
   }
-  main ul[aria-label] > li {
-    animation: card-in 0.35s ease both;
-  }
-  main ul[aria-label] > li:nth-child(2) {
-    animation-delay: 0.04s;
-  }
-  main ul[aria-label] > li:nth-child(3) {
-    animation-delay: 0.08s;
-  }
-  main ul[aria-label] > li:nth-child(4) {
-    animation-delay: 0.12s;
-  }
-  main ul[aria-label] > li:nth-child(n + 5) {
-    animation-delay: 0.16s;
-  }
-}
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
 }
 /* Two columns of cards on a wide screen for the feed. */
 @media (min-width: 52rem) {
@@ -1391,8 +1370,9 @@ article form + form {
   }
 }
 @media (max-width: 34rem) {
-  .prefs .segmented:first-child {
-    display: none;
+  /* On a phone the header scrolls away with the page, so it never covers a third of the screen. */
+  .site-header {
+    position: static;
   }
   .header-actions .link-plain {
     padding: 0 0.6rem;
