@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useI18n, type MessageKey } from '../lib/i18n';
@@ -45,7 +45,7 @@ const GROUPS: {
  * The panel is a disclosure: Escape, the backdrop or opening a page closes it, and the focus goes back to the button.
  * Each link is the human name of the page; the route itself is not shown.
  */
-export function PagesMenu() {
+export function PagesMenu({ phoneExtras }: { phoneExtras?: ReactNode }) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -83,6 +83,19 @@ export function PagesMenu() {
         <>
           <div className="pages-backdrop" hidden={!open} onClick={() => setOpen(false)} />
           <div ref={panelRef} id={panelId} className="pages-panel" hidden={!open} tabIndex={-1}>
+            <button
+              type="button"
+              className="pages-panel__close"
+              aria-label={t('pages.close')}
+              onClick={() => {
+                setOpen(false);
+                buttonRef.current?.focus();
+              }}
+            >
+              <span aria-hidden="true">✕</span>
+            </button>
+            {/* On a phone the header keeps only the logo and this button: account actions and preferences live here. */}
+            {phoneExtras && <div className="pages-panel__phone">{phoneExtras}</div>}
             <nav className="site-nav" aria-label="Pages">
               <p className="pages-panel__title">{t('pages.title')}</p>
               <p className="pages-panel__hint">{t('pages.hint')}</p>

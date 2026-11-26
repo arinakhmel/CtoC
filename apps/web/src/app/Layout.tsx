@@ -3,6 +3,7 @@ import { Fragment, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { isAnonymous, ME_KEY, useLogout, useMe } from '../features/identity/queries/session';
 import { I18nProvider, useI18n } from '../lib/i18n';
+import { ThemeProvider } from '../lib/theme';
 import { createQueryClient } from '../lib/queryClient';
 import { useApiHealth } from '../lib/useApiHealth';
 import { Preferences } from '../ui/Preferences';
@@ -126,7 +127,14 @@ function Shell() {
           <MainMenu />
           <Preferences />
           <HeaderActions />
-          <PagesMenu />
+          <PagesMenu
+            phoneExtras={
+              <>
+                <HeaderActions />
+                <Preferences />
+              </>
+            }
+          />
         </div>
       </header>
       <main id="main" tabIndex={-1}>
@@ -153,7 +161,9 @@ export function Layout() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        <Shell />
+        <ThemeProvider>
+          <Shell />
+        </ThemeProvider>
       </I18nProvider>
     </QueryClientProvider>
   );
