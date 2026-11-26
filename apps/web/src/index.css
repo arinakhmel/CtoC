@@ -2395,3 +2395,119 @@ main > article > .badge {
   margin: 0 0 1.75rem;
 }
 .star-toggle[type='button'] { border-radius: var(--radius-sm); }
+
+/* ============================== Forms, softer ============================== */
+/* Focus: a soft rounded ring that grows in, instead of a hard square outline. */
+input:not([type='radio']):not([type='checkbox']):not([type='file']),
+textarea,
+select {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.25s ease;
+}
+input:not([type='radio']):not([type='checkbox']):not([type='file']):focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* ★ examples and notes. */
+.star-hint {
+  margin: -0.6rem 0 1.15rem;
+}
+.star-hint summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.star-hint summary::-webkit-details-marker {
+  display: none;
+}
+.star-hint summary:hover {
+  text-decoration: underline;
+}
+.star-hint__body {
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--mark);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--muted);
+  background: var(--surface-2);
+  font-size: 0.95rem;
+}
+.star-hint__body p:last-child {
+  margin-bottom: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .star-hint[open] .star-hint__body {
+    animation: fade-in 0.2s ease;
+  }
+}
+
+/* Price with «грн» inside the field and without the up/down arrows. */
+.input-suffix {
+  position: relative;
+  display: block;
+}
+.input-suffix::after {
+  content: attr(data-suffix);
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  color: var(--muted);
+  font-weight: 600;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.input-suffix input {
+  padding-right: 3.25rem !important;
+  font-size: 1.15rem !important;
+  font-weight: 600;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+/* Date: a calmer field, an accent calendar icon, quick presets under it. */
+input[type='datetime-local'],
+input[type='date'] {
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+input[type='datetime-local']::-webkit-calendar-picker-indicator,
+input[type='date']::-webkit-calendar-picker-indicator {
+  width: 1.3rem;
+  height: 1.3rem;
+  padding: 0.35rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--mark);
+  cursor: pointer;
+}
+:root[data-theme='graphite'] input::-webkit-calendar-picker-indicator,
+:root[data-theme='blueprint'] input::-webkit-calendar-picker-indicator {
+  filter: none;
+}
+.date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.date-presets button.button-quiet[type='button'] {
+  min-height: 2.5rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+}
