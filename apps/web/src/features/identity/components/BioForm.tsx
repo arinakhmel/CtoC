@@ -1,5 +1,6 @@
 import { countCharacters, LIMITS, MESSAGES_UK, updateProfileSchema } from '@ctoc/shared';
 import { useState, type FormEvent } from 'react';
+import { StarHint } from '../../../ui/StarHint';
 import { ApiClientError } from '../../../lib/api';
 import { saveBio } from '../queries/bio';
 
@@ -53,6 +54,16 @@ export function BioForm({ initialBio }: { initialBio: string }) {
           aria-describedby="bio-counter bio-error"
         />
       </p>
+      <StarHint label="Як інші пишуть «Про мене»">
+        <p>
+          «Студентка 2 курсу ФІ НаУКМА. Пишу на Python, робила бота для студради та парсер розкладу. Люблю задачі, де треба розібратися з
+          чужими даними.»
+        </p>
+        <p>
+          «Третій курс, комп’ютерні науки. Верстаю на React і Tailwind, маю два лендинги в портфоліо. Відповідаю в той самий день.»
+        </p>
+        <p>Що писати: курс і спеціальність, з чим уже працювали, один-два приклади робіт, як швидко відповідаєте.</p>
+      </StarHint>
       <p id="bio-counter">
         {length} / {LIMITS.bioMax}
       </p>

@@ -114,14 +114,15 @@ export function WithdrawalsQueuePage({ page }: { page: PageConfig }) {
       <h1 id="page-title"><PageTitle page={page} /></h1>
       <p>Виплата робиться вручну: переказ на картку студента, потім позначка тут. Повний номер картки видно лише до рішення.</p>
 
-      <label htmlFor="withdrawal-status">Показати</label>
-      <select id="withdrawal-status" value={status} onChange={(event) => setStatus(event.target.value as WithdrawalStatus)}>
+      <fieldset className="segment-radios">
+        <legend>Показати</legend>
         {WITHDRAWAL_STATUSES.map((value) => (
-          <option key={value} value={value}>
+          <label key={value}>
+            <input type="radio" name="withdrawal-status" value={value} checked={status === value} onChange={() => setStatus(value)} />
             {WITHDRAWAL_STATUS_LABELS_UK[value]}
-          </option>
+          </label>
         ))}
-      </select>
+      </fieldset>
 
       {shownError && <p role="alert">{messageFor(shownError)}</p>}
       {decide.isSuccess && (

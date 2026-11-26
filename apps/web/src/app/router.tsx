@@ -25,6 +25,7 @@ import { LandingPage } from '../features/landing/pages/LandingPage';
 import { PaymentSafetyPage } from '../features/payments/pages/PaymentSafetyPage';
 import { SettingsPage } from '../features/settings/pages/SettingsPage';
 import { TermsPage } from '../features/settings/pages/TermsPage';
+import { LegalPage } from '../features/legal/pages/LegalPage';
 import { PageStub } from '../pages/PageStub';
 import { PAGES, type PageConfig } from '../routes.config';
 import { Layout } from './Layout';
@@ -56,6 +57,9 @@ const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
   '/payment-safety': (page) => <PaymentSafetyPage page={page} />,
   '/terms': (page) => <TermsPage page={page} />,
   '/mod/settings': (page) => <SettingsPage page={page} />,
+  '/legal/terms': (page) => <LegalPage page={page} />,
+  '/legal/privacy': (page) => <LegalPage page={page} />,
+  '/legal/safe-deal': (page) => <LegalPage page={page} />,
 };
 const renderPage = (page: PageConfig) => {
   const element = IMPLEMENTED[page.path]?.(page) ?? <PageStub page={page} />;

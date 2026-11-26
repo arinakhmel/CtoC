@@ -52,3 +52,16 @@ export type ConfirmEmailInput = z.infer<typeof confirmEmailSchema>;
 /** US-07/S3. Public: the user may not be able to log in before confirming (ADR-0006, api.md). */
 export const resendConfirmationSchema = z.object({ email: emailSchema });
 export type ResendConfirmationInput = z.infer<typeof resendConfirmationSchema>;
+
+/** The demo accounts the team can open without a password (ADR-0010). */
+export const TEAM_LOGIN_ACCOUNTS = ['student', 'customer', 'moderator'] as const;
+export type TeamLoginAccount = (typeof TEAM_LOGIN_ACCOUNTS)[number];
+
+/** ADR-0010: the team code alone (to check it), or the code and the demo account to open. */
+export const teamCodeSchema = z.object({
+  code: z.string({ required_error: 'VALIDATION_FAILED', invalid_type_error: 'VALIDATION_FAILED' }).min(1, 'VALIDATION_FAILED').max(64, 'VALIDATION_FAILED'),
+});
+export const teamLoginSchema = teamCodeSchema.extend({
+  account: z.enum(TEAM_LOGIN_ACCOUNTS, { errorMap: () => ({ message: 'VALIDATION_FAILED' }) }),
+});
+export type TeamLoginInput = z.infer<typeof teamLoginSchema>;

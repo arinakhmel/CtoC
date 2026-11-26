@@ -104,21 +104,25 @@ export function NotificationsPage({ page }: { page: PageConfig }) {
           {tabs.visible.map((notification) => (
             <li key={notification.id}>
               <article aria-label={notification.text}>
-                <p>
-                  {!notification.read && <strong>Нове: </strong>}
+                <p className="notice-text">
+                  {!notification.read && <strong className="tag-new">Нове: </strong>}
                   {notification.text}
                 </p>
-                <p>
+                <p className="card-meta">
                   <time dateTime={notification.createdAt}>{formatDeadline(notification.createdAt)}</time>
                 </p>
-                {linkOf(notification) && (
-                  <Link to={linkOf(notification)!}>{notification.type.startsWith('verification_') ? 'Відкрити верифікацію' : 'Відкрити завдання'}</Link>
-                )}
-                {!notification.read && (
-                  <button type="button" disabled={markRead.isPending} onClick={() => markRead.mutate(notification.id)}>
-                    Позначити прочитаним
-                  </button>
-                )}
+                <div className="card-actions">
+                  {linkOf(notification) && (
+                    <Link className="link-ghost link-ghost--sm" to={linkOf(notification)!}>
+                      {notification.type.startsWith('verification_') ? 'Відкрити верифікацію' : 'Відкрити завдання'}
+                    </Link>
+                  )}
+                  {!notification.read && (
+                    <button type="button" className="button-quiet" disabled={markRead.isPending} onClick={() => markRead.mutate(notification.id)}>
+                      Позначити прочитаним
+                    </button>
+                  )}
+                </div>
               </article>
             </li>
           ))}

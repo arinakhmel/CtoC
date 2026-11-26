@@ -65,7 +65,7 @@ export function ProfilePage({ page }: { page: PageConfig }) {
           emptyText="Поки що немає завершених завдань. Записи з’являються автоматично, коли замовник приймає результат."
         />
         <p>
-          <Link to="/">All pages</Link>
+          <Link to="/">На головну</Link>
         </p>
       </article>
     );
@@ -76,7 +76,7 @@ export function ProfilePage({ page }: { page: PageConfig }) {
       <h1 id="page-title">{state.kind === 'failed' ? state.message : page.title}</h1>
       {state.kind === 'loading' && <p role="status">Завантаження…</p>}
       <p>
-        <Link to="/">All pages</Link>
+        <Link to="/">На головну</Link>
       </p>
     </article>
   );

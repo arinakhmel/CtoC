@@ -37,6 +37,24 @@ export const PAGES: PageConfig[] = [
     stories: ["US-03"],
   },
   {
+    path: "/legal/terms",
+    title: "Умови користування",
+    access: "P",
+    stories: [],
+  },
+  {
+    path: "/legal/privacy",
+    title: "Політика конфіденційності",
+    access: "P",
+    stories: [],
+  },
+  {
+    path: "/legal/safe-deal",
+    title: "Безпечна угода та комісія",
+    access: "P",
+    stories: [],
+  },
+  {
     path: "/register",
     title: "Sign-up, choosing student or customer, with display name",
     access: "P",

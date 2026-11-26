@@ -33,24 +33,29 @@ function TaskItem({ task }: { task: MyTask }) {
   return (
     <li>
       <article aria-labelledby={`my-task-${task.id}`}>
-        <h2 id={`my-task-${task.id}`}>{task.title}</h2>
-        <p>
-          Статус: <strong>{TASK_STATUS_UK[task.status]}</strong>
+        <div className="card-head">
+          <h2 id={`my-task-${task.id}`}>{task.title}</h2>
+          <p className="card-status">
+            Статус: <strong>{TASK_STATUS_UK[task.status]}</strong>
+          </p>
+        </div>
+        <p className="card-meta-row">
+          <span>Фіксована ціна: {formatUah(task.priceKopecks)}</span>
+          <span>
+            Виконати до: <time dateTime={task.deadlineAt}>{formatDeadline(task.deadlineAt)}</time>
+          </span>
+          {task.status === 'published' && <span>Відгуків: {task.applicationsCount}</span>}
         </p>
-        <p>Фіксована ціна: {formatUah(task.priceKopecks)}</p>
-        <p>
-          Виконати до: <time dateTime={task.deadlineAt}>{formatDeadline(task.deadlineAt)}</time>
-        </p>
-        {task.status === 'published' && <p>Відгуків: {task.applicationsCount}</p>}
-        <p>
-          <Link to={`/c/tasks/${task.id}`}>Керувати</Link>
-        </p>
-
+        <div className="card-actions">
+          <Link className="link-ghost link-ghost--sm" to={`/c/tasks/${task.id}`}>
+            Керувати
+          </Link>
         {DELETABLE.includes(task.status) && !confirming && (
-          <button type="button" onClick={() => setConfirming(true)}>
+          <button type="button" className="button-quiet" onClick={() => setConfirming(true)}>
             Видалити
           </button>
         )}
+        </div>
         {DELETABLE.includes(task.status) && confirming && (
           <p role="group" aria-label={`Підтвердження видалення «${task.title}»`}>
             Видалити завдання? Відгуки студентів буде відхилено.{' '}

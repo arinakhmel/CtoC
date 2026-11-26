@@ -1,3 +1,4 @@
+import { useId, useState } from 'react';
 import { formatUah } from '../../../lib/money';
 
 interface PriceBlockProps {
@@ -5,6 +6,8 @@ interface PriceBlockProps {
   netKopecks: number | null;
   /** The gross label differs between the card and the details page. */
   grossLabel: string;
+  /** On a feed card the net amount waits behind a ★ button, so the card stays light. The details page shows it at once. */
+  compact?: boolean;
 }
 
 /**
@@ -12,17 +15,26 @@ interface PriceBlockProps {
  * from the API (the snapshot of publication) and is never calculated here. Each amount is its own label and value, and
  * the pairs stack on a narrow screen, so the net never runs into the gross (sc.3). No net line without a snapshot.
  */
-export function PriceBlock({ priceKopecks, netKopecks, grossLabel }: PriceBlockProps) {
+export function PriceBlock({ priceKopecks, netKopecks, grossLabel, compact = false }: PriceBlockProps) {
+  const [open, setOpen] = useState(!compact);
+  const netId = useId();
+  const hasNet = typeof netKopecks === 'number';
   return (
-    <dl className="price-block">
+    <dl className={`price-block${compact ? ' price-block--compact' : ''}`}>
       <div className="price-block__row">
         <dt>{grossLabel}</dt>
         <dd>
           <strong>{formatUah(priceKopecks)}</strong>
+          {compact && hasNet && (
+            <button type="button" className="star-toggle" aria-expanded={open} aria-controls={netId} onClick={() => setOpen((value) => !value)}>
+              <span aria-hidden="true">★</span>
+              <span className="visually-hidden">Скільки я отримаю після комісії</span>
+            </button>
+          )}
         </dd>
       </div>
-      {typeof netKopecks === 'number' && (
-        <div className="price-block__row price-block__row--net">
+      {hasNet && (
+        <div className="price-block__row price-block__row--net" id={netId} hidden={!open}>
           <dt>Ви отримаєте (після комісії)</dt>
           <dd>
             <strong>{formatUah(netKopecks)}</strong>

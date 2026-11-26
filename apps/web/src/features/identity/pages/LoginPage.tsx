@@ -10,6 +10,7 @@ import type { PageConfig } from '../../../routes.config';
 import { login, type SessionUser } from '../queries/login';
 import { ME_KEY } from '../queries/session';
 import { ResendForm } from './ConfirmEmailPage';
+import { TeamLogin } from '../components/TeamLogin';
 import { PageTitle } from '../../../ui/PageTitle';
 
 /** Start page by role (US-45 checklist): student → feed, customer → «Мої завдання», moderator → verification queue. */
@@ -63,7 +64,7 @@ export function LoginPage({ page }: { page: PageConfig }) {
         <p role="alert">{MESSAGES_UK.EMAIL_NOT_CONFIRMED}. Ми можемо надіслати лист підтвердження ще раз.</p>
         <ResendForm defaultEmail={unconfirmedEmail} />
         <p>
-          <Link to="/">All pages</Link>
+          <Link to="/">На головну</Link>
         </p>
       </article>
     );
@@ -93,11 +94,12 @@ export function LoginPage({ page }: { page: PageConfig }) {
           Увійти
         </button>
       </form>
+      <TeamLogin />
       <p>
         <Link to="/register">Створити акаунт</Link>
       </p>
       <p>
-        <Link to="/">All pages</Link>
+        <Link to="/">На головну</Link>
       </p>
     </article>
   );
