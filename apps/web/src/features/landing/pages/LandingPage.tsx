@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useI18n } from '../../../lib/i18n';
 import type { PageConfig } from '../../../routes.config';
 import { HowItWorks } from '../components/HowItWorks';
+import { StickerStack } from '../components/StickerStack';
 import { PageTitle } from '../../../ui/PageTitle';
 
 /** A text made of parts separated by `|`, shown as separate words with space between them (no separator dots). */
@@ -15,32 +16,61 @@ function Parts({ text, className }: { text: string; className?: string }) {
   );
 }
 
-/** Three sample tasks pinned to the board in the hero: decoration, so hidden from a screen reader (the text says the same). */
+/** Three sample tasks pinned to the board in the hero: stickers the visitor can grab and toss (StickerStack). */
 function TicketStack() {
   const { t } = useI18n();
-  const tickets = [
-    { title: t('landing.ticket2Title'), meta: t('landing.ticket2Meta'), price: '800' },
-    { title: t('landing.ticket3Title'), meta: t('landing.ticket3Meta'), price: '1 500' },
-  ];
   return (
-    <div className="ticket-stack" aria-hidden="true">
-      {tickets.map((ticket, index) => (
-        <div key={ticket.title} className={`ticket ticket--back ticket--${index + 1}`}>
-          <Parts className="ticket__meta" text={ticket.meta} />
-          <span className="ticket__title">{ticket.title}</span>
-          <span className="ticket__price">{ticket.price} ₴</span>
-        </div>
-      ))}
-      <div className="ticket ticket--front">
-        <span className="ticket__label">{t('landing.ticketLabel')}</span>
-        <span className="ticket__title">{t('landing.ticketTitle')}</span>
-        <Parts className="ticket__meta" text={t('landing.ticketMeta')} />
-        <span className="ticket__row">
-          <span className="ticket__price">{t('landing.ticketPrice')}</span>
-          <span className="ticket__stamp">✓ {t('landing.ticketNote')}</span>
-        </span>
-      </div>
-    </div>
+    <StickerStack
+      hint={t('landing.dragHint')}
+      stickers={[
+        {
+          id: 'excel',
+          className: 'ticket--back ticket--1',
+          x: -24,
+          y: 0,
+          rotate: -5,
+          content: (
+            <>
+              <Parts className="ticket__meta" text={t('landing.ticket2Meta')} />
+              <span className="ticket__title">{t('landing.ticket2Title')}</span>
+              <span className="ticket__price">800 ₴</span>
+            </>
+          ),
+        },
+        {
+          id: 'smm',
+          className: 'ticket--back ticket--2',
+          x: 28,
+          y: 44,
+          rotate: 4,
+          content: (
+            <>
+              <Parts className="ticket__meta" text={t('landing.ticket3Meta')} />
+              <span className="ticket__title">{t('landing.ticket3Title')}</span>
+              <span className="ticket__price">1 500 ₴</span>
+            </>
+          ),
+        },
+        {
+          id: 'logo',
+          className: 'ticket--front',
+          x: 0,
+          y: 110,
+          rotate: -1.5,
+          content: (
+            <>
+              <span className="ticket__label">{t('landing.ticketLabel')}</span>
+              <span className="ticket__title">{t('landing.ticketTitle')}</span>
+              <Parts className="ticket__meta" text={t('landing.ticketMeta')} />
+              <span className="ticket__row">
+                <span className="ticket__price">{t('landing.ticketPrice')}</span>
+                <span className="ticket__stamp">✓ {t('landing.ticketNote')}</span>
+              </span>
+            </>
+          ),
+        },
+      ]}
+    />
   );
 }
 
