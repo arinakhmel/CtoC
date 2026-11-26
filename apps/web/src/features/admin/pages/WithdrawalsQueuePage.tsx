@@ -31,7 +31,7 @@ function WithdrawalItem({ withdrawal, decide }: { withdrawal: ModWithdrawal; dec
         Картка: {withdrawal.cardNumber ? <strong>{groupCard(withdrawal.cardNumber)}</strong> : <>•••• {withdrawal.cardLast4}</>}
       </p>
       <p>
-        Статус: {WITHDRAWAL_STATUS_LABELS_UK[withdrawal.status]} · подано <time dateTime={withdrawal.createdAt}>{formatDate(withdrawal.createdAt)}</time>
+        Статус: {WITHDRAWAL_STATUS_LABELS_UK[withdrawal.status]}, подано <time dateTime={withdrawal.createdAt}>{formatDate(withdrawal.createdAt)}</time>
       </p>
       {withdrawal.reason && <p>Причина відхилення: {withdrawal.reason}</p>}
 

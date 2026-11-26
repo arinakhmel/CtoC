@@ -23,7 +23,7 @@ function VerificationItem({ item, decide }: { item: ModVerification; decide: Ret
     <article aria-labelledby={titleId}>
       <h2 id={titleId}>{item.student.displayName}</h2>
       <p>
-        {item.student.email} · подано <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
+        {item.student.email}, подано <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
       </p>
       <p>Статус: {VERIFICATION_STATUS_LABELS_UK[item.status]}</p>
       <p>

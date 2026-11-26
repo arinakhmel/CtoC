@@ -30,8 +30,7 @@ function TaskItem({ item, decide }: { item: ModTask; decide: ReturnType<typeof u
         Дедлайн: <time dateTime={item.deadlineAt}>{formatDeadline(item.deadlineAt)}</time>
         {expired && (
           <strong className="deadline-expired" data-expired="true">
-            {' '}
-            · дедлайн минув
+            , дедлайн минув
           </strong>
         )}
       </p>
