@@ -63,9 +63,9 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
   };
 
   /** The same rules as the server (shared): not empty, at most 40 characters, at most 20 skills, no duplicates. */
-  const addSkill = () => {
+  const addSkill = (value: string = input) => {
     setFieldError(null);
-    const parsed = skillSchema.safeParse(input);
+    const parsed = skillSchema.safeParse(value);
     if (!parsed.success) {
       setFieldError(messageFor(parsed.error.issues[0]?.message ?? 'VALIDATION_FAILED'));
       return;
@@ -82,6 +82,13 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
     changed([...skills, name]);
     setInput('');
   };
+
+  // The catalogue as tags under the field: what is not added yet, filtered by what is typed, the first 12.
+  const typed = input.trim().toLowerCase();
+  const offered = suggestions
+    .filter((name) => !skills.some((skill) => skill.toLowerCase() === name.toLowerCase()))
+    .filter((name) => typed === '' || name.toLowerCase().includes(typed))
+    .slice(0, 12);
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
@@ -124,25 +131,30 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
             <label htmlFor="skill">Навичка</label>
             <input
               id="skill"
-              list="skill-suggestions"
+              autoComplete="off"
+              placeholder="Наприклад, Python або SQL"
               value={input}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={onKeyDown}
               aria-describedby="skill-error"
               aria-invalid={fieldError !== null}
             />
-            <datalist id="skill-suggestions">
-              {suggestions.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
-            <button type="button" onClick={addSkill}>
+            <button type="button" onClick={() => addSkill()}>
               Додати
             </button>
           </p>
           <p id="skill-error" role="alert">
             {fieldError}
           </p>
+          {offered.length > 0 && (
+            <div className="skill-suggestions" role="group" aria-label="Підказки навичок">
+              {offered.map((name) => (
+                <button key={name} type="button" aria-label={`Додати навичку ${name}`} onClick={() => addSkill(name)}>
+                  + {name}
+                </button>
+              ))}
+            </div>
+          )}
 
           <ul className="chips" aria-label="Ваші навички">
             {skills.map((name) => (
@@ -178,7 +190,7 @@ export function MyProfilePage({ page }: { page: PageConfig }) {
       )}
 
       <p>
-        <Link to="/">All pages</Link>
+        <Link to="/">На головну</Link>
       </p>
     </article>
   );

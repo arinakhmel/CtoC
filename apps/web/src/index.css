@@ -2511,3 +2511,44 @@ input[type='date']::-webkit-calendar-picker-indicator {
   border-radius: 999px;
   font-size: 0.88rem;
 }
+
+/* ============================== Profile ============================== */
+/* The skills list is tags, not cards (it has an aria-label, so the card-list rule would catch it). */
+main ul.chips[aria-label] {
+  display: flex;
+  margin: 0.5rem 0 0.75rem;
+}
+main ul.chips[aria-label] > li {
+  animation: none;
+}
+.chips li {
+  border-color: var(--line);
+  color: var(--on-mark);
+  background: var(--mark);
+}
+.chips li button[type='button'] {
+  color: var(--on-mark);
+}
+/* Catalogue suggestions: outlined tags that fill on hover. */
+.skill-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.25rem 0 0.75rem;
+}
+.skill-suggestions button[type='button'] {
+  min-height: 2.5rem;
+  padding: 0 0.85rem;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.skill-suggestions button[type='button']:hover:not(:disabled) {
+  border-style: solid;
+  color: var(--on-mark);
+  background: var(--mark);
+}

@@ -67,7 +67,9 @@ describe('/me/profile skills editor (US-10)', () => {
     const user = await openEditor();
 
     expect(listed()).toEqual(['Java', 'Python']);
-    expect(Array.from(document.querySelectorAll('datalist option')).map((o) => o.getAttribute('value'))).toEqual(['Java', 'HTML', 'Копірайтинг']);
+    // The catalogue is offered as tags; a skill that is already in the profile is not offered again.
+    const offered = within(screen.getByRole('group', { name: 'Підказки навичок' })).getAllByRole('button').map((b) => b.getAttribute('aria-label'));
+    expect(offered).toEqual(['Додати навичку HTML', 'Додати навичку Копірайтинг']);
 
     await user.click(screen.getByRole('button', { name: 'Видалити навичку Java' }));
     expect(listed()).toEqual(['Python']);
