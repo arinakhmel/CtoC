@@ -106,7 +106,7 @@ export function VerificationPage({ page }: { page: PageConfig }) {
       )}
 
       <p>
-        <Link to="/">All pages</Link>
+        <Link to="/">На головну</Link>
       </p>
     </article>
   );
