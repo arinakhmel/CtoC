@@ -55,7 +55,7 @@ export function CandidateList({ taskId, candidates, canSelect, priceKopecks }: {
               </ul>
             )}
             <p>
-              Статус відгуку: <strong>{APPLICATION_STATUS_UK[candidate.status]}</strong>
+              Статус відгуку: <strong className="status-pill" data-status={candidate.status}>{APPLICATION_STATUS_UK[candidate.status]}</strong>
             </p>
             {candidate.note && <p>Записка: {candidate.note}</p>}
             {candidate.status === 'accepted' ? (

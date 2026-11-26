@@ -63,7 +63,7 @@ export function CustomerTaskPage() {
       {data && (
         <>
           <p>
-            Статус: <strong>{TASK_STATUS_UK[data.task.status]}</strong>
+            Статус: <strong className="status-pill" data-status={data.task.status}>{TASK_STATUS_UK[data.task.status]}</strong>
           </p>
           <p>Фіксована ціна: {formatUah(data.task.priceKopecks)}</p>
           <section aria-labelledby="candidates-title">

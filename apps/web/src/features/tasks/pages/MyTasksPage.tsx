@@ -36,7 +36,7 @@ function TaskItem({ task }: { task: MyTask }) {
         <div className="card-head">
           <h2 id={`my-task-${task.id}`}>{task.title}</h2>
           <p className="card-status">
-            Статус: <strong>{TASK_STATUS_UK[task.status]}</strong>
+            Статус: <strong className="status-pill" data-status={task.status}>{TASK_STATUS_UK[task.status]}</strong>
           </p>
         </div>
         <p className="card-meta-row">

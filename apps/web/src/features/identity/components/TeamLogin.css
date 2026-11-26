@@ -81,3 +81,31 @@
 .team-login [role='alert'] {
   margin: 0.6rem 0 0;
 }
+
+/* Beside «Увійти», on the right, and smaller. On a phone the button is full width, so it goes under it. */
+.team-login {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin: -3.6rem 0 1.25rem;
+}
+.team-login__toggle[type='button'] {
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  padding: 0 0.7rem 0 0.3rem;
+  font-size: 0.8rem;
+}
+.team-login__q {
+  width: 1.3rem;
+  height: 1.3rem;
+  font-size: 0.75rem;
+}
+.team-login__body {
+  align-self: stretch;
+}
+@media (max-width: 30rem) {
+  .team-login {
+    align-items: flex-start;
+    margin-top: 0.25rem;
+  }
+}
