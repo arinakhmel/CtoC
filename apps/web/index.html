@@ -3,7 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#efe9dc" />
+    <meta name="description" content="CtoC: перші оплачувані мікрозавдання для студентів-початківців. Фіксована ціна, безпечна угода, підтверджений досвід." />
     <title>CtoC</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='5' width='26' height='22' rx='4' fill='%23b83214' stroke='%231a1814' stroke-width='2.5' transform='rotate(-6 16 16)'/%3E%3Ctext x='16' y='22' font-family='Arial Black,sans-serif' font-size='15' font-weight='900' text-anchor='middle' fill='%23fffaf0'%3EC%3C/text%3E%3C/svg%3E" />
+    <script>
+      // Apply the saved theme before the first paint, so a dark theme never flashes light (src/lib/theme.ts).
+      (function () {
+        try {
+          var t = localStorage.getItem('ctoc.theme');
+          if (t !== 'paper' && t !== 'graphite' && t !== 'blueprint') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'graphite' : 'paper';
+          document.documentElement.dataset.theme = t;
+          var l = localStorage.getItem('ctoc.lang');
+          if (l === 'en' || l === 'uk') document.documentElement.lang = l;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
