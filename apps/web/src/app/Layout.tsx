@@ -63,7 +63,11 @@ function MainMenu() {
   useEffect(() => {
     const nav = navRef.current;
     const current = nav?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (nav && current) nav.scrollLeft = Math.max(0, current.offsetLeft - (nav.clientWidth - current.offsetWidth) / 2);
+    if (!nav || !current) return;
+    // Fully in view with a margin, centred when there is room.
+    const offset = current.getBoundingClientRect().left - nav.getBoundingClientRect().left + nav.scrollLeft;
+    const left = offset - (nav.clientWidth - current.offsetWidth) / 2;
+    nav.scrollLeft = Math.max(0, Math.min(left, nav.scrollWidth - nav.clientWidth));
   }, [pathname, user?.role]);
   return (
     <nav ref={navRef} className="main-nav" aria-label={t('layout.menu')}>
