@@ -1782,3 +1782,29 @@ main > article.landing {
 .ticket--back .ticket__title {
   display: none;
 }
+
+/* No decorative dots or circles: plain labels instead. */
+.eyebrow {
+  border-radius: 0.25rem;
+}
+.eyebrow::before,
+.api-status::before,
+.ticket__pin {
+  display: none;
+}
+.hero__facts dt {
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  color: var(--accent);
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+.payment-stages li::before {
+  border-radius: var(--radius-sm);
+}
+.swatch {
+  border-radius: 0.2rem;
+}
