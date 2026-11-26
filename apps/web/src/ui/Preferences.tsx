@@ -31,16 +31,22 @@ export function Preferences() {
  * The phone version: one small button per setting that shows the current choice; a tap drops the options down under it.
  * Only one list is open at a time.
  */
-export function CompactPreferences() {
+export function CompactPreferences({ variant = 'panel' }: { variant?: 'panel' | 'header' }) {
   const { lang, setLang, t } = useI18n();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState<'lang' | 'theme' | null>(null);
   const toggle = (which: 'lang' | 'theme') => setOpen((current) => (current === which ? null : which));
 
   return (
-    <div className="prefs-compact" role="group" aria-label={t('layout.prefs')}>
+    <div className={`prefs-compact prefs-compact--${variant}`} role="group" aria-label={t('layout.prefs')}>
       <div className="prefs-compact__item">
-        <button type="button" className="prefs-compact__toggle" aria-expanded={open === 'lang'} onClick={() => toggle('lang')}>
+        <button
+          type="button"
+          className="prefs-compact__toggle"
+          aria-expanded={open === 'lang'}
+          aria-label={`${t('layout.language')}: ${t(`lang.${lang}`)}`}
+          onClick={() => toggle('lang')}
+        >
           <span className="prefs-compact__label">{t('layout.language')}</span>
           <span>{lang === 'uk' ? 'UA' : 'EN'}</span>
           <span aria-hidden="true" className="prefs-compact__caret" />
@@ -65,10 +71,16 @@ export function CompactPreferences() {
         )}
       </div>
       <div className="prefs-compact__item">
-        <button type="button" className="prefs-compact__toggle" aria-expanded={open === 'theme'} onClick={() => toggle('theme')}>
+        <button
+          type="button"
+          className="prefs-compact__toggle"
+          aria-expanded={open === 'theme'}
+          aria-label={`${t('layout.theme')}: ${t(`theme.${theme}`)}`}
+          onClick={() => toggle('theme')}
+        >
           <span className="prefs-compact__label">{t('layout.theme')}</span>
           <span className={`swatch swatch--${theme}`} aria-hidden="true" />
-          <span>{t(`theme.${theme}`)}</span>
+          <span className="prefs-compact__name">{t(`theme.${theme}`)}</span>
           <span aria-hidden="true" className="prefs-compact__caret" />
         </button>
         {open === 'theme' && (
