@@ -14,7 +14,7 @@ export interface PageConfig {
 export const PAGES: PageConfig[] = [
   {
     path: "/",
-    title: "Landing: beginners-only message, Як це працює, commission",
+    title: "CtoC: мікрозавдання для студентів-початківців",
     access: "P",
     stories: ["US-01", "US-02", "US-03"],
   },

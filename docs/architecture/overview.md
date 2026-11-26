@@ -164,7 +164,7 @@ Holds the Zod schemas, status enums, `money` helpers (integer kopecks, commissio
 
 | Route | Page | Access | Stories |
 |---|---|---|---|
-| `/` | Landing: beginners-only message, "Як це працює", commission | P | US-01, US-02, US-03 |
+| `/` | CtoC: мікрозавдання для студентів-початківців | P | US-01, US-02, US-03 |
 | `/payment-safety` | "Оплата та безпека" | P | US-04 |
 | `/resume-info` | How experience records are confirmed, with an example | P | US-05 |
 | `/terms` | Умови та поточна комісія | P | US-03 |
