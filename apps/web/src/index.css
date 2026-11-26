@@ -4068,3 +4068,21 @@ strong.status-pill {
     transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }
 }
+
+/* The role menu: room at both ends, so the yellow current tab and its shadow are never cut by the edge,
+ * and a soft fade on the right hints that the row scrolls. */
+.main-nav ul {
+  padding: 0.25rem 1rem 0.45rem 0.1rem;
+  scroll-padding-inline: 1rem;
+}
+.main-nav ul::after {
+  content: '';
+  flex: none;
+  width: 0.5rem;
+}
+@media (max-width: 48rem) {
+  .header-bar .main-nav {
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 1.75rem), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 1.75rem), transparent);
+  }
+}
