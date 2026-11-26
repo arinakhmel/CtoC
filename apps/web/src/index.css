@@ -3,7 +3,7 @@
  * Warm paper, ink lines, hard offset shadows instead of soft blur, mono labels like stamped tickets,
  * one accent per theme. Three themes on <html data-theme>: paper (light), graphite (dark), blueprint.
  *
- * Fonts (self-hosted, Cyrillic): Unbounded for display, Onest for text, JetBrains Mono for labels and money.
+ * Fonts (self-hosted, Cyrillic): Unbounded for display, Onest for text, labels and money.
  *
  * Accessibility (WCAG 2.2 AA), measured on the real backgrounds:
  *   paper      text 14.6:1 · muted 5.8:1 · accent 4.9:1 · text on accent 5.8:1
@@ -103,7 +103,8 @@
   --hard-shadow-lg: 7px 7px 0 var(--shadow);
   --font-display: 'Unbounded Variable', 'Unbounded', 'Arial Black', system-ui, sans-serif;
   --font-sans: 'Onest Variable', 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+  /* Labels and money use the text face too: tracked capitals and tabular figures, no monospace. */
+  --font-mono: 'Onest Variable', 'Onest', system-ui, sans-serif;
   --container: 72rem;
 }
 
@@ -121,6 +122,7 @@ html {
 }
 
 body {
+  font-variant-numeric: tabular-nums;
   display: flex;
   flex-direction: column;
   margin: 0;
@@ -1944,4 +1946,25 @@ main > article.landing {
 .ticket__meta {
   display: flex;
   gap: 0.9rem;
+}
+
+/* Small labels in the text face: a touch heavier, less tracking than the old mono. */
+.segmented button[type='button'] {
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+.ticker,
+legend,
+.price-block dt,
+.list-toolbar label,
+.ticket__label,
+.ticket__meta,
+.footer-heading {
+  letter-spacing: 0.06em;
+}
+.price-block dd,
+.ticket__price,
+.finance-balance strong {
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
