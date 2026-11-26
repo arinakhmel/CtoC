@@ -8,7 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 const uk = {
   'layout.skip': 'Перейти до змісту',
   'layout.home': 'CtoC, на головну',
-  'layout.ticker': 'Тільки для студентів-початківців|Фіксована ціна|Оплату зарезервовано до старту',
+  'layout.ticker': 'Тільки для студентів-початківців|Ціна відома наперед|Оплату зарезервовано до старту',
   'layout.login': 'Вхід',
   'layout.start': 'Почати безкоштовно',
   'layout.logout': 'Вийти',
