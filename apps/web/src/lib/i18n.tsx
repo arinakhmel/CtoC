@@ -99,6 +99,15 @@ const uk = {
   'filters.read': 'Прочитані',
   'filters.empty': 'У цій вкладці поки порожньо.',
 
+  'pages.button': 'Усі сторінки',
+  'pages.title': 'Усі сторінки проєкту',
+  'pages.hint': 'Сторінки з :id відкриваються з картки конкретного завдання чи профілю.',
+  'pages.public': 'Для всіх',
+  'pages.student': 'Студент',
+  'pages.customer': 'Замовник',
+  'pages.moderator': 'Модератор',
+  'pages.account': 'Будь-який акаунт',
+
   'notFound.title': 'Сторінку не знайдено',
   'notFound.text': 'За цією адресою нічого немає. Можливо, посилання застаріло.',
   'notFound.home': 'На головну',
@@ -199,6 +208,15 @@ const en: Record<MessageKey, string> = {
   'filters.unread': 'Unread',
   'filters.read': 'Read',
   'filters.empty': 'Nothing in this tab yet.',
+
+  'pages.button': 'All pages',
+  'pages.title': 'Every page of the project',
+  'pages.hint': 'Pages with :id open from the card of a specific task or profile.',
+  'pages.public': 'Everyone',
+  'pages.student': 'Student',
+  'pages.customer': 'Customer',
+  'pages.moderator': 'Moderator',
+  'pages.account': 'Any account',
 
   'notFound.title': 'Page not found',
   'notFound.text': 'There is nothing at this address. The link may be out of date.',

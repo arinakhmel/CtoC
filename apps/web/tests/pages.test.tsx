@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { hrefFor } from '../src/app/Layout';
@@ -45,8 +46,9 @@ describe('overview.md §4: unknown addresses', () => {
     expect(main.getByRole('link', { name: 'На головну' })).toHaveAttribute('href', '/');
   });
 
-  it('keep the layout: the navigation lists every page', async () => {
+  it('keep the layout: the «Усі сторінки» menu lists every page', async () => {
     renderAt('/no/such/page');
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Усі сторінки' }));
     const nav = within(await screen.findByRole('navigation', { name: 'Pages' }));
     expect(nav.getAllByRole('link')).toHaveLength(PAGES.length);
   });

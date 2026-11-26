@@ -1801,3 +1801,134 @@ main > article.landing {
 .empty-filter p {
   margin-bottom: 1rem;
 }
+
+/* ============================== «Усі сторінки» menu ============================== */
+.menu-button[type='button'] {
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+.menu-button__bars {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+.menu-button__bars span {
+  display: block;
+  width: 1.1rem;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .menu-button__bars span {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+}
+.menu-button[aria-expanded='true'] .menu-button__bars span:nth-child(1) {
+  transform: translateY(0.36rem) rotate(45deg);
+}
+.menu-button[aria-expanded='true'] .menu-button__bars span:nth-child(2) {
+  opacity: 0;
+}
+.menu-button[aria-expanded='true'] .menu-button__bars span:nth-child(3) {
+  transform: translateY(-0.36rem) rotate(-45deg);
+}
+@media (max-width: 40rem) {
+  .menu-button__text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+.pages-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--shadow) 35%, transparent);
+}
+.pages-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 50;
+  width: min(30rem, 100vw);
+  overflow-y: auto;
+  padding: 1.5rem 1.5rem 2.5rem;
+  border-right: var(--border);
+  background: var(--surface);
+  box-shadow: var(--hard-shadow-lg);
+}
+.pages-backdrop[hidden],
+.pages-panel[hidden] {
+  display: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pages-panel:not([hidden]) {
+    animation: panel-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  .pages-backdrop:not([hidden]) {
+    animation: fade-in 0.2s ease;
+  }
+}
+@keyframes panel-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.pages-panel__title {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 650;
+}
+.pages-panel__hint {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.pages-panel__group {
+  margin: 1.5rem 0 0.4rem;
+  padding: 0.15rem 0.5rem;
+  display: inline-block;
+  border: var(--border);
+  border-radius: 0.25rem;
+  color: var(--on-mark);
+  background: var(--mark);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pages-panel .site-nav ul {
+  display: block;
+}
+.pages-panel .site-nav li {
+  position: relative;
+  padding: 0 0.25rem;
+}
+.pages-panel .site-nav li:hover {
+  background: var(--surface-2);
+}
+/* The whole row is clickable; the accessible name of the link stays the route. */
+.pages-panel .site-nav a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.pages-panel .site-nav li.is-template > span {
+  color: var(--muted);
+}
+.pages-panel:focus { outline: none; }

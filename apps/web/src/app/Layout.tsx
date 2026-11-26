@@ -5,12 +5,12 @@ import { isAnonymous, ME_KEY, useLogout, useMe } from '../features/identity/quer
 import { I18nProvider, useI18n } from '../lib/i18n';
 import { createQueryClient } from '../lib/queryClient';
 import { useApiHealth } from '../lib/useApiHealth';
-import { PAGES } from '../routes.config';
 import { Preferences } from '../ui/Preferences';
-import { menuFor, PAGE_NAMES } from './navigation';
+import { menuFor } from './navigation';
+import { PagesMenu } from './PagesMenu';
 
-/** Layout: skip link, ticker, header with the role menu and preferences, the page, and the footer with the page index and API status. */
-export const hrefFor = (path: string) => path.replace(/:\w+/g, 'example');
+/** Layout: skip link, ticker, header with the role menu, the page index, preferences and account actions, the page, and the footer. */
+export { hrefFor } from './PagesMenu';
 
 const STATUS_TEXT = { checking: 'API: checking…', ok: 'API: ok', unavailable: 'API: unavailable' } as const;
 
@@ -70,7 +70,7 @@ function MainMenu() {
 
 function Footer() {
   const health = useApiHealth();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   return (
     <footer className="site-footer">
       <div className="container">
@@ -81,20 +81,6 @@ function Footer() {
             </p>
             <p>{t('layout.footerAbout')}</p>
           </div>
-          {/* The index of every page (a development aid). Link texts are the routes, the names are beside them. */}
-          <nav className="site-nav" aria-label="Pages">
-            <p className="footer-heading">{t('layout.footerIndex')}</p>
-            <ul>
-              {PAGES.map((page) => (
-                <li key={page.path}>
-                  <span>{PAGE_NAMES[page.path]?.[lang] ?? page.title}</span>
-                  <NavLink to={hrefFor(page.path)} end>
-                    {page.path}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </nav>
         </div>
         <div className="footer-bottom">
           <p>{t('layout.footerMade')}</p>
@@ -121,6 +107,7 @@ function Shell() {
       </div>
       <header className="site-header">
         <div className="container header-bar">
+          <PagesMenu />
           <Link className="brand" to="/" aria-label={t('layout.home')}>
             Cto<span>C</span>
           </Link>
