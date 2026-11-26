@@ -5,6 +5,7 @@ import { API_BASE_URL, ApiClientError } from '../../../lib/api';
 import { formatDate } from '../../../lib/money';
 import type { PageConfig } from '../../../routes.config';
 import { useDecideVerification, useVerificationQueue, type ModVerification } from '../queries/verifications';
+import { PageTitle } from '../../../ui/PageTitle';
 
 const messageFor = (code: string): string =>
   code === 'NETWORK_ERROR' ? 'Немає зв’язку із сервером. Спробуйте ще раз.' : ((MESSAGES_UK as Record<string, string>)[code] ?? MESSAGES_UK.INTERNAL_ERROR);
@@ -106,7 +107,7 @@ export function VerificationsQueuePage({ page }: { page: PageConfig }) {
 
   return (
     <article aria-labelledby="page-title">
-      <h1 id="page-title">{page.title}</h1>
+      <h1 id="page-title"><PageTitle page={page} /></h1>
       <p>Статус {VERIFICATION_STATUS_LABELS_UK.pending}: відкрийте документ і перевірте, що його надіслав справжній студент.</p>
 
       {shownError && <p role="alert">{messageFor(shownError)}</p>}

@@ -6,6 +6,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ApiClientError } from '../../../lib/api';
 import type { PageConfig } from '../../../routes.config';
 import { confirmEmail, resendConfirmation } from '../queries/confirmEmail';
+import { PageTitle } from '../../../ui/PageTitle';
 
 type State = { kind: 'checking' } | { kind: 'confirmed' } | { kind: 'failed'; code: ErrorCode | 'NETWORK_ERROR' | 'UNKNOWN_ERROR' };
 
@@ -30,7 +31,7 @@ export function ConfirmEmailPage({ page }: { page: PageConfig }) {
 
   return (
     <article aria-labelledby="page-title">
-      <h1 id="page-title">{page.title}</h1>
+      <h1 id="page-title"><PageTitle page={page} /></h1>
       {state.kind === 'checking' && <p role="status">Перевіряємо посилання…</p>}
       {state.kind === 'confirmed' && (
         <>
