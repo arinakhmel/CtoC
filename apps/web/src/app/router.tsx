@@ -22,6 +22,7 @@ import { TaskPage } from '../features/tasks/pages/TaskPage';
 import { VerificationPage } from '../features/verification/pages/VerificationPage';
 import { RegisterPage } from '../features/identity/pages/RegisterPage';
 import { LandingPage } from '../features/landing/pages/LandingPage';
+import { PaymentSafetyPage } from '../features/payments/pages/PaymentSafetyPage';
 import { SettingsPage } from '../features/settings/pages/SettingsPage';
 import { TermsPage } from '../features/settings/pages/TermsPage';
 import { PageStub } from '../pages/PageStub';
@@ -52,6 +53,7 @@ const IMPLEMENTED: Record<string, (page: PageConfig) => ReactElement> = {
   '/c/tasks/new': (page) => <NewTaskPage page={page} />,
   '/c/tasks': (page) => <MyTasksPage page={page} />,
   '/': (page) => <LandingPage page={page} />,
+  '/payment-safety': (page) => <PaymentSafetyPage page={page} />,
   '/terms': (page) => <TermsPage page={page} />,
   '/mod/settings': (page) => <SettingsPage page={page} />,
 };
