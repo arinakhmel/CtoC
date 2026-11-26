@@ -100,6 +100,7 @@ const uk = {
   'filters.empty': 'У цій вкладці поки порожньо.',
 
   'pages.button': 'Усі сторінки',
+  'pages.close': 'Закрити меню',
   'pages.title': 'Усі сторінки проєкту',
   'pages.hint': 'Бліді пункти відкриваються з картки конкретного завдання чи профілю.',
   'pages.public': 'Для всіх',
@@ -210,6 +211,7 @@ const en: Record<MessageKey, string> = {
   'filters.empty': 'Nothing in this tab yet.',
 
   'pages.button': 'All pages',
+  'pages.close': 'Close the menu',
   'pages.title': 'Every page of the project',
   'pages.hint': 'Greyed-out pages open from the card of a specific task or profile.',
   'pages.public': 'Everyone',
