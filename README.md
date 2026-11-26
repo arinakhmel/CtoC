@@ -114,7 +114,10 @@ pnpm dev
 | `pnpm typecheck` | перевірка типів у всіх пакетах і в e2e |
 | `pnpm test` | unit-, API- і компонентні тести (vitest) |
 | `pnpm test:e2e` | e2e у Playwright (перший раз: `pnpm exec playwright install chromium`) |
+| `pnpm test:all` | усе разом: `pnpm typecheck && pnpm test && pnpm test:e2e` |
 | `pnpm db:reset` | перестворити локальну базу |
+
+Усі перевірки однією командою: `pnpm test:all`. Звіт про тестування: [`docs/testing-report.md`](docs/testing-report.md).
 
 Структура: `apps/api` (Express 5 + Prisma + SQLite), `apps/web` (Vite + React), `packages/shared` (zod-схеми, статуси, коди помилок). Документація та рішення: `docs/`. Правила роботи з Claude Code: `CLAUDE.md`.
 

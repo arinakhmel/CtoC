@@ -37,7 +37,7 @@ Short version for the team. The full rules (race tests, rollback tests, e2e rule
 `pnpm typecheck` (all packages and `e2e/`) is part of "green".
 
 **Commands**
-- Whole suite, one line: `pnpm typecheck && pnpm test && pnpm test:e2e`
+- Whole suite, one line: `pnpm test:all` (the same as `pnpm typecheck && pnpm test && pnpm test:e2e`)
 - Everything except the browser: `pnpm test` (runs `shared`, `api` and `web` through `pnpm -r test`)
 - One story: `pnpm --filter @ctoc/api exec vitest run -t "US-18"` (use `@ctoc/web` or `@ctoc/shared` for the other packages)
 - First e2e run: `pnpm exec playwright install chromium`
