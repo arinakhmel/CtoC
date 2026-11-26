@@ -1353,3 +1353,25 @@ article form + form {
     border: 2px solid ButtonText;
   }
 }
+
+/* ============================== 404 ============================== */
+.not-found {
+  text-align: center;
+}
+.not-found__code {
+  display: inline-block;
+  margin: 0 0 1rem;
+  padding: 0.25rem 1.25rem;
+  border: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: clamp(3.5rem, 2rem + 8vw, 7rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  transform: rotate(-4deg);
+}
+.not-found h1::after {
+  margin-inline: auto;
+}
