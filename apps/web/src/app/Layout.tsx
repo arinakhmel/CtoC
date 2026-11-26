@@ -102,7 +102,13 @@ function Shell() {
       </a>
       <div className="ticker">
         <div className="container">
-          <p>{t('layout.ticker')}</p>
+          <p>
+            {t('layout.ticker')
+              .split('|')
+              .map((part) => (
+                <span key={part}>{part}</span>
+              ))}
+          </p>
         </div>
       </div>
       <header className="site-header">

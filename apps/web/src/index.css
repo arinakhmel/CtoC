@@ -1932,3 +1932,16 @@ main > article.landing {
   color: var(--muted);
 }
 .pages-panel:focus { outline: none; }
+
+/* Parts of a line separated by space, not by dots. */
+.ticker p {
+  display: flex;
+  gap: 2.25rem;
+}
+.ticker p span {
+  flex: none;
+}
+.ticket__meta {
+  display: flex;
+  gap: 0.9rem;
+}
