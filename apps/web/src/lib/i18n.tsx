@@ -31,7 +31,7 @@ const uk = {
   'nav.terms': 'Комісія',
   'nav.feed': 'Стрічка',
   'nav.applications': 'Мої відгуки',
-  'nav.work': 'В роботі',
+  'nav.work': 'Активні',
   'nav.finance': 'Фінанси',
   'nav.profile': 'Профіль',
   'nav.verification': 'Верифікація',
